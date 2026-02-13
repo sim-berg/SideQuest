@@ -1,0 +1,35 @@
+export const Category = {
+  SPORT: 'sport',
+  SOCIAL: 'social',
+  ADVENTURE: 'adventure',
+  SKILL: 'skill',
+  MYSTERY: 'mystery',
+} as const;
+
+export type Category = (typeof Category)[keyof typeof Category];
+
+export interface QuestGiver {
+  name: string;
+  avatar?: string;
+}
+
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  lat: number;
+  lng: number;
+  address: string;
+  category: Category;
+  questGiver: QuestGiver;
+  reward?: number;
+  timeLimit?: string;
+  createdAt: string;
+}
+
+export interface QuestFilter {
+  categories: Category[];
+  distanceKm: number;
+  paidOnly: boolean;
+  timedOnly: boolean;
+}
