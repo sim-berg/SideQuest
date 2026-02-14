@@ -3,6 +3,7 @@ import type { Category } from '../../types/quest';
 import { CATEGORY_META } from '../../constants/categories';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useUIStore } from '../../stores/useUIStore';
+import PixelIcon from '../common/PixelIcon';
 
 interface QuestMarkerProps {
   questId: string;
@@ -33,11 +34,10 @@ export default function QuestMarker({ questId, category }: QuestMarkerProps) {
       className="flex cursor-pointer items-center justify-center transition-transform hover:scale-110 active:scale-95"
       aria-label={`Quest: ${meta.label}`}
     >
-      <div
-        className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white shadow-lg"
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-gold/80 shadow-lg"
         style={{ backgroundColor: meta.color }}
       >
-        <span className="text-lg">{meta.icon}</span>
+        <PixelIcon id={23} size={28} alt="Quest" />
       </div>
     </button>
   );

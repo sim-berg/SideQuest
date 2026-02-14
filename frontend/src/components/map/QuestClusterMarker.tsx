@@ -15,7 +15,7 @@ export default function QuestClusterMarker({
         e.stopPropagation();
         onClick();
       }}
-      className="flex cursor-pointer items-center justify-center rounded-full border-2 border-white bg-indigo-500 font-bold text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+      className="flex cursor-pointer items-center justify-center rounded-full border-2 border-gold bg-wood font-bold text-parchment-light shadow-lg transition-transform hover:scale-110 active:scale-95"
       style={{ width: size, height: size }}
       aria-label={`${count} Quests`}
     >

@@ -10,32 +10,32 @@ export interface CategoryMeta {
 export const CATEGORY_META: Record<Category, CategoryMeta> = {
   [Category.SPORT]: {
     label: 'Sport',
-    color: '#22c55e',
+    color: '#4a9e5c',
     bgColor: 'bg-quest-sport',
-    icon: '🏃',
+    icon: '',
   },
   [Category.SOCIAL]: {
     label: 'Social',
-    color: '#3b82f6',
+    color: '#4a7ab5',
     bgColor: 'bg-quest-social',
-    icon: '👥',
+    icon: '',
   },
   [Category.ADVENTURE]: {
     label: 'Abenteuer',
-    color: '#f59e0b',
+    color: '#c48a2a',
     bgColor: 'bg-quest-adventure',
-    icon: '⚔️',
+    icon: '',
   },
   [Category.SKILL]: {
     label: 'Skill',
-    color: '#a855f7',
+    color: '#8b5fb0',
     bgColor: 'bg-quest-skill',
-    icon: '🧠',
+    icon: '',
   },
   [Category.MYSTERY]: {
     label: 'Mystery',
-    color: '#ef4444',
+    color: '#b5443a',
     bgColor: 'bg-quest-mystery',
-    icon: '🔮',
+    icon: '',
   },
 };

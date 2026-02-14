@@ -5,6 +5,7 @@ import { formatDistance } from '../../utils/format';
 import CategoryBadge from './CategoryBadge';
 import QuestReward from './QuestReward';
 import QuestTimeLimit from './QuestTimeLimit';
+import PixelIcon from '../common/PixelIcon';
 
 interface QuestDetailProps {
   quest: Quest;
@@ -15,15 +16,15 @@ export default function QuestDetail({ quest }: QuestDetailProps) {
   const openInfoPage = useUIStore((s) => s.openInfoPage);
 
   return (
-    <div className="flex flex-col gap-4 bg-white px-5 pb-8 dark:bg-slate-900">
+    <div className="flex flex-col gap-4 bg-parchment-light px-5 pb-8 dark:bg-medieval-surface">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+        <h2 className="font-pixel text-sm leading-relaxed text-medieval-text dark:text-medieval-text-light">
           {quest.title}
         </h2>
         <CategoryBadge category={quest.category} />
       </div>
 
-      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+      <p className="text-sm leading-relaxed text-wood-dark dark:text-parchment">
         {quest.description}
       </p>
 
@@ -31,9 +32,9 @@ export default function QuestDetail({ quest }: QuestDetailProps) {
         {quest.reward && <QuestReward reward={quest.reward} />}
         {quest.timeLimit && <QuestTimeLimit timeLimit={quest.timeLimit} />}
         {distance !== null && (
-          <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 dark:bg-slate-800">
-            <span className="text-lg">📍</span>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-1.5 rounded-lg border border-wood-light/30 bg-parchment px-3 py-2 dark:border-wood/30 dark:bg-wood-dark/50">
+            <PixelIcon id={17} size={20} alt="Entfernung" />
+            <span className="text-sm font-semibold text-medieval-text dark:text-medieval-text-light">
               {formatDistance(distance)}
             </span>
           </div>
@@ -42,7 +43,7 @@ export default function QuestDetail({ quest }: QuestDetailProps) {
 
       <button
         onClick={openInfoPage}
-        className="mt-2 w-full rounded-xl bg-indigo-500 py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98] active:bg-indigo-600"
+        className="mt-2 w-full rounded-xl border-2 border-gold bg-wood py-3.5 font-pixel text-xs text-parchment-light shadow-lg transition-all active:scale-[0.98] active:bg-wood-dark"
       >
         Mehr Infos
       </button>

@@ -15,10 +15,10 @@ export default function ToggleFilter({
     <button
       onClick={onToggle}
       className={cn(
-        'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
+        'shrink-0 rounded-lg border-2 px-3 py-1.5 text-xs font-medium transition-all',
         active
-          ? 'border-indigo-500 bg-indigo-500 text-white shadow-sm'
-          : 'border-slate-300 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300',
+          ? 'border-gold bg-wood text-parchment-light shadow-sm'
+          : 'border-wood-light/40 bg-parchment text-medieval-text dark:border-wood/40 dark:bg-medieval-surface dark:text-medieval-text-light',
       )}
     >
       {label}

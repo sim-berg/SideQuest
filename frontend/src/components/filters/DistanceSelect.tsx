@@ -7,16 +7,16 @@ export default function DistanceSelect() {
   const setDistance = useFilterStore((s) => s.setDistance);
 
   return (
-    <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800">
+    <div className="flex shrink-0 items-center gap-1 rounded-lg border-2 border-wood-light/40 bg-parchment p-0.5 dark:border-wood/40 dark:bg-medieval-surface">
       {DISTANCE_OPTIONS.map((km) => (
         <button
           key={km}
           onClick={() => setDistance(km)}
           className={cn(
-            'rounded-full px-2.5 py-1 text-xs font-medium transition-all',
+            'rounded-md px-2.5 py-1 text-xs font-medium transition-all',
             distanceKm === km
-              ? 'bg-indigo-500 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700',
+              ? 'bg-gold text-medieval-text shadow-sm'
+              : 'text-medieval-text hover:bg-parchment-dark/50 dark:text-medieval-text-light dark:hover:bg-wood-dark/50',
           )}
         >
           {km}km

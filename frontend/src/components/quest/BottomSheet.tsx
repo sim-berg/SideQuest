@@ -17,7 +17,7 @@ export default function QuestBottomSheet() {
     selectQuest(null);
   };
 
-  const bg = darkMode ? '#0f172a' : '#ffffff';
+  const bg = darkMode ? '#3D2E1F' : '#F4E4C1';
 
   return (
     <Sheet
@@ -32,7 +32,8 @@ export default function QuestBottomSheet() {
           borderTopRightRadius: 16,
           overflow: 'hidden',
           backgroundColor: bg,
-          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.25)',
+          borderTop: '2px solid #C9A84C',
         }}
       >
         <Sheet.Header

@@ -3,11 +3,29 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-quest-sport: #22c55e;
-  --color-quest-social: #3b82f6;
-  --color-quest-adventure: #f59e0b;
-  --color-quest-skill: #a855f7;
-  --color-quest-mystery: #ef4444;
+  /* Medieval category colors (warmer tones) */
+  --color-quest-sport: #4a9e5c;
+  --color-quest-social: #4a7ab5;
+  --color-quest-adventure: #c48a2a;
+  --color-quest-skill: #8b5fb0;
+  --color-quest-mystery: #b5443a;
+
+  /* Medieval palette */
+  --color-wood: #8B5E3C;
+  --color-wood-dark: #5C3A1E;
+  --color-wood-light: #A47B5A;
+  --color-parchment: #D4B896;
+  --color-parchment-light: #F4E4C1;
+  --color-parchment-dark: #BFA07A;
+  --color-gold: #C9A84C;
+  --color-gold-light: #E0C870;
+  --color-gold-dark: #A08030;
+  --color-medieval-bg: #2A1F14;
+  --color-medieval-surface: #3D2E1F;
+  --color-medieval-text: #3D2517;
+  --color-medieval-text-light: #E8D5B5;
+
+  --font-pixel: 'Press Start 2P', monospace;
 }
 
 html, body, #root {
@@ -26,4 +44,51 @@ body {
 
 .dark {
   color-scheme: dark;
+}
+
+/* Pixel font for headings */
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* Medieval wooden plank gradient for navbar */
+.bg-wood-plank {
+  background: linear-gradient(
+    180deg,
+    #6B4226 0%,
+    #8B5E3C 15%,
+    #7A5030 30%,
+    #8B5E3C 50%,
+    #6B4226 70%,
+    #8B5E3C 85%,
+    #7A5030 100%
+  );
+}
+
+.bg-wood-plank-dark {
+  background: linear-gradient(
+    180deg,
+    #3D2E1F 0%,
+    #5C3A1E 15%,
+    #4A2F18 30%,
+    #5C3A1E 50%,
+    #3D2E1F 70%,
+    #5C3A1E 85%,
+    #4A2F18 100%
+  );
+}
+
+/* Subtle parchment texture via noise */
+.bg-parchment-texture {
+  background-color: #F4E4C1;
+  background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23D4B896' fill-opacity='0.3'/%3E%3C/svg%3E");
+}
+
+/* Scrollbar hiding utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

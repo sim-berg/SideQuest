@@ -6,7 +6,7 @@ export function formatDistance(km: number): string {
 }
 
 export function formatReward(amount: number): string {
-  return `${amount} XP`;
+  return `${amount} Doublons`;
 }
 
 export function formatTimeRemaining(isoDate: string): string {

@@ -6,7 +6,7 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   return (
-    <div className="relative h-full w-full bg-white dark:bg-slate-900">
+    <div className="relative h-full w-full bg-parchment-light dark:bg-medieval-bg">
       {children}
     </div>
   );
