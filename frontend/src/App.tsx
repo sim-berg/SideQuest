@@ -5,6 +5,7 @@ import QuestMap from './components/map/QuestMap';
 import FilterBar from './components/filters/FilterBar';
 import QuestBottomSheet from './components/quest/BottomSheet';
 import QuestInfoPage from './components/quest/QuestInfoPage';
+import CreateQuestPage from './components/quest/CreateQuestPage';
 import FloatingActionButton from './components/common/FloatingActionButton';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useQuestStore } from './stores/useQuestStore';
@@ -20,6 +21,7 @@ function AppContent() {
   const locationError = useMapStore((s) => s.locationError);
   const darkMode = useUIStore((s) => s.darkMode);
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode);
+  const openCreateQuest = useUIStore((s) => s.openCreateQuest);
 
   useEffect(() => {
     setLoading(true);
@@ -36,7 +38,8 @@ function AppContent() {
       </div>
       <QuestBottomSheet />
       <QuestInfoPage />
-      <FloatingActionButton onClick={() => alert('Quest erstellen kommt bald!')} />
+      <CreateQuestPage />
+      <FloatingActionButton onClick={openCreateQuest} />
 
       {/* Dark mode toggle */}
       <button

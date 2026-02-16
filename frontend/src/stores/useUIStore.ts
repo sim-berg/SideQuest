@@ -3,11 +3,14 @@ import { create } from 'zustand';
 interface UIState {
   bottomSheetOpen: boolean;
   infoPageOpen: boolean;
+  createQuestOpen: boolean;
   darkMode: boolean;
   openBottomSheet: () => void;
   closeBottomSheet: () => void;
   openInfoPage: () => void;
   closeInfoPage: () => void;
+  openCreateQuest: () => void;
+  closeCreateQuest: () => void;
   toggleDarkMode: () => void;
   setDarkMode: (dark: boolean) => void;
 }
@@ -15,11 +18,14 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   bottomSheetOpen: false,
   infoPageOpen: false,
+  createQuestOpen: false,
   darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
   openBottomSheet: () => set({ bottomSheetOpen: true }),
   closeBottomSheet: () => set({ bottomSheetOpen: false }),
   openInfoPage: () => set({ infoPageOpen: true, bottomSheetOpen: false }),
   closeInfoPage: () => set({ infoPageOpen: false }),
+  openCreateQuest: () => set({ createQuestOpen: true, bottomSheetOpen: false }),
+  closeCreateQuest: () => set({ createQuestOpen: false }),
   toggleDarkMode: () =>
     set((s) => {
       const next = !s.darkMode;
