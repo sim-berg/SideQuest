@@ -17,7 +17,7 @@ export default function QuestBottomSheet() {
     selectQuest(null);
   };
 
-  const bg = darkMode ? '#3D2E1F' : '#F4E4C1';
+  const bg = darkMode ? '#121828' : '#f0f3fa';
 
   return (
     <Sheet
@@ -32,8 +32,10 @@ export default function QuestBottomSheet() {
           borderTopRightRadius: 16,
           overflow: 'hidden',
           backgroundColor: bg,
-          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.25)',
-          borderTop: '2px solid #C9A84C',
+          boxShadow: darkMode
+            ? '0 -4px 30px rgba(0, 240, 255, 0.15), 0 -1px 0 rgba(0, 240, 255, 0.3)'
+            : '0 -4px 24px rgba(0, 0, 0, 0.12)',
+          borderTop: darkMode ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid #c0c8e0',
         }}
       >
         <Sheet.Header

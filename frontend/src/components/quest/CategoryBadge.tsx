@@ -10,8 +10,12 @@ export default function CategoryBadge({ category }: CategoryBadgeProps) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-lg border border-gold/50 px-2.5 py-1 text-xs font-semibold text-white"
-      style={{ backgroundColor: meta.color }}
+      className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold"
+      style={{
+        color: meta.color,
+        borderColor: `${meta.color}60`,
+        backgroundColor: `${meta.color}15`,
+      }}
     >
       {meta.label}
     </span>

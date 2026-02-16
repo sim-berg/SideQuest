@@ -11,8 +11,8 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed right-0 bottom-0 left-0 z-30 border-t-2 border-gold pb-[env(safe-area-inset-bottom)]">
-      <div className={darkMode ? 'bg-wood-plank-dark' : 'bg-wood-plank'}>
+    <nav className="neon-strip fixed right-0 bottom-0 left-0 z-30 pb-[env(safe-area-inset-bottom)]">
+      <div className="border-t border-neon-cyan/30 bg-cyber-light-panel/90 backdrop-blur-xl dark:border-neon-cyan/20 dark:bg-cyber-surface/90">
         <div className="flex items-center justify-around px-2 py-2">
           <NavButton
             onClick={() => alert('Quest-Log kommt bald!')}
@@ -49,7 +49,7 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className="flex h-12 w-12 items-center justify-center rounded-lg transition-transform active:scale-90"
+      className="flex h-12 w-12 items-center justify-center rounded-lg transition-all hover:bg-neon-cyan/10 active:scale-90 dark:hover:bg-neon-cyan/10"
       aria-label={label}
     >
       {children}

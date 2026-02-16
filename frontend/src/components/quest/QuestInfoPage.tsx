@@ -21,10 +21,10 @@ function InfoRow({
         <PixelIcon id={iconId} size={22} alt={label} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-wood-light dark:text-wood-light">
+        <p className="text-xs font-medium text-cyber-light-text-dim dark:text-cyber-text-dim">
           {label}
         </p>
-        <p className="mt-0.5 text-sm font-semibold text-medieval-text dark:text-medieval-text-light">
+        <p className="mt-0.5 text-sm font-semibold text-cyber-light-text dark:text-cyber-text">
           {value}
         </p>
       </div>
@@ -46,23 +46,27 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
       {/* Header */}
       <div className="mb-4">
         <div
-          className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-gold/50 px-3 py-1 text-xs font-semibold text-white"
-          style={{ backgroundColor: meta.color }}
+          className="mb-3 inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-semibold"
+          style={{
+            color: meta.color,
+            borderColor: `${meta.color}60`,
+            backgroundColor: `${meta.color}15`,
+          }}
         >
           {meta.label}
         </div>
-        <h1 className="font-pixel text-base leading-relaxed text-medieval-text dark:text-medieval-text-light">
+        <h1 className="font-pixel text-base leading-relaxed text-cyber-light-text dark:text-cyber-text">
           {quest.title}
         </h1>
       </div>
 
       {/* Description */}
-      <p className="mb-6 text-sm leading-relaxed text-wood-dark dark:text-parchment">
+      <p className="mb-6 text-sm leading-relaxed text-cyber-light-text-dim dark:text-cyber-text-dim">
         {quest.description}
       </p>
 
       {/* Info Section */}
-      <div className="mb-6 divide-y divide-wood-light/20 rounded-xl border border-wood-light/30 bg-parchment px-4 dark:divide-wood/20 dark:border-wood/30 dark:bg-wood-dark/50">
+      <div className="mb-6 divide-y divide-cyber-light-border rounded-xl border border-cyber-light-border bg-cyber-light-card px-4 dark:divide-cyber-border dark:border-cyber-border dark:bg-cyber-card">
         <InfoRow
           iconId={24}
           label="Quest Geber"
@@ -95,9 +99,12 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
-        <button className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gold bg-quest-sport py-3.5 shadow-lg transition-all active:scale-[0.98] active:brightness-90">
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-quest-sport bg-quest-sport/15 py-3.5 shadow-lg transition-all active:scale-[0.98]"
+          style={{ boxShadow: '0 0 16px #39ff1430' }}
+        >
           <PixelIcon id={11} size={20} alt="Annehmen" />
-          <span className="font-pixel text-xs text-white">Quest annehmen</span>
+          <span className="font-pixel text-xs text-quest-sport">Quest annehmen</span>
         </button>
         <button
           onClick={() =>
@@ -105,10 +112,10 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
               `Nachricht an ${quest.questGiver.name} wird gesendet... (kommt bald)`,
             )
           }
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-wood-light/40 bg-parchment py-3.5 transition-all active:scale-[0.98] active:bg-parchment-dark dark:border-wood/40 dark:bg-medieval-surface dark:active:bg-wood-dark"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyber-light-border bg-cyber-light-card py-3.5 transition-all active:scale-[0.98] active:bg-cyber-light-surface dark:border-cyber-border dark:bg-cyber-card dark:active:bg-cyber-panel"
         >
           <PixelIcon id={18} size={20} alt="Nachricht" />
-          <span className="text-sm font-bold text-medieval-text dark:text-medieval-text-light">
+          <span className="text-sm font-bold text-cyber-light-text dark:text-cyber-text">
             Nachricht an {quest.questGiver.name}
           </span>
         </button>
@@ -131,17 +138,17 @@ export default function QuestInfoPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-parchment-light dark:bg-medieval-bg">
+    <div className="fixed inset-0 z-50 flex flex-col bg-cyber-light-bg dark:bg-cyber-bg">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-gold/30 px-4 pt-[env(safe-area-inset-top)] pb-2 dark:border-gold-dark/30">
+      <div className="neon-strip flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2">
         <button
           onClick={handleClose}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-medieval-text transition-colors hover:bg-parchment-dark/50 dark:text-medieval-text-light dark:hover:bg-wood-dark/50"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-cyber-light-text transition-colors hover:bg-neon-cyan/10 dark:text-cyber-text"
           aria-label="Zurueck"
         >
           <PixelIcon id={12} size={22} alt="Zurueck" />
         </button>
-        <span className="font-pixel text-xs text-wood dark:text-wood-light">
+        <span className="font-pixel text-xs tracking-wider text-cyber-light-text-dim dark:text-cyber-text-dim">
           Quest Details
         </span>
       </div>

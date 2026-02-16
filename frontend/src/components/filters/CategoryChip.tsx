@@ -17,12 +17,12 @@ export default function CategoryChip({ category }: CategoryChipProps) {
     <button
       onClick={() => toggleCategory(category)}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+        'flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-all',
         active
-          ? 'border-gold text-white shadow-md'
-          : 'border-wood-light/40 bg-parchment text-medieval-text dark:border-wood/40 dark:bg-medieval-surface dark:text-medieval-text-light',
+          ? 'border-current text-white'
+          : 'border-cyber-light-border bg-cyber-light-card text-cyber-light-text dark:border-cyber-border dark:bg-cyber-card dark:text-cyber-text',
       )}
-      style={active ? { backgroundColor: meta.color, borderColor: '#C9A84C' } : undefined}
+      style={active ? { backgroundColor: `${meta.color}20`, color: meta.color, borderColor: meta.color, boxShadow: `0 0 10px ${meta.color}40` } : undefined}
     >
       <span>{meta.label}</span>
     </button>

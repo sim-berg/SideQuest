@@ -23,7 +23,6 @@ export default function FilterBar() {
   const setQuests = useQuestStore((s) => s.setQuests);
   const setLoading = useQuestStore((s) => s.setLoading);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
@@ -45,11 +44,11 @@ export default function FilterBar() {
   return (
     <div ref={panelRef} className="absolute top-0 right-0 left-0 z-10 pt-[env(safe-area-inset-top)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-gold/30 bg-parchment-light/85 px-3 py-2 backdrop-blur-md dark:border-gold-dark/30 dark:bg-medieval-bg/85">
+      <div className="neon-strip flex items-center justify-between bg-cyber-light-panel/85 px-3 py-2 backdrop-blur-xl dark:bg-cyber-surface/85">
         {/* Left: filter toggle */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform active:scale-90"
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all active:scale-90 ${open ? 'bg-neon-cyan/15 neon-glow-cyan' : 'hover:bg-neon-cyan/10'}`}
           aria-label="Filter"
         >
           <PixelIcon id={17} size={26} alt="Filter" />
@@ -58,7 +57,7 @@ export default function FilterBar() {
         {/* Center: dark mode toggle */}
         <button
           onClick={toggleDarkMode}
-          className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-neon-magenta/10 active:scale-90"
           aria-label="Dark Mode umschalten"
         >
           <div className="text-xl">{darkMode ? '☀' : '🌙'}</div>
@@ -67,7 +66,7 @@ export default function FilterBar() {
         {/* Right: refresh */}
         <button
           onClick={handleRefresh}
-          className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-neon-cyan/10 active:scale-90"
           aria-label="Aktualisieren"
         >
           <PixelIcon id={14} size={26} alt="Aktualisieren" />
@@ -76,9 +75,9 @@ export default function FilterBar() {
 
       {/* Filter dropdown */}
       {open && (
-        <div className="border-b border-gold/30 bg-parchment-light/95 px-4 py-3 shadow-lg backdrop-blur-md dark:border-gold-dark/30 dark:bg-medieval-bg/95">
+        <div className="neon-strip-vertical relative border-b border-neon-cyan/20 bg-cyber-light-panel/95 px-4 py-3 shadow-xl backdrop-blur-xl dark:border-neon-cyan/15 dark:bg-cyber-panel/95">
           {/* Categories */}
-          <p className="mb-2 font-pixel text-[10px] text-wood dark:text-wood-light">
+          <p className="mb-2 font-pixel text-[10px] tracking-widest text-cyber-light-text-dim uppercase dark:text-cyber-text-dim">
             Kategorie
           </p>
           <div className="mb-3 flex flex-wrap gap-2">
@@ -88,7 +87,7 @@ export default function FilterBar() {
           </div>
 
           {/* Distance + toggles */}
-          <p className="mb-2 font-pixel text-[10px] text-wood dark:text-wood-light">
+          <p className="mb-2 font-pixel text-[10px] tracking-widest text-cyber-light-text-dim uppercase dark:text-cyber-text-dim">
             Entfernung & Filter
           </p>
           <div className="flex flex-wrap items-center gap-2">

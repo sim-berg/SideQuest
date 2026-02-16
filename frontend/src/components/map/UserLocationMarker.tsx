@@ -8,8 +8,8 @@ export default function UserLocationMarker() {
   return (
     <Marker longitude={userLocation.lng} latitude={userLocation.lat}>
       <div className="relative flex items-center justify-center">
-        <div className="absolute h-12 w-12 animate-ping rounded-full bg-gold opacity-20" />
-        <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gold/30" />
+        <div className="absolute h-12 w-12 animate-ping rounded-full bg-neon-cyan opacity-20" />
+        <div className="neon-pulse absolute h-10 w-10 rounded-full bg-neon-cyan/20" />
         <img
           src="/chars/1.png"
           alt="Dein Standort"

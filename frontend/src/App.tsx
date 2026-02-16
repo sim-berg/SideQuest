@@ -39,7 +39,7 @@ function AppContent() {
 
       {/* Location error banner */}
       {locationError && (
-        <div className="fixed bottom-20 left-4 right-4 z-20 rounded-lg border border-gold bg-parchment px-4 py-2 text-center text-sm font-semibold text-medieval-text shadow-md dark:border-gold-dark dark:bg-medieval-surface dark:text-medieval-text-light">
+        <div className="fixed bottom-20 left-4 right-4 z-20 rounded-lg border border-neon-cyan/40 bg-cyber-light-panel px-4 py-2 text-center text-sm font-semibold text-cyber-light-text shadow-md neon-glow-cyan dark:border-neon-cyan/30 dark:bg-cyber-panel dark:text-cyber-text">
           Standort nicht verfuegbar - Entfernungsfilter deaktiviert
         </div>
       )}

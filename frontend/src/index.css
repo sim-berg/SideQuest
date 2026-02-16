@@ -3,29 +3,36 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Medieval category colors (warmer tones) */
-  --color-quest-sport: #4a9e5c;
-  --color-quest-social: #4a7ab5;
-  --color-quest-adventure: #c48a2a;
-  --color-quest-skill: #8b5fb0;
-  --color-quest-mystery: #b5443a;
+  /* Neon category colors */
+  --color-quest-sport: #39ff14;
+  --color-quest-social: #00b4ff;
+  --color-quest-adventure: #ff6b00;
+  --color-quest-skill: #b44aff;
+  --color-quest-mystery: #ff1a6d;
 
-  /* Medieval palette */
-  --color-wood: #8B5E3C;
-  --color-wood-dark: #5C3A1E;
-  --color-wood-light: #A47B5A;
-  --color-parchment: #D4B896;
-  --color-parchment-light: #F4E4C1;
-  --color-parchment-dark: #BFA07A;
-  --color-gold: #C9A84C;
-  --color-gold-light: #E0C870;
-  --color-gold-dark: #A08030;
-  --color-medieval-bg: #2A1F14;
-  --color-medieval-surface: #3D2E1F;
-  --color-medieval-text: #3D2517;
-  --color-medieval-text-light: #E8D5B5;
+  /* Cyberpunk palette */
+  --color-cyber-bg: #0a0e1a;
+  --color-cyber-surface: #121828;
+  --color-cyber-panel: #1a2035;
+  --color-cyber-card: #1e2640;
+  --color-cyber-border: #2a3450;
+  --color-neon-cyan: #00f0ff;
+  --color-neon-magenta: #ff00aa;
+  --color-neon-purple: #7b2fff;
+  --color-neon-yellow: #e0ff00;
+  --color-cyber-text: #e8eaf0;
+  --color-cyber-text-dim: #7a8baa;
 
-  --font-pixel: 'Press Start 2P', monospace;
+  /* Light mode cyberpunk */
+  --color-cyber-light-bg: #e8ecf4;
+  --color-cyber-light-surface: #f0f3fa;
+  --color-cyber-light-panel: #ffffff;
+  --color-cyber-light-card: #f5f7fc;
+  --color-cyber-light-border: #c0c8e0;
+  --color-cyber-light-text: #0d1225;
+  --color-cyber-light-text-dim: #5a6580;
+
+  --font-cyber: 'Orbitron', sans-serif;
 }
 
 html, body, #root {
@@ -46,42 +53,81 @@ body {
   color-scheme: dark;
 }
 
-/* Pixel font for headings */
+/* Cyber heading font */
 .font-pixel {
-  font-family: 'Press Start 2P', monospace;
+  font-family: 'Orbitron', sans-serif;
 }
 
-/* Medieval wooden plank gradient for navbar */
-.bg-wood-plank {
-  background: linear-gradient(
-    180deg,
-    #6B4226 0%,
-    #8B5E3C 15%,
-    #7A5030 30%,
-    #8B5E3C 50%,
-    #6B4226 70%,
-    #8B5E3C 85%,
-    #7A5030 100%
-  );
+/* Neon glow utilities */
+.neon-glow-cyan {
+  box-shadow: 0 0 8px #00f0ff80, 0 0 20px #00f0ff30, inset 0 0 8px #00f0ff10;
 }
 
-.bg-wood-plank-dark {
-  background: linear-gradient(
-    180deg,
-    #3D2E1F 0%,
-    #5C3A1E 15%,
-    #4A2F18 30%,
-    #5C3A1E 50%,
-    #3D2E1F 70%,
-    #5C3A1E 85%,
-    #4A2F18 100%
-  );
+.neon-glow-magenta {
+  box-shadow: 0 0 8px #ff00aa80, 0 0 20px #ff00aa30, inset 0 0 8px #ff00aa10;
 }
 
-/* Subtle parchment texture via noise */
-.bg-parchment-texture {
-  background-color: #F4E4C1;
-  background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23D4B896' fill-opacity='0.3'/%3E%3C/svg%3E");
+.neon-glow-purple {
+  box-shadow: 0 0 8px #7b2fff80, 0 0 20px #7b2fff30;
+}
+
+.neon-text-cyan {
+  text-shadow: 0 0 8px #00f0ff80, 0 0 16px #00f0ff40;
+}
+
+.neon-text-magenta {
+  text-shadow: 0 0 8px #ff00aa80, 0 0 16px #ff00aa40;
+}
+
+/* Pulsing neon strip - horizontal */
+.neon-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.neon-strip::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f0ff, #ff00aa, #7b2fff, transparent);
+  background-size: 200% 100%;
+  animation: neon-slide 3s linear infinite;
+}
+
+@keyframes neon-slide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Pulsing neon border animation */
+.neon-pulse {
+  animation: neon-pulse-anim 2s ease-in-out infinite alternate;
+}
+
+@keyframes neon-pulse-anim {
+  0% { box-shadow: 0 0 4px #00f0ff40, 0 0 10px #00f0ff20; }
+  100% { box-shadow: 0 0 8px #00f0ffaa, 0 0 24px #00f0ff40, 0 0 48px #00f0ff15; }
+}
+
+/* Vertical neon strip for side accents */
+.neon-strip-vertical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, #00f0ff, #ff00aa, transparent);
+  background-size: 100% 200%;
+  animation: neon-slide-v 3s linear infinite;
+}
+
+@keyframes neon-slide-v {
+  0% { background-position: 0 200%; }
+  100% { background-position: 0 -200%; }
 }
 
 /* Scrollbar hiding utility */

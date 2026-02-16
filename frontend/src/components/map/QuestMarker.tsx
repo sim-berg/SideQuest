@@ -34,8 +34,13 @@ export default function QuestMarker({ questId, category }: QuestMarkerProps) {
       className="flex cursor-pointer items-center justify-center transition-transform hover:scale-110 active:scale-95"
       aria-label={`Quest: ${meta.label}`}
     >
-      <div className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-gold/80 shadow-lg"
-        style={{ backgroundColor: meta.color }}
+      <div
+        className="flex h-11 w-11 items-center justify-center rounded-lg border shadow-lg"
+        style={{
+          backgroundColor: `${meta.color}25`,
+          borderColor: meta.color,
+          boxShadow: `0 0 12px ${meta.color}50, 0 0 4px ${meta.color}30`,
+        }}
       >
         <PixelIcon id={23} size={28} alt="Quest" />
       </div>
