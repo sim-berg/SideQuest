@@ -1,53 +1,70 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { v4 as uuid } from 'uuid';
-import { mockQuests } from './data/mock-quests.data.js';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Quest, QuestDocument } from './schemas/quest.schema.js';
 import type { CreateQuestDto } from './dto/create-quest.dto.js';
 import type { QuestFilterDto } from './dto/quest-filter.dto.js';
-import type { Quest } from './interfaces/quest.interface.js';
 import { GeoService } from '../geo/geo.service.js';
+
+function toPlain(doc: QuestDocument) {
+  const obj = doc.toObject();
+  return {
+    id: obj._id.toString(),
+    title: obj.title,
+    description: obj.description,
+    lat: obj.lat,
+    lng: obj.lng,
+    address: obj.address,
+    category: obj.category,
+    questGiver: obj.questGiver,
+    reward: obj.reward,
+    timeLimit: obj.timeLimit,
+    createdAt: obj.createdAt?.toISOString?.() ?? obj.createdAt,
+  };
+}
 
 @Injectable()
 export class QuestService {
-  private quests: Quest[] = [...mockQuests];
+  constructor(
+    @InjectModel(Quest.name) private questModel: Model<QuestDocument>,
+    private readonly geoService: GeoService,
+  ) {}
 
-  constructor(private readonly geoService: GeoService) {}
-
-  findAll(filter: QuestFilterDto): Quest[] {
-    let result = [...this.quests];
+  async findAll(filter: QuestFilterDto) {
+    const query: Record<string, unknown> = {};
 
     if (filter.categories?.length) {
-      result = result.filter((q) => filter.categories!.includes(q.category));
+      query.category = { $in: filter.categories };
     }
     if (filter.paidOnly) {
-      result = result.filter((q) => q.reward != null && q.reward > 0);
+      query.reward = { $gt: 0 };
     }
     if (filter.timedOnly) {
-      result = result.filter((q) => q.timeLimit != null);
+      query.timeLimit = { $ne: null };
     }
+
+    let docs = await this.questModel.find(query).sort({ createdAt: -1 }).exec();
+
+    // Geo filter in-app (haversine) since we don't use a geo index
     if (filter.lat != null && filter.lng != null && filter.radius) {
-      result = result.filter(
+      docs = docs.filter(
         (q) =>
           this.geoService.haversine(filter.lat!, filter.lng!, q.lat, q.lng) <=
           filter.radius!,
       );
     }
 
-    return result;
+    return docs.map(toPlain);
   }
 
-  findOne(id: string): Quest {
-    const quest = this.quests.find((q) => q.id === id);
-    if (!quest) throw new NotFoundException(`Quest ${id} not found`);
-    return quest;
+  async findOne(id: string) {
+    const doc = await this.questModel.findById(id).exec();
+    if (!doc) throw new NotFoundException(`Quest ${id} not found`);
+    return toPlain(doc);
   }
 
-  create(dto: CreateQuestDto): Quest {
-    const quest: Quest = {
-      id: uuid(),
-      ...dto,
-      createdAt: new Date().toISOString(),
-    };
-    this.quests.push(quest);
-    return quest;
+  async create(dto: CreateQuestDto) {
+    const doc = await this.questModel.create(dto);
+    return toPlain(doc);
   }
 }
