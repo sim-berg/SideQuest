@@ -1,10 +1,15 @@
 import { create } from 'zustand';
 
+export type ActiveTab = 'map' | 'chat' | 'create' | 'profile';
+
 interface UIState {
   bottomSheetOpen: boolean;
   infoPageOpen: boolean;
   createQuestOpen: boolean;
   darkMode: boolean;
+  activeTab: ActiveTab;
+  filterPanelOpen: boolean;
+  menuOpen: boolean;
   openBottomSheet: () => void;
   closeBottomSheet: () => void;
   openInfoPage: () => void;
@@ -13,6 +18,11 @@ interface UIState {
   closeCreateQuest: () => void;
   toggleDarkMode: () => void;
   setDarkMode: (dark: boolean) => void;
+  setActiveTab: (tab: ActiveTab) => void;
+  toggleFilterPanel: () => void;
+  closeFilterPanel: () => void;
+  toggleMenu: () => void;
+  closeMenu: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -20,12 +30,16 @@ export const useUIStore = create<UIState>((set) => ({
   infoPageOpen: false,
   createQuestOpen: false,
   darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+  activeTab: 'map',
+  filterPanelOpen: false,
+  menuOpen: false,
   openBottomSheet: () => set({ bottomSheetOpen: true }),
   closeBottomSheet: () => set({ bottomSheetOpen: false }),
   openInfoPage: () => set({ infoPageOpen: true, bottomSheetOpen: false }),
   closeInfoPage: () => set({ infoPageOpen: false }),
-  openCreateQuest: () => set({ createQuestOpen: true, bottomSheetOpen: false }),
-  closeCreateQuest: () => set({ createQuestOpen: false }),
+  openCreateQuest: () =>
+    set({ createQuestOpen: true, bottomSheetOpen: false, activeTab: 'create' }),
+  closeCreateQuest: () => set({ createQuestOpen: false, activeTab: 'map' }),
   toggleDarkMode: () =>
     set((s) => {
       const next = !s.darkMode;
@@ -38,4 +52,16 @@ export const useUIStore = create<UIState>((set) => ({
     localStorage.setItem('sidequest-dark', String(darkMode));
     return set({ darkMode });
   },
+  setActiveTab: (activeTab) => {
+    if (activeTab === 'create') {
+      return set({ activeTab, createQuestOpen: true, bottomSheetOpen: false });
+    }
+    return set({ activeTab, createQuestOpen: false });
+  },
+  toggleFilterPanel: () =>
+    set((s) => ({ filterPanelOpen: !s.filterPanelOpen, menuOpen: false })),
+  closeFilterPanel: () => set({ filterPanelOpen: false }),
+  toggleMenu: () =>
+    set((s) => ({ menuOpen: !s.menuOpen, filterPanelOpen: false })),
+  closeMenu: () => set({ menuOpen: false }),
 }));

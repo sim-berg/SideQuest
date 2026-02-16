@@ -2,6 +2,7 @@ import type { Quest } from '../../types/quest';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { useUIStore } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
+import { useChatStore } from '../../stores/useChatStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { formatDistance, formatReward, formatTimeRemaining } from '../../utils/format';
 
@@ -97,11 +98,9 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           Quest annehmen
         </button>
         <button
-          onClick={() =>
-            alert(
-              `Nachricht an ${quest.questGiver.name} wird gesendet... (kommt bald)`,
-            )
-          }
+          onClick={() => {
+            useUIStore.getState().setActiveTab('chat');
+          }}
           className="w-full rounded-xl border-2 border-slate-200 bg-white py-3.5 text-base font-bold text-slate-700 transition-all active:scale-[0.98] active:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:active:bg-slate-700"
         >
           Nachricht an {quest.questGiver.name}
