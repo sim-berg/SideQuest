@@ -2,23 +2,19 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
 
   backend:
     build: ./backend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     depends_on:
       - mongo
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/sidequest
       JWT_SECRET: change-me-in-production
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: "*"
 
   frontend:
     build: ./frontend

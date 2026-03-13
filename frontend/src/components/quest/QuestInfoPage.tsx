@@ -2,7 +2,6 @@ import type { Quest } from '../../types/quest';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { useUIStore } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
-import { useChatStore } from '../../stores/useChatStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { formatDistance, formatReward, formatTimeRemaining } from '../../utils/format';
 

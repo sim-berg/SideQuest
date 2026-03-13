@@ -1,5 +1,5 @@
 const API_BASE =
-  (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000/api';
+  (import.meta.env.VITE_API_URL as string) || '/api';
 
 let getAccessToken: () => string | null = () => null;
 let onTokenRefreshed: (token: string) => void = () => {};
