@@ -1,12 +1,25 @@
 import { cn } from '../../utils/cn';
 import { useUIStore } from '../../stores/useUIStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { useChatStore } from '../../stores/useChatStore';
 import type { ActiveTab } from '../../stores/useUIStore';
+
+const PROTECTED_TABS: ActiveTab[] = ['chat', 'create', 'profile'];
 
 export default function BottomNavBar() {
   const activeTab = useUIStore((s) => s.activeTab);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const totalUnread = useChatStore((s) => s.totalUnread);
+
+  const handleTabClick = (tab: ActiveTab) => {
+    if (PROTECTED_TABS.includes(tab) && !isAuthenticated) {
+      setShowAuthPrompt(true, tab);
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   const tabs: {
     id: ActiveTab;
@@ -15,7 +28,7 @@ export default function BottomNavBar() {
     badge?: number;
   }[] = [
     { id: 'map', label: 'Karte', icon: MapIcon },
-    { id: 'chat', label: 'Chat', icon: ChatIcon, badge: totalUnread },
+    { id: 'chat', label: 'Chat', icon: ChatIcon, badge: isAuthenticated ? totalUnread : undefined },
     { id: 'create', label: 'Neu', icon: PlusIcon },
     { id: 'profile', label: 'Profil', icon: ProfileIcon },
   ];
@@ -25,7 +38,7 @@ export default function BottomNavBar() {
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          onClick={() => setActiveTab(tab.id)}
+          onClick={() => handleTabClick(tab.id)}
           className={cn(
             'relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
             activeTab === tab.id

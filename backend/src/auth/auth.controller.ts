@@ -62,8 +62,8 @@ export class AuthController {
       });
     }
 
-    const { accessToken } = await this.authService.refreshToken(token);
-    return { accessToken };
+    const { accessToken, user } = await this.authService.refreshToken(token);
+    return { accessToken, user };
   }
 
   @Post('logout')

@@ -10,6 +10,8 @@ interface UIState {
   activeTab: ActiveTab;
   filterPanelOpen: boolean;
   menuOpen: boolean;
+  showAuthPrompt: boolean;
+  pendingAuthTab: ActiveTab | null;
   openBottomSheet: () => void;
   closeBottomSheet: () => void;
   openInfoPage: () => void;
@@ -23,16 +25,19 @@ interface UIState {
   closeFilterPanel: () => void;
   toggleMenu: () => void;
   closeMenu: () => void;
+  setShowAuthPrompt: (show: boolean, pendingTab?: ActiveTab) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   bottomSheetOpen: false,
   infoPageOpen: false,
   createQuestOpen: false,
-  darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+  darkMode: localStorage.getItem('sidequest-dark') === 'true',
   activeTab: 'map',
   filterPanelOpen: false,
   menuOpen: false,
+  showAuthPrompt: false,
+  pendingAuthTab: null,
   openBottomSheet: () => set({ bottomSheetOpen: true }),
   closeBottomSheet: () => set({ bottomSheetOpen: false }),
   openInfoPage: () => set({ infoPageOpen: true, bottomSheetOpen: false }),
@@ -64,4 +69,6 @@ export const useUIStore = create<UIState>((set) => ({
   toggleMenu: () =>
     set((s) => ({ menuOpen: !s.menuOpen, filterPanelOpen: false })),
   closeMenu: () => set({ menuOpen: false }),
+  setShowAuthPrompt: (show, pendingTab) =>
+    set({ showAuthPrompt: show, pendingAuthTab: pendingTab ?? null }),
 }));

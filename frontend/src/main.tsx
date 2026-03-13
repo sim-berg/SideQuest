@@ -8,7 +8,7 @@ const stored = localStorage.getItem('sidequest-dark');
 const dark =
   stored !== null
     ? stored === 'true'
-    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    : false;
 document.documentElement.classList.toggle('dark', dark);
 
 createRoot(document.getElementById('root')!).render(

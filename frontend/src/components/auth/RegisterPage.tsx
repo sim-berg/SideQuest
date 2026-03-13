@@ -4,9 +4,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
+  onSuccess?: () => void;
 }
 
-export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
+export default function RegisterPage({ onSwitchToLogin, onSuccess }: RegisterPageProps) {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +45,7 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     try {
       const res = await register(email, username, password);
       setAuth(res.user, res.accessToken);
+      onSuccess?.();
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Registrierung fehlgeschlagen',

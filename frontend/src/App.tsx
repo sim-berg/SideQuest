@@ -5,7 +5,7 @@ import QuestMap from './components/map/QuestMap';
 import QuestBottomSheet from './components/quest/BottomSheet';
 import QuestInfoPage from './components/quest/QuestInfoPage';
 import CreateQuestPage from './components/quest/CreateQuestPage';
-import AuthGuard from './components/auth/AuthGuard';
+import AuthPrompt from './components/auth/AuthPrompt';
 import TopNavBar from './components/navigation/TopNavBar';
 import NewQuestFAB from './components/navigation/NewQuestFAB';
 import ChatInbox from './components/chat/ChatInbox';
@@ -14,9 +14,11 @@ import ProfilePage from './components/profile/ProfilePage';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useQuestStore } from './stores/useQuestStore';
+import { useAuthStore } from './stores/useAuthStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
 import { fetchQuests } from './services/quest.service';
+import { refreshToken } from './services/auth.service';
 import { getUnreadCount } from './services/message.service';
 import { useChatStore } from './stores/useChatStore';
 
@@ -30,11 +32,20 @@ function AppContent() {
   useUserLocation();
   useRealtimeMessages();
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setAuth = useAuthStore((s) => s.setAuth);
   const setQuests = useQuestStore((s) => s.setQuests);
   const setLoading = useQuestStore((s) => s.setLoading);
   const locationError = useMapStore((s) => s.locationError);
   const activeTab = useUIStore((s) => s.activeTab);
   const setTotalUnread = useChatStore((s) => s.setTotalUnread);
+
+  // Silent refresh on mount — non-blocking, app works without auth
+  useEffect(() => {
+    refreshToken()
+      .then((res) => setAuth(res.user, res.accessToken))
+      .catch(() => {});
+  }, [setAuth]);
 
   useEffect(() => {
     setLoading(true);
@@ -43,12 +54,13 @@ function AppContent() {
       .finally(() => setLoading(false));
   }, [setQuests, setLoading]);
 
-  // Fetch unread count on mount
+  // Fetch unread count only when authenticated
   useEffect(() => {
+    if (!isAuthenticated) return;
     getUnreadCount()
       .then((r) => setTotalUnread(r.count))
       .catch(() => {});
-  }, [setTotalUnread]);
+  }, [isAuthenticated, setTotalUnread]);
 
   return (
     <AppShell>
@@ -80,6 +92,9 @@ function AppContent() {
       <QuestInfoPage />
       <ChatViewWrapper />
 
+      {/* Auth prompt overlay */}
+      <AuthPrompt />
+
       {/* Top Navigation */}
       <TopNavBar />
 
@@ -92,9 +107,7 @@ function AppContent() {
 export default function App() {
   return (
     <MapProvider>
-      <AuthGuard>
-        <AppContent />
-      </AuthGuard>
+      <AppContent />
     </MapProvider>
   );
 }
