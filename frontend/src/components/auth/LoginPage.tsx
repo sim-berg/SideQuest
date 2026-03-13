@@ -4,9 +4,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 interface LoginPageProps {
   onSwitchToRegister: () => void;
+  onSuccess?: () => void;
 }
 
-export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+export default function LoginPage({ onSwitchToRegister, onSuccess }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,6 +21,7 @@ export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
     try {
       const res = await login(email, password);
       setAuth(res.user, res.accessToken);
+      onSuccess?.();
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen',
