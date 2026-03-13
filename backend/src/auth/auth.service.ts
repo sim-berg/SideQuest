@@ -9,15 +9,21 @@ import { UserService } from '../user/user.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
+interface UserPayload {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  bio: string;
+  level: number;
+  questsCompleted: number;
+  isOnline: boolean;
+}
+
 interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  user: {
-    id: string;
-    username: string;
-    displayName: string;
-    avatarUrl: string;
-  };
+  user: UserPayload;
 }
 
 @Injectable()
@@ -68,7 +74,9 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+  async refreshToken(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; user: UserPayload }> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_SECRET || 'sidequest-dev-secret',
@@ -83,8 +91,14 @@ export class AuthService {
         payload.username,
       );
 
-      return { accessToken };
-    } catch {
+      const user = await this.userService.findById(payload.sub);
+
+      return {
+        accessToken,
+        user: this.toUserPayload(user),
+      };
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
@@ -97,12 +111,20 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: {
-        id: userId,
-        username: user.username,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-      },
+      user: this.toUserPayload(user),
+    };
+  }
+
+  private toUserPayload(user: any): UserPayload {
+    return {
+      id: user._id.toString(),
+      username: user.username,
+      displayName: user.displayName || '',
+      avatarUrl: user.avatarUrl || '',
+      bio: user.bio || '',
+      level: user.level ?? 1,
+      questsCompleted: user.questsCompleted ?? 0,
+      isOnline: user.isOnline ?? false,
     };
   }
 
