@@ -9,7 +9,7 @@ import { UserService } from '../user/user.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
-interface UserPayload {
+export interface UserPayload {
   id: string;
   username: string;
   displayName: string;
