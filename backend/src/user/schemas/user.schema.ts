@@ -32,6 +32,9 @@ export class User {
 
   @Prop()
   lastSeenAt: Date;
+
+  @Prop({ default: false })
+  shareLocation: boolean;
 }
 
 export type UserDocument = User & Document;

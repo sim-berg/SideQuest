@@ -17,6 +17,7 @@ interface ChatState {
   markRead: (userId: string) => void;
   setTyping: (userId: string, isTyping: boolean) => void;
   setTotalUnread: (count: number) => void;
+  ensureConversation: (user: Conversation['user']) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -69,4 +70,19 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
 
   setTotalUnread: (totalUnread) => set({ totalUnread }),
+
+  ensureConversation: (user) =>
+    set((s) => {
+      if (s.conversations.some((c) => c.user.id === user.id)) return s;
+      return {
+        conversations: [
+          ...s.conversations,
+          {
+            user,
+            lastMessage: { body: '', createdAt: new Date().toISOString(), senderId: '' },
+            unreadCount: 0,
+          },
+        ],
+      };
+    }),
 }));

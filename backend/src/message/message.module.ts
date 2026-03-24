@@ -6,6 +6,7 @@ import { MessageService } from './message.service.js';
 import { MessageGateway } from './message.gateway.js';
 import { MessageController } from './message.controller.js';
 import { UserModule } from '../user/user.module.js';
+import { GeoModule } from '../geo/geo.module.js';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UserModule } from '../user/user.module.js';
       secret: process.env.JWT_SECRET || 'sidequest-dev-secret',
     }),
     UserModule,
+    GeoModule,
   ],
   controllers: [MessageController],
   providers: [MessageService, MessageGateway],

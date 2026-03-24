@@ -6,8 +6,11 @@ import { useUIStore } from '../../stores/useUIStore';
 import { MAP_STYLE_LIGHT, MAP_STYLE_DARK } from '../../constants/map';
 import UserLocationMarker from './UserLocationMarker';
 import QuestMarkerLayer from './QuestMarkerLayer';
+import NearbyUsersLayer from './NearbyUsersLayer';
+import { useLocationSharing } from '../../hooks/useLocationSharing';
 
 export default function QuestMap() {
+  useLocationSharing();
   const viewState = useMapStore((s) => s.viewState);
   const setViewState = useMapStore((s) => s.setViewState);
   const darkMode = useUIStore((s) => s.darkMode);
@@ -33,6 +36,7 @@ export default function QuestMap() {
     >
       <UserLocationMarker />
       <QuestMarkerLayer />
+      <NearbyUsersLayer />
     </Map>
   );
 }
