@@ -13,6 +13,14 @@ export interface QuestGiver {
   avatar?: string;
 }
 
+export const Difficulty = {
+  EASY: 'easy',
+  MEDIUM: 'medium',
+  HARD: 'hard',
+} as const;
+
+export type Difficulty = (typeof Difficulty)[keyof typeof Difficulty];
+
 export interface Quest {
   id: string;
   title: string;
@@ -24,6 +32,11 @@ export interface Quest {
   questGiver: QuestGiver;
   reward?: number;
   timeLimit?: string;
+  difficulty: Difficulty;
+  acceptedBy: string | null;
+  acceptedAt: string | null;
+  completedBy: string | null;
+  completedAt: string | null;
   createdAt: string;
 }
 

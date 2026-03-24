@@ -5,6 +5,7 @@ import { QuestModule } from './quest/quest.module.js';
 import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { MessageModule } from './message/message.module.js';
+import { DragonModule } from './dragon/dragon.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -20,6 +21,7 @@ import { HealthController } from './health/health.controller.js';
     UserModule,
     AuthModule,
     MessageModule,
+    DragonModule,
   ],
   controllers: [HealthController],
 })

@@ -4,13 +4,15 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useMapStore } from '../../stores/useMapStore';
 import { CATEGORY_META } from '../../constants/categories';
+import { DIFFICULTY_META } from '../../constants/difficulty';
 import { MAP_STYLE_LIGHT, MAP_STYLE_DARK } from '../../constants/map';
-import { Category } from '../../types/quest';
-import type { Category as CategoryType } from '../../types/quest';
+import { Category, Difficulty } from '../../types/quest';
+import type { Category as CategoryType, Difficulty as DifficultyType } from '../../types/quest';
 import { createQuest } from '../../services/quest.service';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
+const ALL_DIFFICULTIES: DifficultyType[] = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD];
 
 export default function CreateQuestPage() {
   const createQuestOpen = useUIStore((s) => s.createQuestOpen);
@@ -29,6 +31,7 @@ export default function CreateQuestPage() {
   const [reward, setReward] = useState('');
   const [timeLimit, setTimeLimit] = useState('');
   const [questGiverName, setQuestGiverName] = useState('Anonym');
+  const [difficulty, setDifficulty] = useState<DifficultyType>(Difficulty.MEDIUM);
   const [pinLat, setPinLat] = useState(
     userLocation?.lat ?? viewState.latitude,
   );
@@ -66,6 +69,7 @@ export default function CreateQuestPage() {
         lng: pinLng,
         address: address.trim(),
         category: category!,
+        difficulty,
         questGiver: { name: questGiverName.trim() || 'Anonym' },
         ...(reward !== '' && { reward: Number(reward) }),
         ...(timeLimit !== '' && { timeLimit: new Date(timeLimit).toISOString() }),
@@ -192,6 +196,35 @@ export default function CreateQuestPage() {
                 Kategorie ist erforderlich
               </p>
             )}
+          </div>
+
+          {/* Difficulty */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              Schwierigkeit
+            </label>
+            <div className="flex gap-2">
+              {ALL_DIFFICULTIES.map((diff) => {
+                const dmeta = DIFFICULTY_META[diff];
+                const active = difficulty === diff;
+                return (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => setDifficulty(diff)}
+                    className={cn(
+                      'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all',
+                      active
+                        ? 'border-transparent text-white shadow-md'
+                        : 'border-slate-300 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                    )}
+                    style={active ? { backgroundColor: dmeta.color } : undefined}
+                  >
+                    {dmeta.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Location */}

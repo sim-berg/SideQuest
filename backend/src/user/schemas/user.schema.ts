@@ -35,6 +35,9 @@ export class User {
 
   @Prop({ default: false })
   shareLocation: boolean;
+
+  @Prop({ default: false })
+  hasDragon: boolean;
 }
 
 export type UserDocument = User & Document;

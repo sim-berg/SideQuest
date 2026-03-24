@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
+import DragonDisplay from '../dragon/DragonDisplay';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -85,6 +86,11 @@ export default function ProfilePage() {
           <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">
             @{user.username}
           </p>
+        </div>
+
+        {/* Dragon */}
+        <div className="mb-6">
+          <DragonDisplay />
         </div>
 
         {/* Display Name */}
