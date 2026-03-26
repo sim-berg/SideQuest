@@ -8,7 +8,6 @@ const EMIT_INTERVAL_MS = 10_000;
 
 export function useLocationSharing() {
   const shareLocation = useAuthStore((s) => s.user?.shareLocation);
-  const userLocation = useMapStore((s) => s.userLocation);
   const setNearbyUsers = useNearbyUsersStore((s) => s.setNearbyUsers);
   const clearNearbyUsers = useNearbyUsersStore((s) => s.clearNearbyUsers);
 

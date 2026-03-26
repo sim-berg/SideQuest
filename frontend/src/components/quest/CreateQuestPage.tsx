@@ -132,7 +132,7 @@ export default function CreateQuestPage() {
     <Sheet
       isOpen={isSheetOpen}
       onClose={handleClose}
-      detent="content-height"
+      detent="content"
     >
       <Sheet.Container
         style={{
