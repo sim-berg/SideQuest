@@ -96,15 +96,15 @@ function AppContent() {
       {/* Chat tab */}
       {activeTab === 'chat' && <ChatInbox />}
 
-      {/* Create tab */}
-      {activeTab === 'create' && <CreateQuestPage />}
-
       {/* Profile tab */}
       {activeTab === 'profile' && <ProfilePage />}
 
       {/* Overlay pages */}
       <QuestInfoPage />
       <ChatViewWrapper />
+
+      {/* Quest creation wizard (bottom sheet overlay on map) */}
+      <CreateQuestPage />
 
       {/* Auth prompt overlay */}
       <AuthPrompt />

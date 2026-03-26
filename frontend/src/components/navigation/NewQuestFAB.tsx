@@ -2,19 +2,22 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function NewQuestFAB() {
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const startPickingLocation = useUIStore((s) => s.startPickingLocation);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
   const activeTab = useUIStore((s) => s.activeTab);
+  const pickingLocation = useUIStore((s) => s.pickingLocation);
+  const createQuestOpen = useUIStore((s) => s.createQuestOpen);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  if (activeTab !== 'map') return null;
+  // Hide when not on map, when already picking, or when wizard is open past location step
+  if (activeTab !== 'map' || pickingLocation || (createQuestOpen && !pickingLocation)) return null;
 
   const handleClick = () => {
     if (!isAuthenticated) {
       setShowAuthPrompt(true, 'create');
       return;
     }
-    setActiveTab('create');
+    startPickingLocation();
   };
 
   return (
