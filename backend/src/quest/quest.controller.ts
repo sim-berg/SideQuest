@@ -23,6 +23,11 @@ export class QuestController {
     return this.questService.findAll(filter);
   }
 
+  @Get('daily')
+  getDailyQuests() {
+    return this.questService.getDailyQuests();
+  }
+
   @Get('my/active')
   @UseGuards(JwtAuthGuard)
   findMyActive(@Request() req: any) {
@@ -58,7 +63,7 @@ export class QuestController {
     @Request() req: any,
     @Body() dto: CompleteQuestDto,
   ) {
-    return this.questService.completeQuest(id, req.user.userId, dto.lat, dto.lng);
+    return this.questService.completeQuest(id, req.user.userId, dto);
   }
 
   @Post(':id/abandon')

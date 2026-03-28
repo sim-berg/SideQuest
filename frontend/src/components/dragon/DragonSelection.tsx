@@ -29,7 +29,8 @@ export default function DragonSelection() {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       <div className="flex-1 overflow-y-auto px-5 pb-10 pt-12">
         <h1 className="mb-2 text-center text-2xl font-bold text-slate-900 dark:text-white">
           Waehle deinen Drachen
@@ -92,6 +93,7 @@ export default function DragonSelection() {
         >
           {submitting ? 'Wird erstellt...' : 'Drache waehlen'}
         </button>
+      </div>
       </div>
     </div>
   );

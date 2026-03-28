@@ -16,5 +16,6 @@ import { UserModule } from '../user/user.module.js';
   ],
   controllers: [QuestController],
   providers: [QuestService],
+  exports: [QuestService],
 })
 export class QuestModule {}

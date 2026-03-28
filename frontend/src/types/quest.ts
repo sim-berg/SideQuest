@@ -21,6 +21,14 @@ export const Difficulty = {
 
 export type Difficulty = (typeof Difficulty)[keyof typeof Difficulty];
 
+export const GoalType = {
+  PROXIMITY: 'proximity',
+  MANUAL: 'manual',
+  COUNT: 'count',
+} as const;
+
+export type GoalType = (typeof GoalType)[keyof typeof GoalType];
+
 export interface Quest {
   id: string;
   title: string;
@@ -33,6 +41,8 @@ export interface Quest {
   reward?: number;
   timeLimit?: string;
   difficulty: Difficulty;
+  goalType: GoalType;
+  goalCount: number | null;
   acceptedBy: string | null;
   acceptedAt: string | null;
   completedBy: string | null;

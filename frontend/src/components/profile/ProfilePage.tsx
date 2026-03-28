@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
 import DragonDisplay from '../dragon/DragonDisplay';
+import { ContributionCalendar } from './ContributionCalendar';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -54,7 +55,8 @@ export default function ProfilePage() {
   const setActiveTab = useUIStore((s) => s.setActiveTab);
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-5 pb-3 pt-5 dark:border-slate-800">
         <button
@@ -91,6 +93,11 @@ export default function ProfilePage() {
         {/* Dragon */}
         <div className="mb-6">
           <DragonDisplay />
+        </div>
+
+        {/* Contributions Calendar */}
+        <div className="mb-6">
+          <ContributionCalendar />
         </div>
 
         {/* Display Name */}
@@ -191,6 +198,7 @@ export default function ProfilePage() {
         >
           Abmelden
         </button>
+      </div>
       </div>
     </div>
   );

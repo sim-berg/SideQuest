@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getSocket } from '../services/socket.service';
 import { useChatStore } from '../stores/useChatStore';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useToastStore } from '../stores/useToastStore';
 import * as messageService from '../services/message.service';
 
 interface IncomingMessage {
@@ -56,6 +57,14 @@ export function useRealtimeMessages() {
           .markAsRead(msg.senderId)
           .then(() => markRead(msg.senderId))
           .catch(() => {});
+      } else {
+        // Show toast if chat is not active
+        useToastStore.getState().addToast({
+          type: 'info',
+          title: `Neue Nachricht von ${msg.senderName}`,
+          message: msg.body.length > 60 ? msg.body.slice(0, 57) + '...' : msg.body,
+          duration: 4000,
+        });
       }
     };
 

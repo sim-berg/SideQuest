@@ -13,6 +13,10 @@ import { ConfigService } from '@nestjs/config';
 import { GeoService } from '../geo/geo.service.js';
 import { UserService } from '../user/user.service.js';
 
+const corsOrigin =
+  process.env.CORS_ORIGIN?.trim().replace(/\/+$/, '') ||
+  'http://localhost:5173';
+
 interface UserLocationEntry {
   lat: number;
   lng: number;
@@ -24,7 +28,7 @@ interface UserLocationEntry {
 }
 
 @WebSocketGateway({
-  cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true },
+  cors: { origin: corsOrigin, credentials: true },
 })
 export class MessageGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleDestroy

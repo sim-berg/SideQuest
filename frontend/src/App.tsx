@@ -9,6 +9,7 @@ import AuthPrompt from './components/auth/AuthPrompt';
 import DragonSelection from './components/dragon/DragonSelection';
 import TopNavBar from './components/navigation/TopNavBar';
 import NewQuestFAB from './components/navigation/NewQuestFAB';
+import ToastContainer from './components/common/ToastContainer';
 import ChatInbox from './components/chat/ChatInbox';
 import ChatView from './components/chat/ChatView';
 import ProfilePage from './components/profile/ProfilePage';
@@ -19,10 +20,11 @@ import { useAuthStore } from './stores/useAuthStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
 import { useDragonStore } from './stores/useDragonStore';
-import { fetchQuests } from './services/quest.service';
+import { fetchQuests, fetchDailyQuests } from './services/quest.service';
 import { refreshToken } from './services/auth.service';
 import { getUnreadCount } from './services/message.service';
 import { useChatStore } from './stores/useChatStore';
+import { useToastStore } from './stores/useToastStore';
 
 function ChatViewWrapper() {
   const activeChat = useChatStore((s) => s.activeChat);
@@ -38,7 +40,9 @@ function AppContent() {
   const user = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
   const setQuests = useQuestStore((s) => s.setQuests);
+  const setDailyQuests = useQuestStore((s) => s.setDailyQuests);
   const setLoading = useQuestStore((s) => s.setLoading);
+  const addToast = useToastStore((s) => s.addToast);
   const locationError = useMapStore((s) => s.locationError);
   const activeTab = useUIStore((s) => s.activeTab);
   const setTotalUnread = useChatStore((s) => s.setTotalUnread);
@@ -57,6 +61,30 @@ function AppContent() {
       .then(setQuests)
       .finally(() => setLoading(false));
   }, [setQuests, setLoading]);
+
+  // Fetch daily quests and show toast on first load
+  useEffect(() => {
+    fetchDailyQuests()
+      .then((dailyQuests) => {
+        setDailyQuests(dailyQuests);
+
+        // Show random daily quest as toast on first load
+        const today = new Date().toISOString().split('T')[0];
+        const storageKey = `sidequest-daily-shown-${today}`;
+        if (!localStorage.getItem(storageKey) && dailyQuests.length > 0) {
+          const randomQuest =
+            dailyQuests[Math.floor(Math.random() * dailyQuests.length)];
+          addToast({
+            type: 'quest',
+            title: randomQuest.title,
+            message: randomQuest.description,
+            duration: 8000,
+          });
+          localStorage.setItem(storageKey, 'true');
+        }
+      })
+      .catch(() => {});
+  }, [setDailyQuests, addToast]);
 
   // Fetch unread count only when authenticated
   useEffect(() => {
@@ -117,6 +145,9 @@ function AppContent() {
 
       {/* New Quest FAB */}
       <NewQuestFAB />
+
+      {/* Toast Container */}
+      <ToastContainer />
     </AppShell>
   );
 }

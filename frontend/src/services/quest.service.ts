@@ -22,12 +22,11 @@ export async function acceptQuest(id: string): Promise<Quest> {
 
 export async function completeQuest(
   id: string,
-  lat: number,
-  lng: number,
+  payload: { lat?: number; lng?: number; countCompleted?: number } = {},
 ): Promise<{ quest: Quest; xpResult: XpResult }> {
   return api.post<{ quest: Quest; xpResult: XpResult }>(
     `/quests/${id}/complete`,
-    { lat, lng },
+    payload,
   );
 }
 
@@ -41,4 +40,8 @@ export async function fetchMyActiveQuests(): Promise<Quest[]> {
 
 export async function fetchMyCompletedQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/my/completed');
+}
+
+export async function fetchDailyQuests(): Promise<Quest[]> {
+  return api.get<Quest[]>('/quests/daily');
 }

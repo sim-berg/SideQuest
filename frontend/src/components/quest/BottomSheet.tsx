@@ -33,6 +33,9 @@ export default function QuestBottomSheet() {
           overflow: 'hidden',
           backgroundColor: bg,
           boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.15)',
+          maxWidth: '1200px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}
       >
         <Sheet.Header

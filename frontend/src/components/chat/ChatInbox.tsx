@@ -94,7 +94,8 @@ export default function ChatInbox() {
   }, [setConversations]);
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-5 pb-3 pt-5 dark:border-slate-800">
         <button
@@ -145,6 +146,7 @@ export default function ChatInbox() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

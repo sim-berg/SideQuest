@@ -12,6 +12,7 @@ import {
 import { Type } from 'class-transformer';
 import { Category } from '../enums/category.enum.js';
 import { Difficulty } from '../enums/difficulty.enum.js';
+import { GoalType } from '../enums/goal-type.enum.js';
 
 export class QuestGiverDto {
   @IsString()
@@ -61,4 +62,13 @@ export class CreateQuestDto {
   @IsOptional()
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
+
+  @IsOptional()
+  @IsEnum(GoalType)
+  goalType?: GoalType;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  goalCount?: number;
 }

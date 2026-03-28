@@ -3,12 +3,14 @@ import type { Quest } from '../types/quest';
 
 interface QuestState {
   quests: Quest[];
+  dailyQuests: Quest[];
   selectedQuest: Quest | null;
   isLoading: boolean;
   activeQuest: Quest | null;
   isAccepting: boolean;
   isCompleting: boolean;
   setQuests: (quests: Quest[]) => void;
+  setDailyQuests: (quests: Quest[]) => void;
   selectQuest: (quest: Quest | null) => void;
   setLoading: (loading: boolean) => void;
   setActiveQuest: (quest: Quest | null) => void;
@@ -19,12 +21,14 @@ interface QuestState {
 
 export const useQuestStore = create<QuestState>((set, get) => ({
   quests: [],
+  dailyQuests: [],
   selectedQuest: null,
   isLoading: false,
   activeQuest: null,
   isAccepting: false,
   isCompleting: false,
   setQuests: (quests) => set({ quests }),
+  setDailyQuests: (dailyQuests) => set({ dailyQuests }),
   selectQuest: (selectedQuest) => set({ selectedQuest }),
   setLoading: (isLoading) => set({ isLoading }),
   setActiveQuest: (activeQuest) => set({ activeQuest }),

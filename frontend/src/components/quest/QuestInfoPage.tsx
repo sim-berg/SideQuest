@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import type { Quest } from '../../types/quest';
+import { useState, useCallback, useEffect } from 'react';
+import type { Quest, GoalType } from '../../types/quest';
 import type { XpResult } from '../../types/dragon';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { useUIStore } from '../../stores/useUIStore';
@@ -60,29 +60,56 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [xpResult, setXpResult] = useState<XpResult | null>(null);
+  const [countInput, setCountInput] = useState('');
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
   const isAcceptedByMe = quest.acceptedBy === userId;
   const isAcceptedByOther = quest.acceptedBy && quest.acceptedBy !== userId;
   const isCompleted = !!quest.completedBy;
 
   const handleAccept = useCallback(async () => {
-    if (!isAuthenticated) {
-      setShowAuthPrompt(true);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
       const updated = await acceptQuest(quest.id);
       updateQuestInList(updated);
+      setShowAcceptConfirm(false);
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Annehmen');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, quest.id, setShowAuthPrompt, updateQuestInList]);
+  }, [quest.id, updateQuestInList]);
 
-  const handleComplete = useCallback(async () => {
+  // Timer for quest timeLimit
+  useEffect(() => {
+    if (!isAcceptedByMe || !quest.timeLimit) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const deadline = new Date(quest.timeLimit!).getTime();
+      const remaining = deadline - now;
+
+      if (remaining <= 0) {
+        setTimeLeft('Zeit abgelaufen');
+        return;
+      }
+
+      const minutes = Math.floor(remaining / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [isAcceptedByMe, quest.timeLimit]);
+
+  const handleCompleteProximity = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -92,11 +119,10 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           timeout: 10000,
         }),
       );
-      const result = await completeQuest(
-        quest.id,
-        pos.coords.latitude,
-        pos.coords.longitude,
-      );
+      const result = await completeQuest(quest.id, {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
       updateQuestInList(result.quest);
       if (result.xpResult) {
         setXpResult(result.xpResult);
@@ -110,6 +136,42 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
       setLoading(false);
     }
   }, [quest.id, updateQuestInList, setDragon]);
+
+  const handleCompleteManual = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await completeQuest(quest.id, {});
+      updateQuestInList(result.quest);
+      if (result.xpResult) {
+        setXpResult(result.xpResult);
+        setDragon(result.xpResult.dragon);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Fehler beim Abschliessen');
+    } finally {
+      setLoading(false);
+    }
+  }, [quest.id, updateQuestInList, setDragon]);
+
+  const handleCompleteCount = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await completeQuest(quest.id, {
+        countCompleted: parseInt(countInput, 10),
+      });
+      updateQuestInList(result.quest);
+      if (result.xpResult) {
+        setXpResult(result.xpResult);
+        setDragon(result.xpResult.dragon);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Fehler beim Abschliessen');
+    } finally {
+      setLoading(false);
+    }
+  }, [quest.id, countInput, updateQuestInList, setDragon]);
 
   const handleAbandon = useCallback(async () => {
     setLoading(true);
@@ -147,6 +209,24 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           {quest.title}
         </h1>
       </div>
+
+      {/* Timer Banner */}
+      {isAcceptedByMe && timeLeft && (
+        <div
+          className={cn(
+            'mb-4 rounded-lg px-4 py-3 text-center font-bold transition-colors',
+            timeLeft === 'Zeit abgelaufen'
+              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+              : parseInt(timeLeft.split(':')[0]) < 5
+                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 animate-pulse'
+                : parseInt(timeLeft.split(':')[0]) < 30
+                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+          )}
+        >
+          ⏱ Noch {timeLeft}
+        </div>
+      )}
 
       {/* Description */}
       <p className="mb-6 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
@@ -203,18 +283,71 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           </button>
         ) : isAcceptedByMe ? (
           <>
-            <button
-              onClick={handleComplete}
-              disabled={loading}
-              className={cn(
-                'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
-                loading
-                  ? 'cursor-not-allowed bg-emerald-400'
-                  : 'bg-emerald-500 active:bg-emerald-600',
-              )}
-            >
-              {loading ? 'Prüfe Standort...' : 'Quest abschliessen'}
-            </button>
+            {/* Proximity quest (existing behavior) */}
+            {(quest.goalType ?? 'proximity') === 'proximity' && (
+              <button
+                onClick={handleCompleteProximity}
+                disabled={loading}
+                className={cn(
+                  'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                  loading
+                    ? 'cursor-not-allowed bg-emerald-400'
+                    : 'bg-emerald-500 active:bg-emerald-600',
+                )}
+              >
+                {loading ? 'Prüfe Standort...' : 'Quest abschliessen'}
+              </button>
+            )}
+
+            {/* Manual quest */}
+            {quest.goalType === 'manual' && (
+              <button
+                onClick={handleCompleteManual}
+                disabled={loading}
+                className={cn(
+                  'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                  loading
+                    ? 'cursor-not-allowed bg-emerald-400'
+                    : 'bg-emerald-500 active:bg-emerald-600',
+                )}
+              >
+                {loading ? 'Wird gespeichert...' : "Ich hab's geschafft! ✓"}
+              </button>
+            )}
+
+            {/* Count-based quest */}
+            {quest.goalType === 'count' && (
+              <div className="flex flex-col gap-3">
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                  Ziel: {quest.goalCount} Wiederholungen
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={quest.goalCount ?? undefined}
+                    value={countInput}
+                    onChange={(e) => setCountInput(e.target.value)}
+                    placeholder={`0 von ${quest.goalCount}`}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-lg font-bold focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <span className="text-sm text-slate-400">von {quest.goalCount}</span>
+                </div>
+                <button
+                  onClick={handleCompleteCount}
+                  disabled={loading || !countInput || parseInt(countInput, 10) < 1}
+                  className={cn(
+                    'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                    loading || !countInput || parseInt(countInput, 10) < 1
+                      ? 'cursor-not-allowed bg-emerald-400'
+                      : 'bg-emerald-500 active:bg-emerald-600',
+                  )}
+                >
+                  {loading ? 'Wird gespeichert...' : 'Abschliessen'}
+                </button>
+              </div>
+            )}
+
             <button
               onClick={handleAbandon}
               disabled={loading}
@@ -231,18 +364,55 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
             Quest bereits vergeben
           </button>
         ) : (
-          <button
-            onClick={handleAccept}
-            disabled={loading}
-            className={cn(
-              'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
-              loading
-                ? 'cursor-not-allowed bg-indigo-400'
-                : 'bg-indigo-500 active:bg-indigo-600',
+          <>
+            {!showAcceptConfirm ? (
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setShowAuthPrompt(true);
+                    return;
+                  }
+                  setShowAcceptConfirm(true);
+                }}
+                disabled={loading}
+                className={cn(
+                  'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                  loading
+                    ? 'cursor-not-allowed bg-indigo-400'
+                    : 'bg-indigo-500 active:bg-indigo-600',
+                )}
+              >
+                {loading ? 'Wird angenommen...' : 'Quest annehmen'}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-center text-sm text-slate-600 dark:text-slate-300">
+                  Möchtest du diese Quest annehmen?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleAccept}
+                    disabled={loading}
+                    className={cn(
+                      'flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                      loading
+                        ? 'cursor-not-allowed bg-emerald-400'
+                        : 'bg-emerald-500 active:bg-emerald-600',
+                    )}
+                  >
+                    {loading ? 'Wird angenommen...' : 'Ja, Quest annehmen!'}
+                  </button>
+                  <button
+                    onClick={() => setShowAcceptConfirm(false)}
+                    disabled={loading}
+                    className="flex-1 rounded-xl bg-slate-200 py-3 text-sm font-bold text-slate-700 transition-all active:scale-[0.98] dark:bg-slate-700 dark:text-slate-300"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
             )}
-          >
-            {loading ? 'Wird angenommen...' : 'Quest annehmen'}
-          </button>
+          </>
         )}
 
         {!isCompleted && !isAcceptedByMe && (
@@ -279,9 +449,10 @@ export default function QuestInfoPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2">
+      <div className="flex shrink-0 items-center gap-3 px-4 pt-4 pb-2">
         <button
           onClick={handleClose}
           className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -297,6 +468,7 @@ export default function QuestInfoPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <QuestInfoContent quest={selectedQuest} />
+      </div>
       </div>
     </div>
   );

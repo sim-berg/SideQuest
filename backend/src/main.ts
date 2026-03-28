@@ -9,8 +9,12 @@ async function bootstrap() {
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix('api');
+  const corsOrigin = config
+    .get<string>('CORS_ORIGIN')
+    ?.trim()
+    .replace(/\/+$/, '');
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN'),
+    origin: corsOrigin || 'http://localhost:5173',
     credentials: true,
   });
   app.use(cookieParser());

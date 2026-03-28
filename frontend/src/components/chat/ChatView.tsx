@@ -141,7 +141,8 @@ export default function ChatView() {
     '?';
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40">
+      <div className="w-full max-w-5xl flex flex-col h-[90vh] rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       {/* Top bar */}
       <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
         <button
@@ -230,6 +231,7 @@ export default function ChatView() {
             </svg>
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

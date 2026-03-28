@@ -5,8 +5,8 @@ import { useQuestStore } from '../../stores/useQuestStore';
 import { useMapStore } from '../../stores/useMapStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
-import { Category, Difficulty } from '../../types/quest';
-import type { Category as CategoryType, Difficulty as DifficultyType } from '../../types/quest';
+import { Category, Difficulty, GoalType } from '../../types/quest';
+import type { Category as CategoryType, Difficulty as DifficultyType, GoalType as GoalTypeType } from '../../types/quest';
 import { createQuest } from '../../services/quest.service';
 import { cn } from '../../utils/cn';
 
@@ -33,6 +33,8 @@ export default function CreateQuestPage() {
   const [timeLimit, setTimeLimit] = useState('');
   const [questGiverName, setQuestGiverName] = useState('Anonym');
   const [difficulty, setDifficulty] = useState<DifficultyType>(Difficulty.MEDIUM);
+  const [goalType, setGoalType] = useState<GoalTypeType>(GoalType.PROXIMITY);
+  const [goalCount, setGoalCount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +46,8 @@ export default function CreateQuestPage() {
     setTimeLimit('');
     setQuestGiverName('Anonym');
     setDifficulty(Difficulty.MEDIUM);
+    setGoalType(GoalType.PROXIMITY);
+    setGoalCount('');
     setError(null);
   }, []);
 
@@ -61,6 +65,8 @@ export default function CreateQuestPage() {
       case 3:
         return true; // difficulty has default
       case 4:
+        return goalType !== 'count' || (goalCount.trim() !== '' && parseInt(goalCount) > 0);
+      case 5:
         return address.trim() !== '';
       default:
         return false;
@@ -68,7 +74,7 @@ export default function CreateQuestPage() {
   };
 
   const goNext = () => {
-    if (wizardStep < 4) {
+    if (wizardStep < 5) {
       setWizardStep((wizardStep + 1) as CreateWizardStep);
     }
   };
@@ -82,7 +88,7 @@ export default function CreateQuestPage() {
   };
 
   const handleSubmit = async () => {
-    if (!pickedLocation || !canGoNext(4)) return;
+    if (!pickedLocation || !canGoNext(5)) return;
 
     setSubmitting(true);
     setError(null);
@@ -96,6 +102,8 @@ export default function CreateQuestPage() {
         address: address.trim(),
         category: category!,
         difficulty,
+        goalType,
+        ...(goalType === 'count' && goalCount ? { goalCount: parseInt(goalCount, 10) } : {}),
         questGiver: { name: questGiverName.trim() || 'Anonym' },
         ...(timeLimit !== '' && { timeLimit: new Date(timeLimit).toISOString() }),
       });
@@ -125,7 +133,8 @@ export default function CreateQuestPage() {
     1: 'Was ist die Quest?',
     2: 'Kategorie waehlen',
     3: 'Schwierigkeit',
-    4: 'Details & Absenden',
+    4: 'Art des Ziels',
+    5: 'Details & Absenden',
   };
 
   return (
@@ -141,6 +150,9 @@ export default function CreateQuestPage() {
           overflow: 'hidden',
           backgroundColor: bg,
           boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.15)',
+          maxWidth: '1200px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}
       >
         <Sheet.Header style={{ backgroundColor: bg }} />
@@ -148,7 +160,7 @@ export default function CreateQuestPage() {
           <div className="px-5 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
             {/* Step indicator */}
             <div className="mb-4 flex items-center gap-2">
-              {[1, 2, 3, 4].map((s) => (
+              {[1, 2, 3, 4, 5].map((s) => (
                 <div
                   key={s}
                   className={cn(
@@ -258,8 +270,56 @@ export default function CreateQuestPage() {
               </div>
             )}
 
-            {/* Step 4: Address & Optional fields */}
+            {/* Step 4: Goal Type */}
             {wizardStep === 4 && (
+              <div className="flex flex-col gap-3">
+                {[
+                  { type: GoalType.PROXIMITY, icon: '📍', label: 'Standort', desc: 'Muss vor Ort abgeschlossen werden' },
+                  { type: GoalType.MANUAL, icon: '✅', label: 'Selbst bestätigen', desc: 'Nutzer bestätigt selbst' },
+                  { type: GoalType.COUNT, icon: '🔢', label: 'Wiederholungen', desc: 'z.B. 10 Kniebeugen' },
+                ].map(({ type, icon, label, desc }) => {
+                  const active = goalType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setGoalType(type as GoalTypeType)}
+                      className={cn(
+                        'flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition-all',
+                        active
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                          : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800',
+                      )}
+                    >
+                      <span className="text-2xl">{icon}</span>
+                      <div>
+                        <p className={cn('font-semibold', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200')}>{label}</p>
+                        <p className="text-xs text-slate-400">{desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {goalType === 'count' && (
+                  <div className="mt-2">
+                    <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Anzahl Wiederholungen *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={goalCount}
+                      onChange={(e) => setGoalCount(e.target.value)}
+                      placeholder="z.B. 10"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 5: Address & Optional fields */}
+            {wizardStep === 5 && (
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -308,7 +368,7 @@ export default function CreateQuestPage() {
               >
                 Zurueck
               </button>
-              {wizardStep < 4 ? (
+              {wizardStep < 5 ? (
                 <button
                   onClick={goNext}
                   disabled={!canGoNext(wizardStep)}
@@ -324,10 +384,10 @@ export default function CreateQuestPage() {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={submitting || !canGoNext(4)}
+                  disabled={submitting || !canGoNext(5)}
                   className={cn(
                     'flex-[2] rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
-                    submitting || !canGoNext(4)
+                    submitting || !canGoNext(5)
                       ? 'cursor-not-allowed bg-slate-300 shadow-none dark:bg-slate-600'
                       : 'bg-indigo-500 shadow-indigo-500/30',
                   )}
