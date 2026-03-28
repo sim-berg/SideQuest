@@ -10,8 +10,13 @@ export default function BottomNavBar() {
   const activeTab = useUIStore((s) => s.activeTab);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
+  const pickingLocation = useUIStore((s) => s.pickingLocation);
+  const createWizardStep = useUIStore((s) => s.createWizardStep);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const totalUnread = useChatStore((s) => s.totalUnread);
+
+  // Hide nav during quest creation flow
+  if (pickingLocation || createWizardStep > 0) return null;
 
   const handleTabClick = (tab: ActiveTab) => {
     if (PROTECTED_TABS.includes(tab) && !isAuthenticated) {

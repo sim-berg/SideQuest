@@ -7,6 +7,8 @@ export interface User {
   level: number;
   questsCompleted: number;
   isOnline: boolean;
+  shareLocation: boolean;
+  hasDragon: boolean;
 }
 
 export interface AuthResponse {

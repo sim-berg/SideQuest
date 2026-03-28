@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Category } from '../enums/category.enum.js';
+import { Difficulty } from '../enums/difficulty.enum.js';
 
 export class QuestGiverDto {
   @IsString()
@@ -56,4 +57,8 @@ export class CreateQuestDto {
   @IsOptional()
   @IsDateString()
   timeLimit?: string;
+
+  @IsOptional()
+  @IsEnum(Difficulty)
+  difficulty?: Difficulty;
 }

@@ -7,6 +7,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service.js';
@@ -56,10 +57,7 @@ export class AuthController {
   ) {
     const token = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!token) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
-        statusCode: HttpStatus.UNAUTHORIZED,
-        message: 'No refresh token provided',
-      });
+      throw new UnauthorizedException('No refresh token provided');
     }
 
     const { accessToken, user } = await this.authService.refreshToken(token);
