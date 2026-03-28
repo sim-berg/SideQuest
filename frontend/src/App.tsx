@@ -6,6 +6,7 @@ import QuestBottomSheet from './components/quest/BottomSheet';
 import QuestInfoPage from './components/quest/QuestInfoPage';
 import CreateQuestPage from './components/quest/CreateQuestPage';
 import AuthPrompt from './components/auth/AuthPrompt';
+import DragonSelection from './components/dragon/DragonSelection';
 import TopNavBar from './components/navigation/TopNavBar';
 import NewQuestFAB from './components/navigation/NewQuestFAB';
 import ChatInbox from './components/chat/ChatInbox';
@@ -17,6 +18,7 @@ import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
+import { useDragonStore } from './stores/useDragonStore';
 import { fetchQuests } from './services/quest.service';
 import { refreshToken } from './services/auth.service';
 import { getUnreadCount } from './services/message.service';
@@ -33,12 +35,14 @@ function AppContent() {
   useRealtimeMessages();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
   const setQuests = useQuestStore((s) => s.setQuests);
   const setLoading = useQuestStore((s) => s.setLoading);
   const locationError = useMapStore((s) => s.locationError);
   const activeTab = useUIStore((s) => s.activeTab);
   const setTotalUnread = useChatStore((s) => s.setTotalUnread);
+  const fetchDragon = useDragonStore((s) => s.fetchDragon);
 
   // Silent refresh on mount — non-blocking, app works without auth
   useEffect(() => {
@@ -62,6 +66,16 @@ function AppContent() {
       .catch(() => {});
   }, [isAuthenticated, setTotalUnread]);
 
+  // Fetch dragon when authenticated and user has a dragon
+  useEffect(() => {
+    if (isAuthenticated && user?.hasDragon) {
+      fetchDragon();
+    }
+  }, [isAuthenticated, user?.hasDragon, fetchDragon]);
+
+  // Show dragon selection overlay for authenticated users without a dragon
+  const showDragonSelection = isAuthenticated && user && user.hasDragon === false;
+
   return (
     <AppShell>
       {/* Map tab - always rendered but hidden when other tabs active */}
@@ -82,9 +96,6 @@ function AppContent() {
       {/* Chat tab */}
       {activeTab === 'chat' && <ChatInbox />}
 
-      {/* Create tab */}
-      {activeTab === 'create' && <CreateQuestPage />}
-
       {/* Profile tab */}
       {activeTab === 'profile' && <ProfilePage />}
 
@@ -92,8 +103,14 @@ function AppContent() {
       <QuestInfoPage />
       <ChatViewWrapper />
 
+      {/* Quest creation wizard (bottom sheet overlay on map) */}
+      <CreateQuestPage />
+
       {/* Auth prompt overlay */}
       <AuthPrompt />
+
+      {/* Dragon selection overlay */}
+      {showDragonSelection && <DragonSelection />}
 
       {/* Top Navigation */}
       <TopNavBar />

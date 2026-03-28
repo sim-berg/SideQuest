@@ -11,7 +11,7 @@ services:
     depends_on:
       - mongo
     environment:
-      PORT: 3000
+      PORT: 3001
       MONGODB_URI: mongodb://mongo:27017/sidequest
       JWT_SECRET: change-me-in-production
       CORS_ORIGIN: "*"
@@ -20,7 +20,7 @@ services:
     build: ./frontend
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "5174:80"
     depends_on:
       - backend
 

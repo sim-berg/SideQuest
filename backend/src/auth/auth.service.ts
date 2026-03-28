@@ -18,6 +18,7 @@ export interface UserPayload {
   level: number;
   questsCompleted: number;
   isOnline: boolean;
+  hasDragon: boolean;
 }
 
 interface AuthResponse {
@@ -125,6 +126,7 @@ export class AuthService {
       level: user.level ?? 1,
       questsCompleted: user.questsCompleted ?? 0,
       isOnline: user.isOnline ?? false,
+      hasDragon: user.hasDragon ?? false,
     };
   }
 

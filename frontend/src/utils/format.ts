@@ -9,6 +9,13 @@ export function formatReward(amount: number): string {
   return `${amount} XP`;
 }
 
+export function formatXp(xp: number): string {
+  if (xp >= 1000) {
+    return `${(xp / 1000).toFixed(1)}k XP`;
+  }
+  return `${xp} XP`;
+}
+
 export function formatTimeRemaining(isoDate: string): string {
   const target = new Date(isoDate);
   const now = new Date();

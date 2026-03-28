@@ -60,6 +60,18 @@ export class UserService {
     await this.userModel.findByIdAndUpdate(id, { $set: update }).exec();
   }
 
+  async incrementQuestsCompleted(id: string): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $inc: { questsCompleted: 1 } })
+      .exec();
+  }
+
+  async setHasDragon(id: string): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $set: { hasDragon: true } })
+      .exec();
+  }
+
   async getPublicProfile(id: string): Promise<Partial<User>> {
     const user = await this.userModel
       .findById(id)

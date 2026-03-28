@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
+import DragonDisplay from '../dragon/DragonDisplay';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -32,6 +33,16 @@ export default function ProfilePage() {
       /* ignore */
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleShareLocation = async () => {
+    const newValue = !user.shareLocation;
+    try {
+      await api.patch('/users/me', { shareLocation: newValue });
+      updateUser({ shareLocation: newValue });
+    } catch {
+      /* ignore */
     }
   };
 
@@ -75,6 +86,11 @@ export default function ProfilePage() {
           <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">
             @{user.username}
           </p>
+        </div>
+
+        {/* Dragon */}
+        <div className="mb-6">
+          <DragonDisplay />
         </div>
 
         {/* Display Name */}
@@ -144,6 +160,26 @@ export default function ProfilePage() {
           >
             <span
               className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-5' : ''}`}
+            />
+          </button>
+        </div>
+
+        {/* Location Sharing Toggle */}
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-800/50">
+          <div>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Standort teilen
+            </span>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Andere SideQuester sehen dich auf der Karte
+            </p>
+          </div>
+          <button
+            onClick={handleToggleShareLocation}
+            className={`relative h-7 w-12 rounded-full transition-colors ${user.shareLocation ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${user.shareLocation ? 'translate-x-5' : ''}`}
             />
           </button>
         </div>
