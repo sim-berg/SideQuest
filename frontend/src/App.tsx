@@ -118,10 +118,14 @@ function AppContent() {
     }
   }, [isAuthenticated, user?.hasDragon, fetchDragon]);
 
-  // Show dragon selection overlay for authenticated users without a dragon
+  // Show dragon selection overlay only on initial login (not on reload)
   useEffect(() => {
     if (isAuthenticated && user && user.hasDragon === false) {
-      setShowDragonSelection(true);
+      const shown = sessionStorage.getItem(`dragon-selection-shown-${user.id}`);
+      if (!shown) {
+        setShowDragonSelection(true);
+        sessionStorage.setItem(`dragon-selection-shown-${user.id}`, 'true');
+      }
     }
   }, [isAuthenticated, user?.hasDragon, user?.id, setShowDragonSelection]);
 
@@ -141,25 +145,55 @@ function AppContent() {
       </div>
       <QuestBottomSheet />
 
-      {/* Location Indicator - always visible */}
-      {isAuthenticated && user && activeTab === 'map' && (
-        <button
-          onClick={() => {
-            const newValue = !user.shareLocation;
-            api.patch('/users/me', { shareLocation: newValue })
-              .then(() => updateUser({ shareLocation: newValue }))
-              .catch(() => {});
-          }}
-          className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all backdrop-blur-md ${
-            user.shareLocation
-              ? 'bg-green-500/30 text-green-700 border border-green-500/50 dark:text-green-300 dark:border-green-500/30'
-              : 'bg-red-500/30 text-red-700 border border-red-500/50 dark:text-red-300 dark:border-red-500/30'
-          }`}
-        >
-          <span className="text-lg">{user.shareLocation ? '📍' : '📍'}</span>
-          <span>{user.shareLocation ? 'Standort aktiv' : 'Kein Standort'}</span>
-        </button>
-      )}
+      {/* Bottom center controls - responsive layout */}
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex flex-row items-center justify-center gap-3 md:gap-6 text-xs md:text-sm font-semibold backdrop-blur-md bg-white/20 dark:bg-slate-900/20 rounded-full px-3 md:px-6 py-2 md:py-3 border border-white/30 dark:border-slate-700/30">
+        {/* Location Status */}
+        {isAuthenticated && user && activeTab === 'map' && (
+          <button
+            onClick={async () => {
+              try {
+                const newValue = !user.shareLocation;
+                const response = await api.patch<{ shareLocation: boolean }>('/users/me', { shareLocation: newValue });
+                updateUser({ shareLocation: response.shareLocation });
+              } catch (error) {
+                console.error('Failed to update location sharing:', error);
+                addToast({
+                  type: 'error',
+                  title: 'Error',
+                  message: 'Failed to update location sharing',
+                  duration: 3000,
+                });
+              }
+            }}
+            className={`transition-colors cursor-pointer hover:opacity-80 whitespace-nowrap ${
+              user.shareLocation
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400'
+            }`}
+          >
+            📍 <span className="hidden sm:inline">{user.shareLocation ? 'Standort aktiv' : 'Standort inaktiv'}</span>
+            <span className="sm:hidden">{user.shareLocation ? 'Aktiv' : 'Inaktiv'}</span>
+          </button>
+        )}
+
+        {/* Separator */}
+        {isAuthenticated && user && activeTab === 'map' && (
+          <span className="text-slate-400 dark:text-slate-500">•</span>
+        )}
+
+        {/* Legal Links */}
+        <div className="flex items-center justify-center gap-2 md:gap-3">
+          <a href="/#/datenschutz" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap">
+            <span className="hidden sm:inline">Datenschutz</span>
+            <span className="sm:hidden">Daten</span>
+          </a>
+          <span className="text-slate-400 dark:text-slate-500">•</span>
+          <a href="/#/impressum" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap">
+            <span className="hidden sm:inline">Impressum</span>
+            <span className="sm:hidden">Info</span>
+          </a>
+        </div>
+      </div>
 
       {/* Chat tab - overlay on map */}
       {activeTab === 'chat' && <ChatInbox />}

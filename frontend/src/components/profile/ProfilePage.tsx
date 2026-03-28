@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
-import { logout } from '../../services/auth.service';
+import { logout } from '../../services/auth.service'; // Needed for auth patch call
 import DragonDisplay from '../dragon/DragonDisplay';
 import { ContributionCalendar } from './ContributionCalendar';
 
@@ -37,16 +37,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleToggleShareLocation = async () => {
-    const newValue = !user.shareLocation;
-    try {
-      await api.patch('/users/me', { shareLocation: newValue });
-      updateUser({ shareLocation: newValue });
-    } catch {
-      /* ignore */
-    }
-  };
-
   const handleLogout = async () => {
     await logout().catch(() => {});
     clearAuth();
@@ -73,19 +63,6 @@ export default function ProfilePage() {
             Profil
           </h1>
         </div>
-
-        {/* Location Toggle Button */}
-        <button
-          onClick={handleToggleShareLocation}
-          className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all backdrop-blur-sm ${
-            user.shareLocation
-              ? 'bg-green-500/30 text-green-700 border border-green-500/50 dark:text-green-300 dark:border-green-500/30'
-              : 'bg-red-500/30 text-red-700 border border-red-500/50 dark:text-red-300 dark:border-red-500/30'
-          }`}
-        >
-          <span className="text-lg">{user.shareLocation ? '📍' : '📍'}</span>
-          {user.shareLocation ? 'Standort aktiv' : 'Kein Standort'}
-        </button>
       </div>
       <div className="flex-1 overflow-y-auto px-5 pb-28 pt-6">
         {/* Avatar */}
@@ -206,26 +183,6 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* Location Sharing Toggle */}
-        <div className="mb-4 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-800/50">
-          <div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Standort teilen
-            </span>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Andere SideQuester sehen dich auf der Karte
-            </p>
-          </div>
-          <button
-            onClick={handleToggleShareLocation}
-            className={`relative h-7 w-12 rounded-full transition-colors ${user.shareLocation ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${user.shareLocation ? 'translate-x-5' : ''}`}
-            />
-          </button>
-        </div>
-
         {/* Logout */}
         <button
           onClick={handleLogout}
@@ -233,17 +190,6 @@ export default function ProfilePage() {
         >
           Abmelden
         </button>
-
-        {/* Legal Links */}
-        <div className="mt-8 flex justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <a href="/#/datenschutz" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-            Datenschutz
-          </a>
-          <span>•</span>
-          <a href="/#/impressum" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-            Impressum
-          </a>
-        </div>
       </div>
       </div>
     </div>

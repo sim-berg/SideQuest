@@ -376,10 +376,10 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
                 }}
                 disabled={loading}
                 className={cn(
-                  'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                  'w-full rounded-xl py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98]',
                   loading
-                    ? 'cursor-not-allowed bg-indigo-400'
-                    : 'bg-indigo-500 active:bg-indigo-600',
+                    ? 'cursor-not-allowed bg-emerald-400'
+                    : 'bg-emerald-500 active:bg-emerald-600',
                 )}
               >
                 {loading ? 'Wird angenommen...' : 'Quest annehmen'}
