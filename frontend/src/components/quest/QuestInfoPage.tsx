@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Quest, GoalType } from '../../types/quest';
+import type { Quest } from '../../types/quest';
 import type { XpResult } from '../../types/dragon';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { useUIStore } from '../../stores/useUIStore';
@@ -450,7 +450,7 @@ export default function QuestInfoPage() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <div className="w-full max-w-[1200px] h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
       {/* Top bar */}
       <div className="flex shrink-0 items-center gap-3 px-4 pt-4 pb-2">
         <button

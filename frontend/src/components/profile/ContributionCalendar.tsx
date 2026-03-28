@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchActivity, type ActivityData } from '../../services/user.service';
+import { fetchActivity } from '../../services/user.service';
 
 export function ContributionCalendar() {
   const [activity, setActivity] = useState<Record<string, number>>({});
@@ -86,7 +86,7 @@ export function ContributionCalendar() {
               )}
 
               {/* Day cells */}
-              {week.map((day, dayIndex) => {
+              {week.map((day) => {
                 const count = activity[day.date] || 0;
                 return (
                   <div

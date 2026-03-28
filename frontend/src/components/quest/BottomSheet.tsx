@@ -36,6 +36,9 @@ export default function QuestBottomSheet() {
           maxWidth: '1200px',
           marginLeft: 'auto',
           marginRight: 'auto',
+          left: 0,
+          right: 0,
+          width: '100%',
         }}
       >
         <Sheet.Header

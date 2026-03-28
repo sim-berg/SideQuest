@@ -95,9 +95,9 @@ export default function ChatInbox() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-5xl h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <div className="w-full max-w-[1200px] h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white/80 backdrop-blur-md dark:bg-slate-900/80 border border-white/20 dark:border-slate-800/20">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-5 pb-3 pt-5 dark:border-slate-800">
+      <div className="flex shrink-0 items-center gap-3 border-b border-slate-100/20 px-5 pb-3 pt-5 dark:border-slate-800/20">
         <button
           onClick={() => setActiveTab('map')}
           className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"

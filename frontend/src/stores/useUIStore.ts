@@ -14,6 +14,7 @@ interface UIState {
   filterPanelOpen: boolean;
   menuOpen: boolean;
   showAuthPrompt: boolean;
+  showDragonSelection: boolean;
   pendingAuthTab: ActiveTab | null;
   /** Whether the user is currently picking a location on the map */
   pickingLocation: boolean;
@@ -38,6 +39,7 @@ interface UIState {
   toggleMenu: () => void;
   closeMenu: () => void;
   setShowAuthPrompt: (show: boolean, pendingTab?: ActiveTab) => void;
+  setShowDragonSelection: (show: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -49,6 +51,7 @@ export const useUIStore = create<UIState>((set) => ({
   filterPanelOpen: false,
   menuOpen: false,
   showAuthPrompt: false,
+  showDragonSelection: false,
   pendingAuthTab: null,
   pickingLocation: false,
   createWizardStep: 0,
@@ -117,4 +120,5 @@ export const useUIStore = create<UIState>((set) => ({
   closeMenu: () => set({ menuOpen: false }),
   setShowAuthPrompt: (show, pendingTab) =>
     set({ showAuthPrompt: show, pendingAuthTab: pendingTab ?? null }),
+  setShowDragonSelection: (showDragonSelection) => set({ showDragonSelection }),
 }));

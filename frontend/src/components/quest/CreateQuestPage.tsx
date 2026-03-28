@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { Sheet } from 'react-modal-sheet';
 import { useUIStore, type CreateWizardStep } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useMapStore } from '../../stores/useMapStore';
@@ -20,7 +19,6 @@ export default function CreateQuestPage() {
   const setWizardStep = useUIStore((s) => s.setCreateWizardStep);
   const pickedLocation = useUIStore((s) => s.pickedLocation);
   const closeCreateQuest = useUIStore((s) => s.closeCreateQuest);
-  const darkMode = useUIStore((s) => s.darkMode);
   const quests = useQuestStore((s) => s.quests);
   const setQuests = useQuestStore((s) => s.setQuests);
   const setViewState = useMapStore((s) => s.setViewState);
@@ -103,7 +101,7 @@ export default function CreateQuestPage() {
         category: category!,
         difficulty,
         goalType,
-        ...(goalType === 'count' && goalCount ? { goalCount: parseInt(goalCount, 10) } : {}),
+        goalCount: goalType === 'count' && goalCount ? parseInt(goalCount, 10) : null,
         questGiver: { name: questGiverName.trim() || 'Anonym' },
         ...(timeLimit !== '' && { timeLimit: new Date(timeLimit).toISOString() }),
       });
@@ -123,11 +121,8 @@ export default function CreateQuestPage() {
     }
   };
 
-  // Don't show sheets during location picking or when wizard hasn't started
+  // Don't show when location picking or when wizard hasn't started
   if (!createQuestOpen || pickingLocation || wizardStep === 0) return null;
-
-  const bg = darkMode ? '#0f172a' : '#ffffff';
-  const isSheetOpen = wizardStep >= 1;
 
   const stepTitles: Record<number, string> = {
     1: 'Was ist die Quest?',
@@ -138,54 +133,47 @@ export default function CreateQuestPage() {
   };
 
   return (
-    <Sheet
-      isOpen={isSheetOpen}
-      onClose={handleClose}
-      detent="content"
-    >
-      <Sheet.Container
-        style={{
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          overflow: 'hidden',
-          backgroundColor: bg,
-          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.15)',
-          maxWidth: '1200px',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-        }}
-      >
-        <Sheet.Header style={{ backgroundColor: bg }} />
-        <Sheet.Content style={{ backgroundColor: bg }}>
-          <div className="px-5 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
-            {/* Step indicator */}
-            <div className="mb-4 flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <div
-                  key={s}
-                  className={cn(
-                    'h-1 flex-1 rounded-full transition-all',
-                    s <= wizardStep ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700',
-                  )}
-                />
-              ))}
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-[1200px] h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      {/* Header */}
+      <div className="flex shrink-0 items-center gap-3 px-4 pt-4 pb-2">
+        <button
+          onClick={handleClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          aria-label="Zurueck"
+        >
+          ←
+        </button>
+        <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+          {stepTitles[wizardStep]}
+        </span>
+      </div>
 
-            {/* Step title */}
-            <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">
-              {stepTitles[wizardStep]}
-            </h2>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 pb-10 pt-4">
+        {/* Step indicator */}
+        <div className="mb-4 flex items-center gap-2">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div
+              key={s}
+              className={cn(
+                'h-1 flex-1 rounded-full transition-all',
+                s <= wizardStep ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700',
+              )}
+            />
+          ))}
+        </div>
 
-            {/* Error banner */}
-            {error && (
-              <div className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                {error}
-              </div>
-            )}
+        {/* Error banner */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-300">
+            {error}
+          </div>
+        )}
 
-            {/* Step 1: Title & Description */}
-            {wizardStep === 1 && (
-              <div className="flex flex-col gap-4">
+        {/* Step 1: Title & Description */}
+        {wizardStep === 1 && (
+          <div className="flex flex-col gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
                     Titel *
@@ -211,11 +199,11 @@ export default function CreateQuestPage() {
                     className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
-              </div>
-            )}
+          </div>
+        )}
 
-            {/* Step 2: Category */}
-            {wizardStep === 2 && (
+        {/* Step 2: Category */}
+        {wizardStep === 2 && (
               <div className="grid grid-cols-2 gap-3">
                 {ALL_CATEGORIES.map((cat) => {
                   const meta = CATEGORY_META[cat];
@@ -238,11 +226,11 @@ export default function CreateQuestPage() {
                     </button>
                   );
                 })}
-              </div>
-            )}
+          </div>
+        )}
 
-            {/* Step 3: Difficulty */}
-            {wizardStep === 3 && (
+        {/* Step 3: Difficulty */}
+        {wizardStep === 3 && (
               <div className="flex flex-col gap-3">
                 {ALL_DIFFICULTIES.map((diff) => {
                   const dmeta = DIFFICULTY_META[diff];
@@ -267,11 +255,11 @@ export default function CreateQuestPage() {
                     </button>
                   );
                 })}
-              </div>
-            )}
+          </div>
+        )}
 
-            {/* Step 4: Goal Type */}
-            {wizardStep === 4 && (
+        {/* Step 4: Goal Type */}
+        {wizardStep === 4 && (
               <div className="flex flex-col gap-3">
                 {[
                   { type: GoalType.PROXIMITY, icon: '📍', label: 'Standort', desc: 'Muss vor Ort abgeschlossen werden' },
@@ -315,11 +303,11 @@ export default function CreateQuestPage() {
                     />
                   </div>
                 )}
-              </div>
-            )}
+          </div>
+        )}
 
-            {/* Step 5: Address & Optional fields */}
-            {wizardStep === 5 && (
+        {/* Step 5: Address & Optional fields */}
+        {wizardStep === 5 && (
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -357,59 +345,57 @@ export default function CreateQuestPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
-              </div>
-            )}
-
-            {/* Navigation buttons */}
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={goBack}
-                className="flex-1 rounded-2xl bg-slate-100 py-3.5 text-sm font-semibold text-slate-700 transition-all active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
-              >
-                Zurueck
-              </button>
-              {wizardStep < 5 ? (
-                <button
-                  onClick={goNext}
-                  disabled={!canGoNext(wizardStep)}
-                  className={cn(
-                    'flex-[2] rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
-                    canGoNext(wizardStep)
-                      ? 'bg-indigo-500 shadow-indigo-500/30'
-                      : 'cursor-not-allowed bg-slate-300 shadow-none dark:bg-slate-600',
-                  )}
-                >
-                  Weiter
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || !canGoNext(5)}
-                  className={cn(
-                    'flex-[2] rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
-                    submitting || !canGoNext(5)
-                      ? 'cursor-not-allowed bg-slate-300 shadow-none dark:bg-slate-600'
-                      : 'bg-indigo-500 shadow-indigo-500/30',
-                  )}
-                >
-                  {submitting ? (
-                    <span className="inline-flex items-center gap-2">
-                      <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Erstelle...
-                    </span>
-                  ) : (
-                    'Quest erstellen'
-                  )}
-                </button>
-              )}
-            </div>
           </div>
-        </Sheet.Content>
-      </Sheet.Container>
-      <Sheet.Backdrop onTap={handleClose} />
-    </Sheet>
+        )}
+
+        {/* Navigation buttons */}
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={goBack}
+            className="flex-1 rounded-2xl bg-slate-100 py-3.5 text-sm font-semibold text-slate-700 transition-all active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
+          >
+            Zurueck
+          </button>
+          {wizardStep < 5 ? (
+            <button
+              onClick={goNext}
+              disabled={!canGoNext(wizardStep)}
+              className={cn(
+                'flex-[2] rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                canGoNext(wizardStep)
+                  ? 'bg-indigo-500 shadow-indigo-500/30'
+                  : 'cursor-not-allowed bg-slate-300 shadow-none dark:bg-slate-600',
+              )}
+            >
+              Weiter
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !canGoNext(5)}
+              className={cn(
+                'flex-[2] rounded-2xl py-3.5 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                submitting || !canGoNext(5)
+                  ? 'cursor-not-allowed bg-slate-300 shadow-none dark:bg-slate-600'
+                  : 'bg-indigo-500 shadow-indigo-500/30',
+              )}
+            >
+              {submitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Erstelle...
+                </span>
+              ) : (
+                'Quest erstellen'
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+      </div>
+    </div>
   );
 }

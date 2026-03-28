@@ -23,7 +23,7 @@ export default function UserProfileSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="relative w-full max-w-5xl rounded-2xl bg-white px-5 pb-10 pt-6 dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-[1200px] rounded-2xl bg-white px-5 pb-10 pt-6 dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
         {/* Close button */}
         <button
           onClick={onClose}

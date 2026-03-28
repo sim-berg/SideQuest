@@ -27,7 +27,7 @@ export default function AuthPrompt() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       {/* Centered modal container */}
-      <div className="relative w-full max-w-5xl rounded-2xl overflow-hidden">
+      <div className="relative w-full max-w-[1200px] rounded-2xl overflow-hidden">
         {/* Close button */}
         <button
           onClick={handleClose}
