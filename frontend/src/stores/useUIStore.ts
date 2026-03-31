@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ActiveTab = 'map' | 'chat' | 'create' | 'profile';
+export type ActiveTab = 'map' | 'chat' | 'create' | 'profile' | 'rpg';
 
 /** Steps for the quest creation wizard (0 = picking location on map) */
 export type CreateWizardStep = 0 | 1 | 2 | 3 | 4;
@@ -107,7 +107,13 @@ export const useUIStore = create<UIState>((set) => ({
         bottomSheetOpen: false,
       });
     }
-    return set({ activeTab, createQuestOpen: false, pickingLocation: false, createWizardStep: 0, pickedLocation: null });
+    return set({
+      activeTab,
+      createQuestOpen: false,
+      pickingLocation: false,
+      createWizardStep: 0,
+      pickedLocation: null,
+    });
   },
   toggleFilterPanel: () =>
     set((s) => ({ filterPanelOpen: !s.filterPanelOpen, menuOpen: false })),

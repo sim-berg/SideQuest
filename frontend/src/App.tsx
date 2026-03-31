@@ -8,10 +8,12 @@ import CreateQuestPage from './components/quest/CreateQuestPage';
 import AuthPrompt from './components/auth/AuthPrompt';
 import DragonSelection from './components/dragon/DragonSelection';
 import TopNavBar from './components/navigation/TopNavBar';
+import BottomNavBar from './components/navigation/BottomNavBar';
 import NewQuestFAB from './components/navigation/NewQuestFAB';
 import ChatInbox from './components/chat/ChatInbox';
 import ChatView from './components/chat/ChatView';
 import ProfilePage from './components/profile/ProfilePage';
+import RPGView from './components/rpg/RPGView';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useQuestStore } from './stores/useQuestStore';
@@ -99,6 +101,9 @@ function AppContent() {
       {/* Profile tab */}
       {activeTab === 'profile' && <ProfilePage />}
 
+      {/* RPG tab */}
+      {activeTab === 'rpg' && <RPGView />}
+
       {/* Overlay pages */}
       <QuestInfoPage />
       <ChatViewWrapper />
@@ -114,6 +119,9 @@ function AppContent() {
 
       {/* Top Navigation */}
       <TopNavBar />
+
+      {/* Bottom Navigation */}
+      <BottomNavBar />
 
       {/* New Quest FAB */}
       <NewQuestFAB />
