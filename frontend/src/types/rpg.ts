@@ -22,6 +22,11 @@ export interface ZoneDef {
   osmAmenities: string[];
   unlockRadius: number;
   tileMap: number[][];
+  /** Full map dimensions (tileMap columns / rows) */
+  mapW: number;
+  mapH: number;
+  /** Filename under /rpg/ for the pre-rendered room background */
+  bgImage: string;
   npcs: NpcDef[];
   playerSpawnX: number;
   playerSpawnY: number;
