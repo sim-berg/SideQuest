@@ -14,6 +14,7 @@ import ChatInbox from './components/chat/ChatInbox';
 import ChatView from './components/chat/ChatView';
 import ProfilePage from './components/profile/ProfilePage';
 import RPGView from './components/rpg/RPGView';
+import DungeonView from './components/dungeon/DungeonView';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useQuestStore } from './stores/useQuestStore';
@@ -103,6 +104,9 @@ function AppContent() {
 
       {/* RPG tab */}
       {activeTab === 'rpg' && <RPGView />}
+
+      {/* Dungeon tab */}
+      {activeTab === 'dungeon' && <DungeonView />}
 
       {/* Overlay pages */}
       <QuestInfoPage />

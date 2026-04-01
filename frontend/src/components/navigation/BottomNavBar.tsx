@@ -4,18 +4,24 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useChatStore } from '../../stores/useChatStore';
 import type { ActiveTab } from '../../stores/useUIStore';
 
-const PROTECTED_TABS: ActiveTab[] = ['chat', 'create', 'profile', 'rpg'];
+const PROTECTED_TABS: ActiveTab[] = ['chat', 'create', 'profile', 'rpg', 'dungeon'];
+
+interface TabDef {
+  id: ActiveTab;
+  label: string;
+  icon: React.FC<{ active: boolean }>;
+  badge?: number;
+}
 
 export default function BottomNavBar() {
-  const activeTab = useUIStore((s) => s.activeTab);
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const activeTab        = useUIStore((s) => s.activeTab);
+  const setActiveTab     = useUIStore((s) => s.setActiveTab);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
-  const pickingLocation = useUIStore((s) => s.pickingLocation);
+  const pickingLocation  = useUIStore((s) => s.pickingLocation);
   const createWizardStep = useUIStore((s) => s.createWizardStep);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const totalUnread = useChatStore((s) => s.totalUnread);
+  const isAuthenticated  = useAuthStore((s) => s.isAuthenticated);
+  const totalUnread      = useChatStore((s) => s.totalUnread);
 
-  // Hide nav during quest creation flow
   if (pickingLocation || createWizardStep > 0) return null;
 
   const handleTabClick = (tab: ActiveTab) => {
@@ -26,144 +32,211 @@ export default function BottomNavBar() {
     setActiveTab(tab);
   };
 
-  const tabs: {
-    id: ActiveTab;
-    label: string;
-    icon: React.FC<{ active: boolean }>;
-    badge?: number;
-  }[] = [
-    { id: 'map', label: 'Karte', icon: MapIcon },
-    { id: 'rpg', label: 'Abenteuer', icon: RpgIcon },
-    { id: 'create', label: 'Neu', icon: PlusIcon },
-    { id: 'chat', label: 'Chat', icon: ChatIcon, badge: isAuthenticated ? totalUnread : undefined },
-    { id: 'profile', label: 'Profil', icon: ProfileIcon },
+  const tabs: TabDef[] = [
+    { id: 'map',     label: 'Karte',       icon: MapIcon },
+    { id: 'rpg',     label: 'Abenteuer',   icon: RpgIcon },
+    { id: 'dungeon', label: 'Kerker',       icon: DungeonIcon },
+    { id: 'chat',    label: 'Nachrichten', icon: ChatIcon, badge: isAuthenticated ? totalUnread : undefined },
+    { id: 'profile', label: 'Profil',      icon: ProfileIcon },
   ];
 
+  const activeTabIndex = tabs.findIndex((t) => t.id === activeTab);
+
   return (
-    <nav className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg dark:border-slate-700 dark:bg-slate-900/90">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => handleTabClick(tab.id)}
-          className={cn(
-            'relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-            activeTab === tab.id
-              ? 'text-indigo-500'
-              : 'text-slate-400 dark:text-slate-500',
-          )}
-        >
-          <tab.icon active={activeTab === tab.id} />
-          <span>{tab.label}</span>
-          {tab.badge != null && tab.badge > 0 && (
-            <span className="absolute top-1 right-1/4 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-              {tab.badge > 99 ? '99+' : tab.badge}
-            </span>
-          )}
-        </button>
-      ))}
+    <nav
+      className="fixed right-0 bottom-0 left-0 z-40"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {/* Gothic arch border at the top of the bar */}
+      <div className="relative w-full h-8 overflow-hidden">
+        {/* Arch image */}
+        <div
+          className="absolute inset-0 bg-repeat-x"
+          style={{
+            backgroundImage: 'url(/menu/border_top.png)',
+            backgroundSize: 'auto 32px',
+            backgroundPosition: 'center top',
+          }}
+        />
+        {/* Gold glow at active tab position */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-all duration-300"
+          style={{
+            background: `radial-gradient(ellipse 24% 100% at ${activeTabIndex * 20 + 10}% 50%, rgba(220,170,30,0.6) 0%, rgba(180,130,20,0.25) 45%, transparent 75%)`,
+            mixBlendMode: 'screen',
+          }}
+        />
+      </div>
+
+      {/* Main bar body */}
+      <div
+        className="relative flex items-center justify-around px-1 py-1"
+        style={{
+          background: 'linear-gradient(180deg, #1c1608 0%, #0e0c04 60%, #0a0802 100%)',
+          borderTop: '2px solid #5a4a1a',
+          boxShadow: 'inset 0 1px 0 rgba(200,170,60,0.15)',
+        }}
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className="relative flex flex-1 flex-col items-center gap-0.5 py-1.5"
+              style={{ minWidth: 0 }}
+            >
+              {/* Arch slot glow for active tab */}
+              {isActive && (
+                <span
+                  className="absolute inset-0 rounded-sm"
+                  style={{
+                    background: 'radial-gradient(ellipse at 50% 40%, rgba(200,160,40,0.18) 0%, transparent 70%)',
+                    border: '1px solid rgba(200,160,40,0.25)',
+                  }}
+                />
+              )}
+
+              {/* Icon */}
+              <span
+                className="relative"
+                style={{
+                  filter: isActive
+                    ? 'drop-shadow(0 0 6px rgba(220,180,40,0.9)) brightness(1.15)'
+                    : 'brightness(0.55) sepia(0.3)',
+                  transition: 'filter 0.2s',
+                }}
+              >
+                <tab.icon active={isActive} />
+              </span>
+
+              {/* Label */}
+              <span
+                className="relative text-[9px] font-semibold tracking-wider uppercase"
+                style={{
+                  fontFamily: '"Georgia", "Times New Roman", serif',
+                  color: isActive ? '#d4a832' : '#6b5a2a',
+                  textShadow: isActive ? '0 0 8px rgba(220,180,40,0.6)' : 'none',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {tab.label}
+              </span>
+
+              {/* Unread badge */}
+              {tab.badge != null && tab.badge > 0 && (
+                <span
+                  className="absolute top-0.5 right-1/4 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
+                  style={{ background: '#8b1a1a', border: '1px solid #c43a3a' }}
+                >
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Vertical dividers between tabs */}
+        {[1, 2, 3, 4].map((i) => (
+          <span
+            key={i}
+            className="absolute top-2 bottom-2 w-px"
+            style={{
+              left: `${i * 20}%`,
+              background: 'linear-gradient(180deg, transparent, rgba(180,140,40,0.25) 40%, rgba(180,140,40,0.25) 60%, transparent)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Bottom ornament border */}
+      <div
+        className="w-full h-6 bg-repeat-x"
+        style={{
+          backgroundImage: 'url(/menu/border_bottom.png)',
+          backgroundSize: 'auto 24px',
+          backgroundPosition: 'center top',
+          background: '#0a0802',
+        }}
+      />
     </nav>
   );
 }
 
+// ─── Icons — PNG assets with fallback SVGs ────────────────────────────────────
+
 function MapIcon({ active }: { active: boolean }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill={active ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={active ? 0 : 1.5}
-      className="h-6 w-6"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
-      />
-    </svg>
-  );
-}
-
-function ChatIcon({ active }: { active: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill={active ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={active ? 0 : 1.5}
-      className="h-6 w-6"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
-      />
-    </svg>
-  );
-}
-
-function PlusIcon({ active }: { active: boolean }) {
-  return (
-    <div
-      className={cn(
-        'flex h-6 w-6 items-center justify-center rounded-full',
-        active
-          ? 'bg-indigo-500 text-white'
-          : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
-      )}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        className="h-4 w-4"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 4.5v15m7.5-7.5h-15"
-        />
-      </svg>
-    </div>
+    <img
+      src="/menu/icon_map.png"
+      alt="Karte"
+      className={cn('h-8 w-8 object-contain', active ? 'opacity-100' : 'opacity-80')}
+      draggable={false}
+    />
   );
 }
 
 function RpgIcon({ active }: { active: boolean }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill={active ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={active ? 0 : 1.5}
-      className="h-6 w-6"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
-      />
-    </svg>
+    <img
+      src="/menu/icon_rpg.png"
+      alt="Abenteuer"
+      className={cn('h-8 w-8 object-contain', active ? 'opacity-100' : 'opacity-80')}
+      draggable={false}
+    />
+  );
+}
+
+function DungeonIcon({ active }: { active: boolean }) {
+  return (
+    <img
+      src="/menu/icon_dungeon.png"
+      alt="Kerker"
+      className={cn('h-8 w-8 object-contain', active ? 'opacity-100' : 'opacity-80')}
+      draggable={false}
+    />
+  );
+}
+
+function ChatIcon({ active }: { active: boolean }) {
+  return (
+    <img
+      src="/menu/icon_chat.png"
+      alt="Nachrichten"
+      className={cn('h-8 w-8 object-contain', active ? 'opacity-100' : 'opacity-80')}
+      draggable={false}
+    />
   );
 }
 
 function ProfileIcon({ active }: { active: boolean }) {
+  // No matching item PNG — draw a medieval shield SVG
   return (
     <svg
+      viewBox="0 0 32 38"
+      className="h-8 w-8"
+      fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill={active ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={active ? 0 : 1.5}
-      className="h-6 w-6"
     >
+      {/* Shield body */}
       <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+        d="M16 2 L30 8 L30 20 C30 29 16 36 16 36 C16 36 2 29 2 20 L2 8 Z"
+        fill={active ? '#8b6914' : '#3a2e0a'}
+        stroke={active ? '#d4a832' : '#5a4a1a'}
+        strokeWidth="1.5"
+      />
+      {/* Gothic trefoil ornament */}
+      <circle cx="16" cy="13" r="3.5" fill={active ? '#d4a832' : '#5a4a1a'} />
+      <circle cx="11" cy="17" r="2.5" fill={active ? '#d4a832' : '#5a4a1a'} />
+      <circle cx="21" cy="17" r="2.5" fill={active ? '#d4a832' : '#5a4a1a'} />
+      {/* Center gem */}
+      <circle cx="16" cy="13" r="1.5" fill={active ? '#fff8d0' : '#8b6914'} />
+      {/* Bottom point accent */}
+      <path
+        d="M13 22 L16 30 L19 22"
+        stroke={active ? '#d4a832' : '#5a4a1a'}
+        strokeWidth="1.2"
+        fill="none"
       />
     </svg>
   );
