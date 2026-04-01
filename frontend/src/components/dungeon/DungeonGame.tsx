@@ -4,7 +4,7 @@ import {
   T_CHEST_GOLD, T_CHEST_WOOD, T_CHEST_STEEL,
   T_BARREL, T_BARREL_SWORD, T_SKULL, T_BRAZIER,
   T_WEAPONS_STAND, T_ARMOR_STAND, T_SACK, T_CRATE,
-  T_BONES, T_CANDLE, T_POT, T_LOOT_FLOOR,
+  T_BONES, T_CANDLE, T_POT, T_LOOT_FLOOR, T_VOID,
   DUNGEON_SOLID, type DungeonMap,
 } from './DungeonGenerator';
 import TouchControls from '../rpg/TouchControls';
@@ -50,10 +50,10 @@ function drawDungeonTile(
   ctx: CanvasRenderingContext2D,
   tile: number, bx: number, by: number, ts: number,
   p: Pal, col: number, row: number, frame: number,
+  tiles?: number[][],
 ) {
   switch (tile) {
     case T_FLOOR:
-    case T_DOOR:
     case T_DECOR: {
       const checker = (col + row) % 2 === 0;
       ctx.fillStyle = checker ? p.floor : p.floor2;
@@ -71,23 +71,82 @@ function drawDungeonTile(
       }
       break;
     }
-    case T_WALL: {
-      ctx.fillStyle = p.wallTop;
-      ctx.fillRect(bx, by, ts, Math.round(ts * 0.35));
+    case T_DOOR: {
+      // Floor base
+      const checker = (col + row) % 2 === 0;
+      ctx.fillStyle = checker ? p.floor : p.floor2;
+      ctx.fillRect(bx, by, ts, ts);
+      // Archway pillars on left/right edges
+      const pw = Math.round(ts * 0.14);
       ctx.fillStyle = p.wallFront;
-      ctx.fillRect(bx, by + Math.round(ts * 0.35), ts, ts - Math.round(ts * 0.35));
-      // Stone brick lines
-      const bh = Math.round(ts * 0.32);
-      for (let i = 0; i < 3; i++) {
-        const ly = by + Math.round(ts * 0.35) + i * bh;
-        ctx.fillStyle = p.wallBrick;
-        ctx.fillRect(bx, ly, ts, 1);
-        const off = ((col ^ row) + i) % 2 === 0 ? 0 : Math.round(ts * 0.45);
-        ctx.fillRect(bx + off, ly, 1, bh);
+      ctx.fillRect(bx, by, pw, ts);
+      ctx.fillRect(bx + ts - pw, by, pw, ts);
+      // Pillar highlight
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(bx, by, pw, Math.round(ts * 0.35));
+      ctx.fillRect(bx + ts - pw, by, pw, Math.round(ts * 0.35));
+      // Top arch lintel
+      ctx.fillStyle = p.wallFront;
+      ctx.fillRect(bx, by, ts, Math.round(ts * 0.18));
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(bx, by, ts, Math.round(ts * 0.08));
+      // Metal hinge dots
+      ctx.fillStyle = '#5a4a1a';
+      ctx.fillRect(bx + pw - 2, Math.round(by + ts * 0.25), 3, 3);
+      ctx.fillRect(bx + ts - pw, Math.round(by + ts * 0.25), 3, 3);
+      break;
+    }
+    case T_WALL: {
+      // Detect if left or right neighbor is open (side wall) vs top/bottom wall
+      const leftOpen  = tiles ? !DUNGEON_SOLID.has(tiles[row]?.[col - 1] ?? T_WALL) : false;
+      const rightOpen = tiles ? !DUNGEON_SOLID.has(tiles[row]?.[col + 1] ?? T_WALL) : false;
+      const isSide = leftOpen || rightOpen;
+
+      if (isSide) {
+        // Side wall — lit band on the OPPOSITE side of the open space (180° fix)
+        const bandW = Math.round(ts * 0.3);
+        if (rightOpen) {
+          // Floor is on the right → lit face on the LEFT
+          ctx.fillStyle = p.wallFront;
+          ctx.fillRect(bx + bandW, by, ts - bandW, ts);
+          ctx.fillStyle = p.wallTop;
+          ctx.fillRect(bx, by, bandW, ts);
+        } else {
+          // Floor is on the left → lit face on the RIGHT
+          ctx.fillStyle = p.wallFront;
+          ctx.fillRect(bx, by, ts - bandW, ts);
+          ctx.fillStyle = p.wallTop;
+          ctx.fillRect(bx + ts - bandW, by, bandW, ts);
+        }
+        // Vertical brick lines
+        const bw = Math.round(ts * 0.32);
+        for (let i = 0; i < 3; i++) {
+          const lx = bx + i * bw;
+          ctx.fillStyle = p.wallBrick;
+          ctx.fillRect(lx, by, 1, ts);
+          const off = ((col ^ row) + i) % 2 === 0 ? 0 : Math.round(ts * 0.45);
+          ctx.fillRect(lx, by + off, bw, 1);
+        }
+        // Highlight on the lit edge
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(rightOpen ? bx : bx + ts - bandW, by, 2, ts);
+      } else {
+        // Top / bottom wall — horizontal bricks (original rendering)
+        ctx.fillStyle = p.wallTop;
+        ctx.fillRect(bx, by, ts, Math.round(ts * 0.35));
+        ctx.fillStyle = p.wallFront;
+        ctx.fillRect(bx, by + Math.round(ts * 0.35), ts, ts - Math.round(ts * 0.35));
+        const bh = Math.round(ts * 0.32);
+        for (let i = 0; i < 3; i++) {
+          const ly = by + Math.round(ts * 0.35) + i * bh;
+          ctx.fillStyle = p.wallBrick;
+          ctx.fillRect(bx, ly, ts, 1);
+          const off = ((col ^ row) + i) % 2 === 0 ? 0 : Math.round(ts * 0.45);
+          ctx.fillRect(bx + off, ly, 1, bh);
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(bx, by, ts, 2);
       }
-      // Top highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      ctx.fillRect(bx, by, ts, 2);
       break;
     }
     case T_TORCH: {
@@ -597,10 +656,10 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
             // Explored but not currently lit — draw dimly
             ctx.save();
             ctx.globalAlpha = 0.6;
-            drawDungeonTile(ctx, tile, bx, by, ts, p, col, row, 0);
+            drawDungeonTile(ctx, tile, bx, by, ts, p, col, row, 0, dungeon.tiles);
             ctx.restore();
           } else {
-            drawDungeonTile(ctx, tile, bx, by, ts, p, col, row, gs.frame);
+            drawDungeonTile(ctx, tile, bx, by, ts, p, col, row, gs.frame, dungeon.tiles);
           }
         }
       }

@@ -23,9 +23,10 @@ export const T_BONES        = 18; // prop: bones on floor (walkable)
 export const T_CANDLE       = 19; // prop: candle (walkable, glows)
 export const T_POT          = 20; // prop: stone pot (solid)
 export const T_LOOT_FLOOR   = 21; // special golden floor for loot rooms
+export const T_VOID         = 22; // empty void — background shows through (impassable)
 
 export const DUNGEON_SOLID = new Set([
-  T_WALL, T_TORCH, T_CHEST_GOLD, T_CHEST_WOOD, T_CHEST_STEEL,
+  T_WALL, T_VOID, T_TORCH, T_CHEST_GOLD, T_CHEST_WOOD, T_CHEST_STEEL,
   T_BARREL, T_BARREL_SWORD, T_BRAZIER, T_WEAPONS_STAND, T_ARMOR_STAND,
   T_SACK, T_CRATE, T_POT,
 ]);
@@ -69,7 +70,7 @@ interface BSPNode {
 }
 
 function bspSplit(node: BSPNode, rng: () => number, depth = 0): void {
-  const MIN = 9;
+  const MIN = 11;
   const canH = node.h >= MIN * 2 + 2;
   const canV = node.w >= MIN * 2 + 2;
   if ((!canH && !canV) || depth > 4) return;
@@ -93,14 +94,16 @@ function bspPlaceRooms(node: BSPNode, rng: () => number): void {
     if (node.right) bspPlaceRooms(node.right, rng);
     return;
   }
-  const mg = 2;
+  // Small margin so rooms fill most of the partition
+  const mg = 1;
   const maxW = node.w - mg * 2, maxH = node.h - mg * 2;
-  const minW = 5, minH = 4;
+  const minW = 7, minH = 5;
   if (maxW < minW || maxH < minH) return;
-  const rw = minW + Math.floor(rng() * (maxW - minW + 1));
-  const rh = minH + Math.floor(rng() * (maxH - minH + 1));
-  const rx = node.x + mg + Math.floor(rng() * (maxW - rw + 1));
-  const ry = node.y + mg + Math.floor(rng() * (maxH - rh + 1));
+  // Bias rooms toward larger sizes — rooms fill 60-100 % of available space
+  const rw = Math.min(maxW, minW + Math.floor(rng() * rng() * (maxW - minW + 1) + (maxW - minW) * 0.4));
+  const rh = Math.min(maxH, minH + Math.floor(rng() * rng() * (maxH - minH + 1) + (maxH - minH) * 0.4));
+  const rx = node.x + mg + Math.floor(rng() * Math.max(1, maxW - rw + 1));
+  const ry = node.y + mg + Math.floor(rng() * Math.max(1, maxH - rh + 1));
   node.room = { x: rx, y: ry, w: rw, h: rh };
 }
 
@@ -117,12 +120,71 @@ function center(r: { x: number; y: number; w: number; h: number }) {
 }
 
 function carveH(map: number[][], y: number, x1: number, x2: number) {
+  const H = map.length, W = map[0].length;
   for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-    if (map[y][x] === T_WALL) map[y][x] = T_FLOOR;
+    for (let dy = -1; dy <= 1; dy++) {
+      const fy = y + dy;
+      if (fy <= 0 || fy >= H - 1) continue;
+      if (map[fy][x] === T_WALL) map[fy][x] = T_FLOOR;
+    }
 }
 function carveV(map: number[][], x: number, y1: number, y2: number) {
+  const H = map.length, W = map[0].length;
   for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-    if (map[y][x] === T_WALL) map[y][x] = T_FLOOR;
+    for (let dx = -1; dx <= 1; dx++) {
+      const fx = x + dx;
+      if (fx <= 0 || fx >= W - 1) continue;
+      if (map[y][fx] === T_WALL) map[y][fx] = T_FLOOR;
+    }
+}
+
+// Place door tiles where a corridor enters/exits a room wall
+function placeDoors(map: number[][], rooms: { x: number; y: number; w: number; h: number }[]) {
+  const H = map.length, W = map[0].length;
+  for (const r of rooms) {
+    // Scan room perimeter — if a perimeter wall has a floor corridor behind it, mark as door
+    for (let x = r.x; x < r.x + r.w; x++) {
+      for (const [wy, fy] of [[r.y - 1, r.y - 2], [r.y + r.h, r.y + r.h + 1]]) {
+        if (wy <= 0 || wy >= H - 1 || fy <= 0 || fy >= H - 1) continue;
+        if (map[wy][x] === T_FLOOR && map[fy][x] === T_FLOOR)
+          map[wy][x] = T_DOOR;
+      }
+    }
+    for (let y = r.y; y < r.y + r.h; y++) {
+      for (const [wx, fx] of [[r.x - 1, r.x - 2], [r.x + r.w, r.x + r.w + 1]]) {
+        if (wx <= 0 || wx >= W - 1 || fx <= 0 || fx >= W - 1) continue;
+        if (map[y][wx] === T_FLOOR && map[y][fx] === T_FLOOR)
+          map[y][wx] = T_DOOR;
+      }
+    }
+  }
+}
+
+// ─── Partition-wall approach (building-like rooms) ───────────────────────────
+
+// Draws a 1-tile wall along each BSP split boundary and punches a 3-tile opening.
+function buildPartitionWalls(node: BSPNode, map: number[][], rng: () => number): void {
+  if (!node.left || !node.right) return;
+  buildPartitionWalls(node.left, map, rng);
+  buildPartitionWalls(node.right, map, rng);
+
+  const isHoriz = node.left.y + node.left.h === node.right.y;
+
+  if (isHoriz) {
+    const wallY = node.right.y;
+    for (let x = node.x; x < node.x + node.w; x++) map[wallY][x] = T_WALL;
+    const avail = Math.max(1, node.w - 5);
+    const openX = node.x + 2 + Math.floor(rng() * avail);
+    for (let x = openX; x <= openX + 2 && x < node.x + node.w - 2; x++)
+      map[wallY][x] = T_DOOR;
+  } else {
+    const wallX = node.right.x;
+    for (let y = node.y; y < node.y + node.h; y++) map[y][wallX] = T_WALL;
+    const avail = Math.max(1, node.h - 5);
+    const openY = node.y + 2 + Math.floor(rng() * avail);
+    for (let y = openY; y <= openY + 2 && y < node.y + node.h - 2; y++)
+      map[y][wallX] = T_DOOR;
+  }
 }
 
 function bspConnect(node: BSPNode, map: number[][], rng: () => number): void {
@@ -427,6 +489,7 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
           map[y][x] = T_FLOOR;
     }
     bspConnect(root, map, rng);
+    placeDoors(map, leaves.map(l => l.room!));
 
     // Krypta cross extensions
     if (style === 'krypta') {
@@ -434,16 +497,14 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
         const r = leaf.room!;
         if (r.w < 6 || r.h < 6) continue;
         const cx = Math.floor(r.x + r.w / 2), cy = Math.floor(r.y + r.h / 2);
-        for (let x = Math.max(1, r.x - 2); x < Math.min(W - 1, r.x + r.w + 2); x++) {
+        for (let x = Math.max(1, r.x - 2); x < Math.min(W - 1, r.x + r.w + 2); x++)
           if (map[cy][x] === T_WALL) map[cy][x] = T_FLOOR;
-        }
-        for (let y = Math.max(1, r.y - 2); y < Math.min(H - 1, r.y + r.h + 2); y++) {
+        for (let y = Math.max(1, r.y - 2); y < Math.min(H - 1, r.y + r.h + 2); y++)
           if (map[y][cx] === T_WALL) map[y][cx] = T_FLOOR;
-        }
       }
     }
 
-    // Pick spawn (first room) and exit (farthest room)
+    // Pick spawn and exit
     playerStart = leaves.length ? center(leaves[0].room!) : { x: 2, y: 2 };
     const dist = bfsDist(map, playerStart.x, playerStart.y);
     let maxD = 0;
@@ -453,13 +514,9 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
         if (dist[y][x] > maxD) { maxD = dist[y][x]; exit = { x, y }; }
     map[exit.y][exit.x] = T_EXIT;
 
-    // Designate 1–2 loot rooms (medium-distance rooms that aren't spawn/exit)
+    // Designate 1–2 loot rooms
     const roomsSorted = leaves
-      .filter(l => l.room)
-      .map(l => {
-        const c = center(l.room!);
-        return { room: l.room!, dist: dist[c.y]?.[c.x] ?? 0 };
-      })
+      .map(l => { const c = center(l.room!); return { room: l.room!, dist: dist[c.y]?.[c.x] ?? 0 }; })
       .filter(r => r.dist > 5)
       .sort(() => rng() - 0.5)
       .slice(0, 2);
@@ -471,17 +528,32 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
       lootRooms.push({ ...room, tier });
     }
 
-    // Furnish remaining regular rooms
+    // Furnish remaining rooms
     for (const leaf of leaves) {
-      if (!leaf.room) continue;
       const isLoot = lootRooms.some(lr => lr.x === leaf.room!.x && lr.y === leaf.room!.y);
-      if (!isLoot && leaf !== leaves[0]) {
-        furnishRoom(map, leaf.room, style, rng);
-      }
+      if (!isLoot && leaf !== leaves[0]) furnishRoom(map, leaf.room!, style, rng);
     }
   }
 
   addTorches(map, rng);
+
+  // Replace filler walls with void — only keep walls that directly border a walkable tile
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (map[y][x] !== T_WALL) continue;
+      let keep = false;
+      outer: for (let dy2 = -1; dy2 <= 1; dy2++) {
+        for (let dx2 = -1; dx2 <= 1; dx2++) {
+          if (dy2 === 0 && dx2 === 0) continue;
+          const nx = x + dx2, ny = y + dy2;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const t = map[ny][nx];
+          if (t !== T_WALL && t !== T_VOID) { keep = true; break outer; }
+        }
+      }
+      if (!keep) map[y][x] = T_VOID;
+    }
+  }
 
   const names = style === 'kerker' ? KERKER_NAMES : style === 'hoehle' ? HOEHLE_NAMES : KRYPTA_NAMES;
   const name = names[Math.floor(rng() * names.length)];
