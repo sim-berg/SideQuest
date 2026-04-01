@@ -24,11 +24,13 @@ export const T_CANDLE       = 19; // prop: candle (walkable, glows)
 export const T_POT          = 20; // prop: stone pot (solid)
 export const T_LOOT_FLOOR   = 21; // special golden floor for loot rooms
 export const T_VOID         = 22; // empty void — background shows through (impassable)
+export const T_TABLE        = 23; // prop: wooden table / workbench (solid)
+export const T_PILLAR       = 24; // prop: stone pillar (solid)
 
 export const DUNGEON_SOLID = new Set([
   T_WALL, T_VOID, T_TORCH, T_CHEST_GOLD, T_CHEST_WOOD, T_CHEST_STEEL,
   T_BARREL, T_BARREL_SWORD, T_BRAZIER, T_WEAPONS_STAND, T_ARMOR_STAND,
-  T_SACK, T_CRATE, T_POT,
+  T_SACK, T_CRATE, T_POT, T_TABLE, T_PILLAR,
 ]);
 
 export const DNG_W = 50;
@@ -207,6 +209,210 @@ function bspConnect(node: BSPNode, map: number[][], rng: () => number): void {
   else             { carveV(map, lc.x, lc.y, rc.y); carveH(map, rc.y, lc.x, rc.x); }
 }
 
+// ─── Scene system ─────────────────────────────────────────────────────────────
+// [dx, dy, tile] relative to an anchor. dy=0 = wall-adjacent row (back of scene).
+
+type SceneTile = [number, number, number];
+type Wall = 'top' | 'bottom' | 'left' | 'right';
+
+function tryPlaceScene(
+  map: number[][], scene: SceneTile[],
+  ax: number, ay: number,
+  rx: number, ry: number, rw: number, rh: number,
+): boolean {
+  const fits = scene.every(([dx, dy]) => {
+    const tx = ax + dx, ty = ay + dy;
+    return tx >= rx + 1 && tx < rx + rw - 1 &&
+           ty >= ry + 1 && ty < ry + rh - 1 &&
+           map[ty][tx] === T_FLOOR;
+  });
+  if (fits) scene.forEach(([dx, dy, t]) => { map[ay + dy][ax + dx] = t; });
+  return fits;
+}
+
+// Place a scene anchored against a specific room wall.
+// Scenes are defined in "top-wall" orientation (dy=0 is wall-touching row, dy+ extends inward).
+// For other walls the dx/dy are transposed/negated automatically.
+function placeAtWall(
+  map: number[][], scene: SceneTile[],
+  room: { x: number; y: number; w: number; h: number },
+  wall: Wall, rng: () => number,
+): boolean {
+  const { x, y, w, h } = room;
+  // Transform scene for the target wall
+  const s: SceneTile[] = scene.map(([dx, dy, t]) => {
+    if (wall === 'top')    return [dx, dy, t];
+    if (wall === 'bottom') return [dx, -dy, t];
+    if (wall === 'left')   return [dy, dx, t];
+    /* right */            return [-dy, dx, t];
+  });
+  const dxs = s.map(c => c[0]), dys = s.map(c => c[1]);
+  const minDx = Math.min(...dxs), maxDx = Math.max(...dxs);
+  const minDy = Math.min(...dys), maxDy = Math.max(...dys);
+  const sw = maxDx - minDx + 1, sh = maxDy - minDy + 1;
+
+  for (let i = 0; i < 12; i++) {
+    let ax: number, ay: number;
+    if (wall === 'top') {
+      const avail = w - 2 - sw + 1; if (avail <= 0) return false;
+      ax = x + 1 - minDx + Math.floor(rng() * avail); ay = y + 1 - minDy;
+    } else if (wall === 'bottom') {
+      const avail = w - 2 - sw + 1; if (avail <= 0) return false;
+      ax = x + 1 - minDx + Math.floor(rng() * avail); ay = y + h - 2 - maxDy;
+    } else if (wall === 'left') {
+      const avail = h - 2 - sh + 1; if (avail <= 0) return false;
+      ax = x + 1 - minDx; ay = y + 1 - minDy + Math.floor(rng() * avail);
+    } else {
+      const avail = h - 2 - sh + 1; if (avail <= 0) return false;
+      ax = x + w - 2 - maxDx; ay = y + 1 - minDy + Math.floor(rng() * avail);
+    }
+    if (tryPlaceScene(map, s, ax, ay, x, y, w, h)) return true;
+  }
+  return false;
+}
+
+// Place symmetrical pillars in large rooms
+function placePillars(
+  map: number[][], room: { x: number; y: number; w: number; h: number },
+) {
+  const { x, y, w, h } = room;
+  const cols = [Math.round(x + w * 0.25), Math.round(x + w * 0.75)];
+  const rows = [Math.round(y + h * 0.3),  Math.round(y + h * 0.7)];
+  for (const py of rows) for (const px of cols)
+    if (map[py]?.[px] === T_FLOOR) map[py][px] = T_PILLAR;
+}
+
+// ─── Scene library ────────────────────────────────────────────────────────────
+// All scenes in "top-wall" orientation: dy=0 is the row touching the wall,
+// dy increases inward. Keep the back row solid, front row can be walkable.
+
+// ── KERKER ────────────────────────────────────────────────────────────────────
+
+// Waffenkammer: armor stand + weapons rack + sword barrel in a row
+const S_ARMORY: SceneTile[] = [
+  [0,0,T_ARMOR_STAND],[1,0,T_WEAPONS_STAND],[2,0,T_BARREL_SWORD],
+];
+// Werkbank: three tables with candles at either end
+const S_WORKBENCH: SceneTile[] = [
+  [0,0,T_TABLE],[1,0,T_TABLE],[2,0,T_TABLE],
+  [0,1,T_CANDLE],                           [2,1,T_CANDLE],
+];
+// Lager: crates + barrel row, sacks in front
+const S_STORAGE: SceneTile[] = [
+  [0,0,T_CRATE],[1,0,T_CRATE],[2,0,T_BARREL],
+  [0,1,T_SACK],              [2,1,T_POT],
+];
+// Wachposten: armor stand + table (duty log)
+const S_GUARD_POST: SceneTile[] = [
+  [0,0,T_ARMOR_STAND],[1,0,T_TABLE],
+  [1,1,T_CANDLE],
+];
+// Vorrat: barrel row with sword and sacks
+const S_BARREL_ROW: SceneTile[] = [
+  [0,0,T_BARREL],[1,0,T_BARREL_SWORD],[2,0,T_BARREL],[3,0,T_SACK],
+];
+// Folterkeller: bones + skull with a candle, against wall
+const S_TORTURE: SceneTile[] = [
+  [0,0,T_SKULL],[1,0,T_BONES],[2,0,T_BONES],
+  [0,1,T_CANDLE],[2,1,T_BONES],
+];
+// Schreibtisch: single table with candle and pot
+const S_DESK: SceneTile[] = [
+  [0,0,T_TABLE],[1,0,T_TABLE],
+  [0,1,T_CANDLE],[1,1,T_POT],
+];
+// Nachschub: supply row
+const S_SUPPLY: SceneTile[] = [
+  [0,0,T_CRATE],[1,0,T_SACK],[2,0,T_BARREL],[3,0,T_POT],
+];
+
+// ── KRYPTA ────────────────────────────────────────────────────────────────────
+
+// Hauptaltar: decor flanked by candles, bones in front
+const S_MAIN_ALTAR: SceneTile[] = [
+  [0,0,T_CANDLE],[1,0,T_DECOR],[2,0,T_CANDLE],
+  [0,1,T_BONES], [1,1,T_SKULL],[2,1,T_BONES],
+];
+// Opfertisch: burial table with skulls and candles
+const S_BURIAL_TABLE: SceneTile[] = [
+  [0,0,T_CANDLE],[1,0,T_TABLE],[2,0,T_CANDLE],
+  [0,1,T_SKULL], [1,1,T_BONES],[2,1,T_SKULL],
+];
+// Brasero-Flanken: brazier with skull sentinels
+const S_BRAZIER_SHRINE: SceneTile[] = [
+  [0,0,T_SKULL],[1,0,T_BRAZIER],[2,0,T_SKULL],
+  [0,1,T_CANDLE],              [2,1,T_CANDLE],
+];
+// Grabwächter: two armor stands guarding bones
+const S_TOMB_GUARD: SceneTile[] = [
+  [0,0,T_ARMOR_STAND],[1,0,T_BONES],[2,0,T_ARMOR_STAND],
+];
+// Knochenwand: bone + skull row with candles
+const S_BONE_WALL: SceneTile[] = [
+  [0,0,T_BONES],[1,0,T_SKULL],[2,0,T_BONES],[3,0,T_SKULL],
+  [1,1,T_CANDLE],             [3,1,T_CANDLE],
+];
+// Nekromantentisch: ritual table with candles and skull
+const S_RITUAL_TABLE: SceneTile[] = [
+  [0,0,T_TABLE],[1,0,T_TABLE],
+  [0,1,T_SKULL],[1,1,T_CANDLE],
+];
+// Kerzenaltar: simple candle row with central skull
+const S_CANDLE_ALTAR: SceneTile[] = [
+  [0,0,T_CANDLE],[1,0,T_SKULL],[2,0,T_CANDLE],
+];
+
+const KERKER_SCENES: SceneTile[][] = [
+  S_ARMORY, S_WORKBENCH, S_STORAGE, S_GUARD_POST,
+  S_BARREL_ROW, S_TORTURE, S_DESK, S_SUPPLY,
+];
+const KRYPTA_SCENES: SceneTile[][] = [
+  S_MAIN_ALTAR, S_BURIAL_TABLE, S_BRAZIER_SHRINE,
+  S_TOMB_GUARD, S_BONE_WALL, S_RITUAL_TABLE, S_CANDLE_ALTAR,
+];
+
+// ── HÖHLE ─────────────────────────────────────────────────────────────────────
+
+// Kristallformation: pillar flanked by decor crystals
+const S_CRYSTALS: SceneTile[] = [
+  [0,0,T_DECOR],[1,0,T_PILLAR],[2,0,T_DECOR],
+];
+// Lagerfeuer: brazier + supply cache
+const S_CAVE_CAMP: SceneTile[] = [
+  [0,0,T_BRAZIER],[1,0,T_BARREL],[2,0,T_SACK],
+  [0,1,T_POT],                  [2,1,T_CRATE],
+];
+// Knochenhaufen: creature bones + skull
+const S_CREATURE_BONES: SceneTile[] = [
+  [0,0,T_BONES],[1,0,T_SKULL],[2,0,T_BONES],
+  [0,1,T_BONES],              [2,1,T_SKULL],
+];
+// Höhlensäulen: pillar row (stalagmite cluster)
+const S_STALAGMITES: SceneTile[] = [
+  [0,0,T_PILLAR],[2,0,T_PILLAR],
+  [1,1,T_DECOR],
+];
+// Wasserstelle: water pool bordered by decor
+const S_SPRING: SceneTile[] = [
+  [0,0,T_WATER],[1,0,T_WATER],
+  [0,1,T_DECOR],[1,1,T_WATER],
+];
+// Fundstück: scavenged loot pile
+const S_CAVE_LOOT: SceneTile[] = [
+  [0,0,T_CRATE],[1,0,T_BARREL],[2,0,T_POT],
+  [1,1,T_SACK],
+];
+// Ritualherd: brazier flanked by bone offerings
+const S_FIRE_SHRINE: SceneTile[] = [
+  [0,0,T_BONES],[1,0,T_BRAZIER],[2,0,T_BONES],
+  [1,1,T_SKULL],
+];
+
+const HOEHLE_SCENES: SceneTile[][] = [
+  S_CRYSTALS, S_CAVE_CAMP, S_CREATURE_BONES,
+  S_STALAGMITES, S_SPRING, S_CAVE_LOOT, S_FIRE_SHRINE,
+];
+
 // ─── Loot room furnishing ────────────────────────────────────────────────────
 
 function furnishLootRoom(
@@ -216,33 +422,39 @@ function furnishLootRoom(
   const { x, y, w, h } = room;
   const cx = Math.floor(x + w / 2), cy = Math.floor(y + h / 2);
 
-  // Golden floor for whole room
+  // Golden floor
   for (let ry = y; ry < y + h; ry++)
     for (let rx = x; rx < x + w; rx++)
       if (map[ry][rx] === T_FLOOR) map[ry][rx] = T_LOOT_FLOOR;
 
-  // Place chest at center
-  const chestTile = tier === 'legendary' ? T_CHEST_GOLD
+  const p = (px: number, py: number, t: number) => {
+    if (px >= x && px < x+w && py >= y && py < y+h &&
+        (map[py][px] === T_LOOT_FLOOR)) map[py][px] = t;
+  };
+
+  // Chest at center
+  map[cy][cx] = tier === 'legendary' ? T_CHEST_GOLD
     : tier === 'rare' ? T_CHEST_STEEL : T_CHEST_WOOD;
-  map[cy][cx] = chestTile;
 
-  // Flanking braziers for rare/legendary
-  if (tier !== 'common') {
-    if (cx - 2 >= x) map[cy][cx - 2] = T_BRAZIER;
-    if (cx + 2 < x + w) map[cy][cx + 2] = T_BRAZIER;
-  }
-
-  // Corner barrels / sacks
-  if (w >= 6 && h >= 5) {
-    if (map[y + 1][x + 1] === T_LOOT_FLOOR)     map[y + 1][x + 1] = T_SACK;
-    if (map[y + 1][x + w - 2] === T_LOOT_FLOOR) map[y + 1][x + w - 2] = T_SACK;
-  }
-
-  // Weapons stand on back wall
-  if (tier !== 'common' && h >= 4) {
-    const wx = cx + (rng() < 0.5 ? -1 : 1);
-    if (wx >= x && wx < x + w && map[y + 1][wx] === T_LOOT_FLOOR)
-      map[y + 1][wx] = T_WEAPONS_STAND;
+  if (tier === 'legendary') {
+    // Grandiose Schatzkammer: braziers + armor stands + weapons stands + candles
+    p(cx-2, cy, T_BRAZIER);    p(cx+2, cy, T_BRAZIER);
+    p(cx-1, cy-1, T_ARMOR_STAND);   p(cx+1, cy-1, T_ARMOR_STAND);
+    p(cx-1, cy+1, T_WEAPONS_STAND); p(cx+1, cy+1, T_WEAPONS_STAND);
+    p(cx,   cy-2, T_CANDLE);        p(cx,   cy+2, T_CANDLE);
+    p(cx-2, cy-1, T_SKULL);         p(cx+2, cy-1, T_SKULL);
+    // Tables flanking chest
+    p(cx-3, cy, T_TABLE); p(cx+3, cy, T_TABLE);
+  } else if (tier === 'rare') {
+    p(cx-2, cy, T_BRAZIER); p(cx+2, cy, T_BRAZIER);
+    p(cx-1, cy, T_SACK);    p(cx+1, cy, T_SACK);
+    p(cx, cy-1, T_WEAPONS_STAND);
+    p(cx-1, cy+1, T_CANDLE); p(cx+1, cy+1, T_CANDLE);
+    p(cx, cy+2, T_CRATE);
+  } else {
+    p(cx-1, cy, T_BARREL); p(cx+1, cy, T_BARREL);
+    p(cx, cy-1, T_SACK);
+    p(cx-1, cy+1, T_CRATE); p(cx+1, cy+1, T_POT);
   }
 }
 
@@ -252,65 +464,32 @@ function furnishRoom(
   map: number[][], room: { x: number; y: number; w: number; h: number },
   style: DungeonStyle, rng: () => number,
 ) {
-  const { x, y, w, h } = room;
+  const { w, h } = room;
+  const scenes = style === 'krypta' ? KRYPTA_SCENES
+    : style === 'hoehle' ? HOEHLE_SCENES : KERKER_SCENES;
+  const walls: Wall[] = ['top', 'bottom', 'left', 'right'];
 
-  // Scattered barrels
-  for (let i = 0; i < 2; i++) {
-    const rx = x + 1 + Math.floor(rng() * (w - 2));
-    const ry = y + 1 + Math.floor(rng() * (h - 2));
-    if (map[ry][rx] === T_FLOOR) {
-      map[ry][rx] = rng() < 0.4 ? T_BARREL_SWORD : T_BARREL;
-    }
+  // Symmetric pillars in large rooms before placing wall scenes
+  if (w >= 12 && h >= 9) placePillars(map, room);
+
+  // Fill each wall with a scene (shuffle walls for variety)
+  const area = w * h;
+  const sceneCount = area >= 70 ? 3 : 2;
+  const shuffled = [...walls].sort(() => rng() - 0.5);
+
+  let placed = 0;
+  // First pass: one scene per wall direction
+  for (const wall of shuffled) {
+    if (placed >= sceneCount) break;
+    const scene = scenes[Math.floor(rng() * scenes.length)];
+    if (placeAtWall(map, scene, room, wall, rng)) placed++;
   }
-
-  // Crates in corners
-  if (w >= 5 && h >= 4 && rng() < 0.5) {
-    const corners = [
-      [y + 1, x + 1], [y + 1, x + w - 2],
-      [y + h - 2, x + 1], [y + h - 2, x + w - 2],
-    ];
-    const c = corners[Math.floor(rng() * corners.length)];
-    if (map[c[0]][c[1]] === T_FLOOR) map[c[0]][c[1]] = T_CRATE;
-  }
-
-  // Bones scattered (walkable)
-  for (let i = 0; i < 3; i++) {
-    const rx = x + 1 + Math.floor(rng() * (w - 2));
-    const ry = y + 1 + Math.floor(rng() * (h - 2));
-    if (map[ry][rx] === T_FLOOR) map[ry][rx] = T_BONES;
-  }
-
-  // Skull in corner
-  if (rng() < 0.3) {
-    const rx = x + 1 + Math.floor(rng() * (w - 2));
-    if (map[y + 1][rx] === T_FLOOR) map[y + 1][rx] = T_SKULL;
-  }
-
-  // Stone pot along wall
-  if (rng() < 0.4) {
-    const rx = x + 1 + Math.floor(rng() * (w - 2));
-    if (map[y + 1][rx] === T_FLOOR) map[y + 1][rx] = T_POT;
-  }
-
-  // Candles (walkable glow)
-  for (let i = 0; i < 2; i++) {
-    const rx = x + 1 + Math.floor(rng() * (w - 2));
-    const ry = y + 1 + Math.floor(rng() * (h - 2));
-    if (map[ry][rx] === T_FLOOR) map[ry][rx] = T_CANDLE;
-  }
-
-  // Style-specific
-  if (style === 'krypta') {
-    // Armor stands along wall
-    if (rng() < 0.4 && w >= 6) {
-      const rx = x + 1 + Math.floor(rng() * (w - 2));
-      if (map[y + 1][rx] === T_FLOOR) map[y + 1][rx] = T_ARMOR_STAND;
-    }
-    // Altar decor center
-    if (rng() < 0.3) {
-      const cx = Math.floor(x + w / 2), cy = Math.floor(y + h / 2);
-      if (map[cy][cx] === T_FLOOR) map[cy][cx] = T_DECOR;
-    }
+  // Second pass if room is large enough for more
+  let attempts = 0;
+  while (placed < sceneCount && ++attempts < 50) {
+    const wall = shuffled[Math.floor(rng() * 4)];
+    const scene = scenes[Math.floor(rng() * scenes.length)];
+    if (placeAtWall(map, scene, room, wall, rng)) placed++;
   }
 }
 

@@ -5,6 +5,7 @@ import {
   T_BARREL, T_BARREL_SWORD, T_SKULL, T_BRAZIER,
   T_WEAPONS_STAND, T_ARMOR_STAND, T_SACK, T_CRATE,
   T_BONES, T_CANDLE, T_POT, T_LOOT_FLOOR, T_VOID,
+  T_TABLE, T_PILLAR,
   DUNGEON_SOLID, type DungeonMap,
 } from './DungeonGenerator';
 import TouchControls from '../rpg/TouchControls';
@@ -482,6 +483,50 @@ function drawDungeonTile(
       // Rim
       ctx.fillStyle = '#6a5438';
       ctx.fillRect(Math.round(cx - ts * 0.22), Math.round(cy - ts * 0.24), Math.round(ts * 0.44), Math.round(ts * 0.06));
+      break;
+    }
+    case T_TABLE: {
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const tw = Math.round(ts * 0.72), th = Math.round(ts * 0.5);
+      const tx2 = bx + Math.round((ts - tw) / 2), ty2 = by + Math.round(ts * 0.22);
+      // Table top
+      ctx.fillStyle = '#6a4a1a';
+      ctx.fillRect(tx2, ty2, tw, th);
+      // Top highlight edge
+      ctx.fillStyle = '#8a6428';
+      ctx.fillRect(tx2, ty2, tw, Math.round(ts * 0.07));
+      // Side shadow
+      ctx.fillStyle = '#4a3010';
+      ctx.fillRect(tx2, ty2 + th - Math.round(ts * 0.06), tw, Math.round(ts * 0.06));
+      // Legs
+      ctx.fillStyle = '#5a3c14';
+      const legW = Math.round(ts * 0.07), legH = Math.round(ts * 0.16);
+      ctx.fillRect(tx2 + 1, ty2 + th, legW, legH);
+      ctx.fillRect(tx2 + tw - 1 - legW, ty2 + th, legW, legH);
+      break;
+    }
+    case T_PILLAR: {
+      // Floor base
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const pw2 = Math.round(ts * 0.54), ph = Math.round(ts * 0.8);
+      const px2 = bx + Math.round((ts - pw2) / 2), py2 = by + Math.round(ts * 0.08);
+      // Capital (top)
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(px2 - Math.round(ts * 0.04), py2, pw2 + Math.round(ts * 0.08), Math.round(ts * 0.1));
+      // Shaft
+      ctx.fillStyle = p.wallFront;
+      ctx.fillRect(px2, py2 + Math.round(ts * 0.1), pw2, ph - Math.round(ts * 0.1));
+      // Lit face (left band)
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(px2, py2 + Math.round(ts * 0.1), Math.round(pw2 * 0.3), ph - Math.round(ts * 0.1));
+      // Vertical groove
+      ctx.fillStyle = p.wallBrick;
+      ctx.fillRect(px2 + Math.round(pw2 * 0.5), py2 + Math.round(ts * 0.1), 1, ph - Math.round(ts * 0.1));
+      // Base
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(px2 - Math.round(ts * 0.04), py2 + ph - Math.round(ts * 0.08), pw2 + Math.round(ts * 0.08), Math.round(ts * 0.08));
       break;
     }
   }
