@@ -1178,13 +1178,20 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
       });
     }
   };
-  const handleFight = useCallback(() => handleFightRef.current(), []);
+  const handleFightWithDirRef = useRef<(dx: number, dy: number) => void>(() => {});
+  handleFightWithDirRef.current = (dx: number, dy: number) => {
+    if (dx !== 0 || dy !== 0) {
+      gsRef.current.facing = dx === 1 ? 'right' : dx === -1 ? 'left' : dy === -1 ? 'up' : 'down';
+    }
+    handleFightRef.current();
+  };
+  const handleFightWithDir = useCallback((dx: number, dy: number) => handleFightWithDirRef.current(dx, dy), []);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       keysRef.current.add(e.key);
       if ([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
-      if (e.key === ' ' || e.key === 'e' || e.key === 'Enter') handleActionRef.current();
+      if (e.key === ' ') handleFightRef.current();
     };
     const up = (e: KeyboardEvent) => keysRef.current.delete(e.key);
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
@@ -1575,7 +1582,7 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
           onDpad={(dx, dy) => { dpadRef.current = { dx, dy }; }}
           onDpadRelease={() => { dpadRef.current = { dx: 0, dy: 0 }; }}
           onAction={handleAction}
-          onFight={handleFight}
+          onFightDir={handleFightWithDir}
           showInteract={nearChest}
           showFight={nearEnemy}
           interactLabel={nearLocked ? (playerKeys > 0 ? '🗝 Öffnen' : '🔒 Gesperrt') : 'Öffnen'}

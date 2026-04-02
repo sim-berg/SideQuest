@@ -4,7 +4,7 @@ interface TouchControlsProps {
   onDpad: (dx: number, dy: number) => void;
   onDpadRelease: () => void;
   onAction: () => void;
-  onFight?: () => void;
+  onFightDir?: (dx: number, dy: number) => void;
   showInteract: boolean;
   showFight?: boolean;
   interactLabel?: string;
@@ -14,168 +14,196 @@ const KNOB_R     = 22;
 const MAX_TRAVEL = 44;
 const DEAD       = 0.22;
 
+type JoyVisual = { base: { x: number; y: number }; kx: number; ky: number } | null;
+
 export default function TouchControls({
-  onDpad, onDpadRelease, onAction, onFight, showInteract, showFight = false, interactLabel = 'Öffnen',
+  onDpad, onDpadRelease, onAction, onFightDir, showInteract, showFight = false, interactLabel = 'Öffnen',
 }: TouchControlsProps) {
-  const activeId  = useRef<number | null>(null);
-  const baseRef   = useRef<{ x: number; y: number } | null>(null);
 
-  // Only knob offset + base position need to trigger re-render for visual
-  const [visual, setVisual] = useState<{ base: { x: number; y: number }; kx: number; ky: number } | null>(null);
+  // ── Left joystick (movement) ──────────────────────────────────────────────
+  const moveId   = useRef<number | null>(null);
+  const moveBase = useRef<{ x: number; y: number } | null>(null);
+  const [moveVis, setMoveVis] = useState<JoyVisual>(null);
 
-  const compute = (touchX: number, touchY: number) => {
-    const b = baseRef.current;
-    if (!b) return;
-    const dx = touchX - b.x;
-    const dy = touchY - b.y;
+  const computeMove = (cx: number, cy: number) => {
+    const b = moveBase.current; if (!b) return;
+    const dx = cx - b.x, dy = cy - b.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const clamped = Math.min(dist, MAX_TRAVEL);
-    const angle = Math.atan2(dy, dx);
-    const kx = Math.cos(angle) * clamped;
-    const ky = Math.sin(angle) * clamped;
+    const cl = Math.min(dist, MAX_TRAVEL);
+    const a = Math.atan2(dy, dx);
+    const kx = Math.cos(a) * cl, ky = Math.sin(a) * cl;
+    setMoveVis({ base: { ...b }, kx, ky });
+    const nx = kx / MAX_TRAVEL, ny = ky / MAX_TRAVEL;
+    if (Math.sqrt(nx * nx + ny * ny) < DEAD) { onDpad(0, 0); }
+    else if (Math.abs(nx) >= Math.abs(ny))    { onDpad(nx > 0 ? 1 : -1, 0); }
+    else                                       { onDpad(0, ny > 0 ? 1 : -1); }
+  };
 
-    setVisual({ base: { ...b }, kx, ky });
+  const onMoveStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (moveId.current !== null) return;
+    const t = e.changedTouches[0];
+    moveId.current = t.identifier;
+    moveBase.current = { x: t.clientX, y: t.clientY };
+    setMoveVis({ base: { x: t.clientX, y: t.clientY }, kx: 0, ky: 0 });
+  };
+  const onMoveMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const t = Array.from(e.changedTouches).find(t => t.identifier === moveId.current);
+    if (t) computeMove(t.clientX, t.clientY);
+  };
+  const onMoveEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const t = Array.from(e.changedTouches).find(t => t.identifier === moveId.current);
+    if (!t) return;
+    moveId.current = null; moveBase.current = null;
+    setMoveVis(null); onDpadRelease();
+  };
 
-    const nx = kx / MAX_TRAVEL;
-    const ny = ky / MAX_TRAVEL;
+  // ── Right joystick (attack) ───────────────────────────────────────────────
+  const atkId    = useRef<number | null>(null);
+  const atkBase  = useRef<{ x: number; y: number } | null>(null);
+  const atkDir   = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+  const [atkVis, setAtkVis] = useState<JoyVisual>(null);
+
+  const computeAtk = (cx: number, cy: number) => {
+    const b = atkBase.current; if (!b) return;
+    const dx = cx - b.x, dy = cy - b.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const cl = Math.min(dist, MAX_TRAVEL);
+    const a = Math.atan2(dy, dx);
+    const kx = Math.cos(a) * cl, ky = Math.sin(a) * cl;
+    setAtkVis({ base: { ...b }, kx, ky });
+    const nx = kx / MAX_TRAVEL, ny = ky / MAX_TRAVEL;
     if (Math.sqrt(nx * nx + ny * ny) < DEAD) {
-      onDpad(0, 0);
+      atkDir.current = { dx: 0, dy: 0 };
     } else if (Math.abs(nx) >= Math.abs(ny)) {
-      onDpad(nx > 0 ? 1 : -1, 0);
+      atkDir.current = { dx: nx > 0 ? 1 : -1, dy: 0 };
     } else {
-      onDpad(0, ny > 0 ? 1 : -1);
+      atkDir.current = { dx: 0, dy: ny > 0 ? 1 : -1 };
     }
   };
 
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onAtkStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (activeId.current !== null) return;
+    if (atkId.current !== null) return;
     const t = e.changedTouches[0];
-    activeId.current = t.identifier;
-    baseRef.current = { x: t.clientX, y: t.clientY };
-    setVisual({ base: { x: t.clientX, y: t.clientY }, kx: 0, ky: 0 });
+    atkId.current = t.identifier;
+    atkBase.current = { x: t.clientX, y: t.clientY };
+    atkDir.current = { dx: 0, dy: 0 };
+    setAtkVis({ base: { x: t.clientX, y: t.clientY }, kx: 0, ky: 0 });
+  };
+  const onAtkMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const t = Array.from(e.changedTouches).find(t => t.identifier === atkId.current);
+    if (t) computeAtk(t.clientX, t.clientY);
+  };
+  const onAtkEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const t = Array.from(e.changedTouches).find(t => t.identifier === atkId.current);
+    if (!t) return;
+    atkId.current = null; atkBase.current = null;
+    setAtkVis(null);
+    if (onFightDir) onFightDir(atkDir.current.dx, atkDir.current.dy);
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
-    const touch = Array.from(e.changedTouches).find(t => t.identifier === activeId.current);
-    if (!touch) return;
-    compute(touch.clientX, touch.clientY);
-  };
-
-  const release = (e: React.TouchEvent) => {
-    e.preventDefault();
-    const touch = Array.from(e.changedTouches).find(t => t.identifier === activeId.current);
-    if (!touch) return;
-    activeId.current = null;
-    baseRef.current = null;
-    setVisual(null);
-    onDpadRelease();
+  // ── Shared joystick renderer ──────────────────────────────────────────────
+  const renderJoy = (vis: JoyVisual, ringColor = 'rgba(255,255,255,0.2)', ringBg = 'rgba(0,0,0,0.25)') => {
+    if (!vis) return null;
+    return (
+      <div style={{
+        position: 'fixed',
+        left: vis.base.x, top: vis.base.y,
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none', zIndex: 100,
+      }}>
+        <div style={{
+          position: 'absolute',
+          width:  (MAX_TRAVEL + KNOB_R) * 2,
+          height: (MAX_TRAVEL + KNOB_R) * 2,
+          borderRadius: '50%',
+          border: `2px solid ${ringColor}`,
+          background: ringBg,
+          top: '50%', left: '50%',
+          transform: 'translate(-50%,-50%)',
+        }} />
+        <div style={{
+          position: 'absolute',
+          width:  KNOB_R * 2,
+          height: KNOB_R * 2,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.75), rgba(200,200,200,0.3))',
+          border: '1.5px solid rgba(255,255,255,0.55)',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.6)',
+          top: '50%', left: '50%',
+          transform: `translate(calc(-50% + ${vis.kx}px), calc(-50% + ${vis.ky}px))`,
+        }} />
+      </div>
+    );
   };
 
   return (
     <div className="pointer-events-none absolute inset-0 flex">
 
-      {/* Left half — joystick zone */}
+      {/* Left half — movement joystick */}
       <div
         className="pointer-events-auto relative"
         style={{ flex: 1 }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={release}
-        onTouchCancel={release}
+        onTouchStart={onMoveStart}
+        onTouchMove={onMoveMove}
+        onTouchEnd={onMoveEnd}
+        onTouchCancel={onMoveEnd}
       >
-        {visual && (
-          <div style={{
-            position: 'fixed',
-            left: visual.base.x,
-            top: visual.base.y,
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            zIndex: 100,
-          }}>
-            {/* Outer ring */}
-            <div style={{
-              position: 'absolute',
-              width:  (MAX_TRAVEL + KNOB_R) * 2,
-              height: (MAX_TRAVEL + KNOB_R) * 2,
-              borderRadius: '50%',
-              border: '2px solid rgba(255,255,255,0.2)',
-              background: 'rgba(0,0,0,0.25)',
-              top: '50%', left: '50%',
-              transform: 'translate(-50%,-50%)',
-            }} />
-            {/* Knob */}
-            <div style={{
-              position: 'absolute',
-              width:  KNOB_R * 2,
-              height: KNOB_R * 2,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.75), rgba(200,200,200,0.3))',
-              border: '1.5px solid rgba(255,255,255,0.55)',
-              boxShadow: '0 3px 12px rgba(0,0,0,0.6)',
-              top: '50%', left: '50%',
-              transform: `translate(calc(-50% + ${visual.kx}px), calc(-50% + ${visual.ky}px))`,
-            }} />
-          </div>
-        )}
+        {renderJoy(moveVis)}
       </div>
 
-      {/* Right half — action buttons */}
+      {/* Right half — attack joystick + interact button */}
       <div
-        className="pointer-events-none flex items-end justify-end gap-3"
-        style={{ flex: 1, paddingBottom: 32, paddingRight: 20 }}
+        className="pointer-events-auto relative"
+        style={{ flex: 1 }}
+        onTouchStart={onAtkStart}
+        onTouchMove={onAtkMove}
+        onTouchEnd={onAtkEnd}
+        onTouchCancel={onAtkEnd}
       >
-        {/* B — fight button (only when onFight provided) */}
-        {onFight && (
-          <div className="pointer-events-auto flex flex-col items-center gap-1 mb-1">
-            {showFight && (
-              <span style={{
-                background: 'rgba(180,40,20,0.9)',
-                color: '#ffe0d0',
-                fontFamily: 'Georgia, serif',
-                fontSize: 10,
-                fontWeight: 'bold',
-                borderRadius: 999,
-                padding: '2px 10px',
-                letterSpacing: '0.04em',
-              }}>
-                Kämpfen
-              </span>
-            )}
-            <button
-              onTouchStart={(e) => { e.preventDefault(); onFight(); }}
-              onMouseDown={(e) => { e.preventDefault(); onFight(); }}
-              className="select-none touch-none flex items-center justify-center font-bold"
-              style={{
-                width: 52, height: 52,
-                borderRadius: '50%',
-                background: showFight
-                  ? 'radial-gradient(circle at 38% 32%, #e04020, #801808)'
-                  : 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.25), rgba(255,255,255,0.08))',
-                border: `2px solid ${showFight ? 'rgba(220,80,40,0.9)' : 'rgba(255,255,255,0.2)'}`,
-                boxShadow: showFight
-                  ? '0 0 20px rgba(200,60,20,0.7), 0 3px 10px rgba(0,0,0,0.5)'
-                  : '0 3px 10px rgba(0,0,0,0.4)',
-                color: showFight ? '#ffe0d0' : 'rgba(255,255,255,0.5)',
-                fontSize: 18,
-              }}
-              aria-label="Kämpfen"
-            >
-              ⚔
-            </button>
+        {renderJoy(
+          atkVis,
+          showFight ? 'rgba(220,80,40,0.65)' : 'rgba(255,255,255,0.2)',
+          showFight ? 'rgba(80,10,0,0.35)'   : 'rgba(0,0,0,0.25)',
+        )}
+
+        {/* Hint label above ring when no touch active */}
+        {!atkVis && showFight && (
+          <div style={{
+            position: 'absolute', bottom: 100, right: 0, left: 0,
+            display: 'flex', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <span style={{
+              background: 'rgba(180,40,20,0.85)',
+              color: '#ffe0d0',
+              fontFamily: 'Georgia, serif',
+              fontSize: 10, fontWeight: 'bold',
+              borderRadius: 999,
+              padding: '2px 12px',
+              letterSpacing: '0.04em',
+            }}>
+              Angriff halten &amp; ziehen
+            </span>
           </div>
         )}
 
-        {/* A — interact button */}
-        <div className="pointer-events-auto flex flex-col items-center gap-2">
+        {/* A — interact button (stops propagation so it doesn't trigger attack joystick) */}
+        <div
+          className="absolute flex flex-col items-center gap-2"
+          style={{ bottom: 32, right: 20, pointerEvents: 'auto' }}
+        >
           {showInteract && (
             <span style={{
               background: 'rgba(212,168,50,0.9)',
               color: '#3a2800',
               fontFamily: 'Georgia, serif',
-              fontSize: 11,
-              fontWeight: 'bold',
+              fontSize: 11, fontWeight: 'bold',
               letterSpacing: '0.04em',
               borderRadius: 999,
               padding: '2px 12px',
@@ -184,7 +212,7 @@ export default function TouchControls({
             </span>
           )}
           <button
-            onTouchStart={(e) => { e.preventDefault(); onAction(); }}
+            onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); onAction(); }}
             onMouseDown={(e) => { e.preventDefault(); onAction(); }}
             className="select-none touch-none flex items-center justify-center font-bold"
             style={{
