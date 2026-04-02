@@ -17,6 +17,12 @@ services:
       MONGODB_URI: mongodb://mongo:27017/sidequest
       JWT_SECRET: change-me-in-production
       CORS_ORIGIN: "*"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build: ./frontend
@@ -24,7 +30,8 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   mongo-data:
