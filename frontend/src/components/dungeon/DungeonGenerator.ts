@@ -136,7 +136,7 @@ function center(r: { x: number; y: number; w: number; h: number }) {
 }
 
 function carveH(map: number[][], y: number, x1: number, x2: number) {
-  const H = map.length, W = map[0].length;
+  const H = map.length;
   for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
     for (let dy = -1; dy <= 1; dy++) {
       const fy = y + dy;
@@ -145,7 +145,7 @@ function carveH(map: number[][], y: number, x1: number, x2: number) {
     }
 }
 function carveV(map: number[][], x: number, y1: number, y2: number) {
-  const H = map.length, W = map[0].length;
+  const W = map[0].length;
   for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
     for (let dx = -1; dx <= 1; dx++) {
       const fx = x + dx;
@@ -179,7 +179,7 @@ function placeDoors(map: number[][], rooms: { x: number; y: number; w: number; h
 // ─── Partition-wall approach (building-like rooms) ───────────────────────────
 
 // Draws a 1-tile wall along each BSP split boundary and punches a 3-tile opening.
-function buildPartitionWalls(node: BSPNode, map: number[][], rng: () => number): void {
+export function buildPartitionWalls(node: BSPNode, map: number[][], rng: () => number): void {
   if (!node.left || !node.right) return;
   buildPartitionWalls(node.left, map, rng);
   buildPartitionWalls(node.right, map, rng);
@@ -431,7 +431,7 @@ const HOEHLE_SCENES: SceneTile[][] = [
 
 function furnishLootRoom(
   map: number[][], room: { x: number; y: number; w: number; h: number },
-  tier: 'common' | 'rare' | 'legendary', rng: () => number,
+  tier: 'common' | 'rare' | 'legendary', _rng: () => number,
 ) {
   const { x, y, w, h } = room;
   const cx = Math.floor(x + w / 2), cy = Math.floor(y + h / 2);
