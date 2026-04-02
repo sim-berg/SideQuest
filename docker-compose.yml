@@ -14,7 +14,7 @@ services:
       - mongo
     environment:
       PORT: 3001
-      MONGODB_URI: mongodb://mongo:27017/sidequest
+      MONGODB_URI: mongodb://mongo:27017/devsidequest
       JWT_SECRET: change-me-in-production
       CORS_ORIGIN: "*"
 
