@@ -13,12 +13,12 @@ services:
     depends_on:
       - mongo
     environment:
-      PORT: 3001
+      PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/devsidequest
       JWT_SECRET: change-me-in-production
       CORS_ORIGIN: "*"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
