@@ -111,7 +111,7 @@ export default function ChatInbox() {
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-16">
         {loading && conversations.length === 0 ? (
           <div className="flex items-center justify-center pt-20">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-500" />

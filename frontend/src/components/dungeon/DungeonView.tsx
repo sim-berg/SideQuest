@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DungeonGame from './DungeonGame';
 import { generateDungeon, type DungeonStyle, type DungeonMap } from './DungeonGenerator';
+import { useUIStore } from '../../stores/useUIStore';
 
 const STYLES: { id: DungeonStyle; label: string; sub: string; color: string; glow: string }[] = [
   {
@@ -29,6 +30,12 @@ const STYLES: { id: DungeonStyle; label: string; sub: string; color: string; glo
 export default function DungeonView() {
   const [activeDungeon, setActiveDungeon] = useState<DungeonMap | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<DungeonStyle>('kerker');
+  const setDungeonGameActive = useUIStore((s) => s.setDungeonGameActive);
+
+  useEffect(() => {
+    setDungeonGameActive(!!activeDungeon);
+    return () => setDungeonGameActive(false);
+  }, [activeDungeon, setDungeonGameActive]);
 
   if (activeDungeon) {
     return (

@@ -21,6 +21,9 @@ interface UIState {
   createWizardStep: CreateWizardStep;
   /** Picked location coordinates */
   pickedLocation: { lat: number; lng: number } | null;
+  /** Whether a dungeon game is actively running (hides nav bars) */
+  dungeonGameActive: boolean;
+  setDungeonGameActive: (active: boolean) => void;
   openBottomSheet: () => void;
   closeBottomSheet: () => void;
   openInfoPage: () => void;
@@ -53,6 +56,8 @@ export const useUIStore = create<UIState>((set) => ({
   pickingLocation: false,
   createWizardStep: 0,
   pickedLocation: null,
+  dungeonGameActive: false,
+  setDungeonGameActive: (active) => set({ dungeonGameActive: active }),
   openBottomSheet: () => set({ bottomSheetOpen: true }),
   closeBottomSheet: () => set({ bottomSheetOpen: false }),
   openInfoPage: () => set({ infoPageOpen: true, bottomSheetOpen: false }),

@@ -69,7 +69,7 @@ export default function ProfilePage() {
           Profil
         </h1>
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-28 pt-6">
+      <div className="flex-1 overflow-y-auto px-5 pb-16 pt-6">
         {/* Avatar */}
         <div className="mb-6 flex flex-col items-center">
           {user.avatarUrl ? (

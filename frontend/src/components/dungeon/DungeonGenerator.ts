@@ -41,6 +41,19 @@ export interface LootRoom {
   tier: 'common' | 'rare' | 'legendary';
 }
 
+export interface DungeonEnemy {
+  id: string;
+  x: number;
+  y: number;
+  type: 'guard' | 'knight' | 'darkelf' | 'bat' | 'goblin' | 'golem' | 'skeleton' | 'zombie' | 'lich';
+  name: string;
+  maxHp: number;
+  atk: number;
+  def: number;
+  xp: number;
+  gold: number;
+}
+
 export interface DungeonMap {
   tiles: number[][];
   width: number;
@@ -51,6 +64,7 @@ export interface DungeonMap {
   name: string;
   seed: number;
   lootRooms: LootRoom[];
+  enemies: DungeonEnemy[];
 }
 
 // ─── Seeded LCG RNG ──────────────────────────────────────────────────────────
@@ -620,6 +634,7 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
   let playerStart: { x: number; y: number };
   let exit: { x: number; y: number };
   const lootRooms: LootRoom[] = [];
+  const enemies: DungeonEnemy[] = [];
 
   if (style === 'hoehle') {
     map = generateCave(W, H, rng);
@@ -712,6 +727,47 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
       const isLoot = lootRooms.some(lr => lr.x === leaf.room!.x && lr.y === leaf.room!.y);
       if (!isLoot && leaf !== leaves[0]) furnishRoom(map, leaf.room!, style, rng);
     }
+
+    // ─── Spawn enemies ──────────────────────────────────────────────────────
+    const ENEMY_TEMPLATES: Record<DungeonStyle, DungeonEnemy['type'][]> = {
+      kerker: ['guard', 'guard', 'knight', 'darkelf'],
+      hoehle: ['bat', 'bat', 'goblin', 'golem'],
+      krypta: ['skeleton', 'skeleton', 'zombie', 'lich'],
+    };
+    const ENEMY_DATA: Record<DungeonEnemy['type'], Omit<DungeonEnemy, 'id' | 'x' | 'y'>> = {
+      guard:    { type: 'guard',    name: 'Wache',        maxHp: 28, atk: 8,  def: 3, xp: 20, gold: 15 },
+      knight:   { type: 'knight',   name: 'Ritter',       maxHp: 55, atk: 14, def: 6, xp: 45, gold: 35 },
+      darkelf:  { type: 'darkelf',  name: 'Dunkelelf',    maxHp: 35, atk: 16, def: 2, xp: 35, gold: 25 },
+      bat:      { type: 'bat',      name: 'Fledermaus',   maxHp: 18, atk: 6,  def: 1, xp: 12, gold: 5  },
+      goblin:   { type: 'goblin',   name: 'Goblin',       maxHp: 25, atk: 10, def: 2, xp: 18, gold: 12 },
+      golem:    { type: 'golem',    name: 'Steingolem',   maxHp: 70, atk: 18, def: 8, xp: 60, gold: 40 },
+      skeleton: { type: 'skeleton', name: 'Skelett',      maxHp: 22, atk: 9,  def: 1, xp: 16, gold: 8  },
+      zombie:   { type: 'zombie',   name: 'Zombie',       maxHp: 40, atk: 11, def: 2, xp: 28, gold: 10 },
+      lich:     { type: 'lich',     name: 'Lich',         maxHp: 80, atk: 22, def: 4, xp: 90, gold: 70 },
+    };
+    const templates = ENEMY_TEMPLATES[style];
+    let eid = 0;
+
+    for (const leaf of leaves) {
+      const r = leaf.room!;
+      const isLootRoom = lootRooms.some(lr => lr.x === r.x && lr.y === r.y);
+      const isStart = leaf === leaves[0];
+      if (isLootRoom || isStart) continue;
+      const count = r.w * r.h >= 80 ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        let ex = -1, ey = -1;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          const tx = r.x + 1 + Math.floor(rng() * (r.w - 2));
+          const ty = r.y + 1 + Math.floor(rng() * (r.h - 2));
+          if (map[ty][tx] === T_FLOOR && !enemies.some(e => e.x === tx && e.y === ty)) {
+            ex = tx; ey = ty; break;
+          }
+        }
+        if (ex < 0) continue;
+        const type = templates[Math.floor(rng() * templates.length)];
+        enemies.push({ id: `e${eid++}`, x: ex, y: ey, ...ENEMY_DATA[type] });
+      }
+    }
   }
 
   addTorches(map, rng);
@@ -737,5 +793,5 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
   const names = style === 'kerker' ? KERKER_NAMES : style === 'hoehle' ? HOEHLE_NAMES : KRYPTA_NAMES;
   const name = names[Math.floor(rng() * names.length)];
 
-  return { tiles: map, width: W, height: H, playerStart, exit, style, name, seed: s, lootRooms };
+  return { tiles: map, width: W, height: H, playerStart, exit, style, name, seed: s, lootRooms, enemies };
 }

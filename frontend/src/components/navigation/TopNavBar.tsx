@@ -57,13 +57,13 @@ export default function TopNavBar() {
 
   return (
     <div className="absolute top-0 right-0 left-0 z-30 pt-[env(safe-area-inset-top)]">
-      <div className="flex items-center justify-between px-3 py-2">
+      <div className="flex items-center justify-between px-3 py-1">
         {/* Left: Filter icon */}
         <div ref={filterRef} className="relative">
           <button
             onClick={toggleFilterPanel}
             className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-full shadow-md backdrop-blur-md transition-colors',
+              'relative flex h-8 w-8 items-center justify-center rounded-full shadow-md backdrop-blur-md transition-colors',
               filterPanelOpen
                 ? 'bg-indigo-500 text-white'
                 : 'bg-white/90 text-slate-700 dark:bg-slate-800/90 dark:text-slate-200',
@@ -93,7 +93,7 @@ export default function TopNavBar() {
 
           {/* Filter panel dropdown */}
           {filterPanelOpen && (
-            <div className="absolute top-12 left-0 z-40 w-80 rounded-2xl bg-white/95 p-4 shadow-xl backdrop-blur-lg dark:bg-slate-800/95">
+            <div className="absolute top-10 left-0 z-40 w-[92vw] max-w-sm rounded-2xl bg-white/95 p-4 shadow-xl backdrop-blur-lg dark:bg-slate-800/95">
               {/* Distance */}
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Entfernung
@@ -175,7 +175,7 @@ export default function TopNavBar() {
         </div>
 
         {/* Center: Logo / Title */}
-        <h1 className="text-lg font-bold text-slate-800 drop-shadow-sm dark:text-white">
+        <h1 className="text-base font-bold text-slate-800 drop-shadow-sm dark:text-white">
           SideQuest
         </h1>
 
@@ -184,7 +184,7 @@ export default function TopNavBar() {
           <button
             onClick={toggleMenu}
             className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-full shadow-md backdrop-blur-md transition-colors',
+              'relative flex h-8 w-8 items-center justify-center rounded-full shadow-md backdrop-blur-md transition-colors',
               menuOpen
                 ? 'bg-indigo-500 text-white'
                 : 'bg-white/90 text-slate-700 dark:bg-slate-800/90 dark:text-slate-200',
@@ -214,7 +214,7 @@ export default function TopNavBar() {
 
           {/* Menu dropdown */}
           {menuOpen && (
-            <div className="absolute top-12 right-0 z-40 w-48 overflow-hidden rounded-2xl bg-white/95 shadow-xl backdrop-blur-lg dark:bg-slate-800/95">
+            <div className="absolute top-10 right-0 z-40 w-44 overflow-hidden rounded-2xl bg-white/95 shadow-xl backdrop-blur-lg dark:bg-slate-800/95">
               <button
                 onClick={() => {
                   setActiveTab('profile');
