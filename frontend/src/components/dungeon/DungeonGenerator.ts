@@ -26,11 +26,18 @@ export const T_LOOT_FLOOR   = 21; // special golden floor for loot rooms
 export const T_VOID         = 22; // empty void — background shows through (impassable)
 export const T_TABLE        = 23; // prop: wooden table / workbench (solid)
 export const T_PILLAR       = 24; // prop: stone pillar (solid)
+export const T_BED          = 25; // prop: bed / bunk (solid)
+export const T_BOOKSHELF    = 26; // prop: bookshelf (solid)
+export const T_THRONE       = 27; // prop: throne / high seat (solid)
+export const T_CARPET       = 28; // deco: floor carpet / rug (walkable)
+export const T_CHAIN        = 29; // deco: wall chains (solid — counts as wall fixture)
+export const T_CAULDRON     = 30; // prop: bubbling cauldron (solid, glows)
 
 export const DUNGEON_SOLID = new Set([
   T_WALL, T_VOID, T_TORCH, T_CHEST_GOLD, T_CHEST_WOOD, T_CHEST_STEEL,
   T_BARREL, T_BARREL_SWORD, T_BRAZIER, T_WEAPONS_STAND, T_ARMOR_STAND,
   T_SACK, T_CRATE, T_POT, T_TABLE, T_PILLAR,
+  T_BED, T_BOOKSHELF, T_THRONE, T_CHAIN, T_CAULDRON,
 ]);
 
 export const DNG_W = 50;
@@ -339,6 +346,40 @@ const S_DESK: SceneTile[] = [
 const S_SUPPLY: SceneTile[] = [
   [0,0,T_CRATE],[1,0,T_SACK],[2,0,T_BARREL],[3,0,T_POT],
 ];
+// Kaserne: bunk beds against wall, armor stand to the side
+const S_BARRACKS: SceneTile[] = [
+  [0,0,T_BED],[1,0,T_BED],[2,0,T_ARMOR_STAND],
+  [0,1,T_SACK],[2,1,T_CANDLE],
+];
+// Einzelbett: solo bed with personal effects
+const S_BUNK: SceneTile[] = [
+  [0,0,T_BED],[1,0,T_TABLE],
+  [1,1,T_CANDLE],
+];
+// Bibliothek: bookshelves with candle light
+const S_LIBRARY_WALL: SceneTile[] = [
+  [0,0,T_BOOKSHELF],[1,0,T_BOOKSHELF],[2,0,T_BOOKSHELF],
+  [0,1,T_CANDLE],                     [2,1,T_POT],
+];
+// Lesepult: desk beneath bookshelves
+const S_READING_NOOK: SceneTile[] = [
+  [0,0,T_BOOKSHELF],[1,0,T_BOOKSHELF],
+  [0,1,T_TABLE],[1,1,T_CANDLE],
+];
+// Küche: barrel + pot + crate cooking area
+const S_KITCHEN: SceneTile[] = [
+  [0,0,T_BARREL],[1,0,T_POT],[2,0,T_CRATE],
+  [0,1,T_SACK],[2,1,T_BARREL],
+];
+// Folterkammer-Ketten: chains + skull arrangement
+const S_TORTURE_CHAINS: SceneTile[] = [
+  [0,0,T_CHAIN],[1,0,T_SKULL],[2,0,T_CHAIN],
+  [0,1,T_BONES],[1,1,T_CANDLE],[2,1,T_BONES],
+];
+// Thronsaal-Wand: brazier flanking approach
+const S_THRONE_FLANKS: SceneTile[] = [
+  [0,0,T_BRAZIER],[1,0,T_CARPET],[2,0,T_BRAZIER],
+];
 
 // ── KRYPTA ────────────────────────────────────────────────────────────────────
 
@@ -375,14 +416,20 @@ const S_RITUAL_TABLE: SceneTile[] = [
 const S_CANDLE_ALTAR: SceneTile[] = [
   [0,0,T_CANDLE],[1,0,T_SKULL],[2,0,T_CANDLE],
 ];
-
-const KERKER_SCENES: SceneTile[][] = [
-  S_ARMORY, S_WORKBENCH, S_STORAGE, S_GUARD_POST,
-  S_BARREL_ROW, S_TORTURE, S_DESK, S_SUPPLY,
+// Hexenkessel: bubbling cauldron with ritual components
+const S_CAULDRON_SHRINE: SceneTile[] = [
+  [0,0,T_SKULL],[1,0,T_CAULDRON],[2,0,T_SKULL],
+  [0,1,T_CANDLE],[1,1,T_BONES],[2,1,T_CANDLE],
 ];
-const KRYPTA_SCENES: SceneTile[][] = [
-  S_MAIN_ALTAR, S_BURIAL_TABLE, S_BRAZIER_SHRINE,
-  S_TOMB_GUARD, S_BONE_WALL, S_RITUAL_TABLE, S_CANDLE_ALTAR,
+// Lichthron-Wand: throne backing scene for undead ruler
+const S_LICH_THRONE_WALL: SceneTile[] = [
+  [0,0,T_CANDLE],[1,0,T_SKULL],[2,0,T_CANDLE],
+  [0,1,T_BONES],              [2,1,T_BONES],
+];
+// Gruftregale: dark shelves with sinister contents
+const S_CRYPT_SHELVES: SceneTile[] = [
+  [0,0,T_BOOKSHELF],[1,0,T_BOOKSHELF],
+  [0,1,T_SKULL],[1,1,T_CANDLE],
 ];
 
 // ── HÖHLE ─────────────────────────────────────────────────────────────────────
@@ -421,11 +468,100 @@ const S_FIRE_SHRINE: SceneTile[] = [
   [0,0,T_BONES],[1,0,T_BRAZIER],[2,0,T_BONES],
   [1,1,T_SKULL],
 ];
+// Goblinlager: makeshift bed + stolen goods
+const S_GOBLIN_CAMP: SceneTile[] = [
+  [0,0,T_BED],[1,0,T_CRATE],[2,0,T_BARREL],
+  [0,1,T_SACK],[2,1,T_POT],
+];
+// Hexenkessel-Höhle: cauldron with cave offerings
+const S_CAVE_CAULDRON: SceneTile[] = [
+  [0,0,T_BONES],[1,0,T_CAULDRON],[2,0,T_SKULL],
+  [1,1,T_CANDLE],
+];
 
+const KERKER_SCENES: SceneTile[][] = [
+  S_ARMORY, S_WORKBENCH, S_STORAGE, S_GUARD_POST,
+  S_BARREL_ROW, S_TORTURE, S_DESK, S_SUPPLY,
+  S_BARRACKS, S_BUNK, S_LIBRARY_WALL, S_KITCHEN, S_TORTURE_CHAINS,
+];
+const KRYPTA_SCENES: SceneTile[][] = [
+  S_MAIN_ALTAR, S_BURIAL_TABLE, S_BRAZIER_SHRINE,
+  S_TOMB_GUARD, S_BONE_WALL, S_RITUAL_TABLE, S_CANDLE_ALTAR,
+  S_CAULDRON_SHRINE, S_CRYPT_SHELVES,
+];
 const HOEHLE_SCENES: SceneTile[][] = [
   S_CRYSTALS, S_CAVE_CAMP, S_CREATURE_BONES,
   S_STALAGMITES, S_SPRING, S_CAVE_LOOT, S_FIRE_SHRINE,
+  S_GOBLIN_CAMP, S_CAVE_CAULDRON,
 ];
+
+// ─── Room-type system ─────────────────────────────────────────────────────────
+
+type RoomType =
+  | 'barracks' | 'armory' | 'storage' | 'guard' | 'torture'
+  | 'throne' | 'library' | 'kitchen' | 'chapel' | 'necro' | 'generic'
+  | 'cave_camp' | 'cave_shrine' | 'cave_crystal';
+
+function assignRoomType(
+  room: { w: number; h: number },
+  style: DungeonStyle,
+  dist: number,
+  maxDist: number,
+  rng: () => number,
+): RoomType {
+  const area = room.w * room.h;
+  const relDist = maxDist > 0 ? dist / maxDist : 0;
+
+  if (style === 'hoehle') {
+    const roll = rng();
+    if (area >= 60) return roll < 0.4 ? 'cave_shrine' : 'cave_camp';
+    return roll < 0.35 ? 'cave_crystal' : roll < 0.65 ? 'cave_camp' : 'cave_shrine';
+  }
+
+  if (style === 'krypta') {
+    if (area >= 70 && relDist > 0.6) return 'necro';
+    if (area >= 50) return rng() < 0.5 ? 'chapel' : 'necro';
+    return 'generic';
+  }
+
+  // kerker
+  if (area >= 90 && relDist > 0.5) return 'throne';
+  const roll = rng();
+  if (area >= 70) return roll < 0.3 ? 'armory' : roll < 0.55 ? 'barracks' : 'storage';
+  if (area <= 30) return roll < 0.4 ? 'guard' : roll < 0.7 ? 'torture' : 'kitchen';
+  if (relDist < 0.2) return roll < 0.5 ? 'guard' : 'barracks';
+  if (roll < 0.18) return 'library';
+  if (roll < 0.36) return 'armory';
+  if (roll < 0.54) return 'storage';
+  if (roll < 0.68) return 'barracks';
+  if (roll < 0.78) return 'torture';
+  if (roll < 0.86) return 'kitchen';
+  return 'generic';
+}
+
+// Place a carpet strip from top-wall inward (approach path) in large rooms
+function placeCarpetApproach(
+  map: number[][], room: { x: number; y: number; w: number; h: number },
+  targetY: number,
+) {
+  const cx = Math.floor(room.x + room.w / 2);
+  for (let y = room.y + 1; y <= targetY; y++) {
+    if (map[y]?.[cx] === T_FLOOR) map[y][cx] = T_CARPET;
+    if (map[y]?.[cx - 1] === T_FLOOR) map[y][cx - 1] = T_CARPET;
+    if (map[y]?.[cx + 1] === T_FLOOR) map[y][cx + 1] = T_CARPET;
+  }
+}
+
+// Place a central feature tile (throne / cauldron / altar) in room center
+function placeCentral(
+  map: number[][], room: { x: number; y: number; w: number; h: number },
+  tile: number, offsetY = 0,
+) {
+  const cx = Math.floor(room.x + room.w / 2);
+  const cy = Math.floor(room.y + room.h / 2) + offsetY;
+  if (map[cy]?.[cx] === T_FLOOR) map[cy][cx] = tile;
+  return { cx, cy };
+}
 
 // ─── Loot room furnishing ────────────────────────────────────────────────────
 
@@ -474,35 +610,97 @@ function furnishLootRoom(
 
 // ─── Regular room furnishing ─────────────────────────────────────────────────
 
+// Scene pools per room type for kerker
+const SCENES_BY_TYPE: Partial<Record<RoomType, SceneTile[][]>> = {
+  barracks:   [S_BARRACKS, S_BUNK, S_BARRACKS, S_GUARD_POST, S_DESK],
+  armory:     [S_ARMORY, S_ARMORY, S_BARREL_ROW, S_WORKBENCH, S_SUPPLY],
+  storage:    [S_STORAGE, S_SUPPLY, S_BARREL_ROW, S_KITCHEN],
+  guard:      [S_GUARD_POST, S_DESK, S_BARREL_ROW],
+  torture:    [S_TORTURE, S_TORTURE_CHAINS, S_TORTURE, S_BONE_WALL],
+  throne:     [S_THRONE_FLANKS, S_ARMORY, S_GUARD_POST],
+  library:    [S_LIBRARY_WALL, S_READING_NOOK, S_DESK, S_LIBRARY_WALL],
+  kitchen:    [S_KITCHEN, S_STORAGE, S_BARREL_ROW, S_SUPPLY],
+  chapel:     [S_MAIN_ALTAR, S_BRAZIER_SHRINE, S_CANDLE_ALTAR, S_BURIAL_TABLE],
+  necro:      [S_CAULDRON_SHRINE, S_RITUAL_TABLE, S_LICH_THRONE_WALL, S_BONE_WALL, S_CRYPT_SHELVES],
+  cave_camp:  [S_CAVE_CAMP, S_GOBLIN_CAMP, S_CAVE_LOOT, S_CREATURE_BONES],
+  cave_shrine:[S_FIRE_SHRINE, S_CAVE_CAULDRON, S_CREATURE_BONES, S_SPRING],
+  cave_crystal:[S_CRYSTALS, S_STALAGMITES, S_SPRING, S_CRYSTALS],
+};
+
 function furnishRoom(
   map: number[][], room: { x: number; y: number; w: number; h: number },
   style: DungeonStyle, rng: () => number,
+  roomType: RoomType = 'generic',
 ) {
-  const { w, h } = room;
-  const scenes = style === 'krypta' ? KRYPTA_SCENES
-    : style === 'hoehle' ? HOEHLE_SCENES : KERKER_SCENES;
-  const walls: Wall[] = ['top', 'bottom', 'left', 'right'];
-
-  // Symmetric pillars in large rooms before placing wall scenes
-  if (w >= 12 && h >= 9) placePillars(map, room);
-
-  // Fill each wall with a scene (shuffle walls for variety)
+  const { x, y, w, h } = room;
+  const cx = Math.floor(x + w / 2);
+  const cy = Math.floor(y + h / 2);
   const area = w * h;
-  const sceneCount = area >= 70 ? 3 : 2;
+  const walls: Wall[] = ['top', 'bottom', 'left', 'right'];
   const shuffled = [...walls].sort(() => rng() - 0.5);
 
+  // ── Symmetric pillars in large rooms ─────────────────────────────────────
+  if (w >= 12 && h >= 9) placePillars(map, room);
+
+  // ── Central feature for special room types ────────────────────────────────
+  if (roomType === 'throne' && area >= 60) {
+    // Throne on north wall center + carpet approach
+    const throneY = y + 2;
+    if (map[throneY]?.[cx] === T_FLOOR) map[throneY][cx] = T_THRONE;
+    // Flanking braziers
+    if (map[throneY]?.[cx - 1] === T_FLOOR) map[throneY][cx - 1] = T_BRAZIER;
+    if (map[throneY]?.[cx + 1] === T_FLOOR) map[throneY][cx + 1] = T_BRAZIER;
+    // Carpet runner from throne to lower half
+    placeCarpetApproach(map, room, cy + 1);
+  } else if (roomType === 'necro' && area >= 50) {
+    // Cauldron centerpiece + carpet ring
+    const { cy: fcy } = placeCentral(map, room, T_CAULDRON, -1);
+    // Candles around cauldron
+    for (const [dx, dy] of [[-2,0],[2,0],[0,-1],[0,1]]) {
+      const nx = cx + dx, ny = fcy + dy;
+      if (map[ny]?.[nx] === T_FLOOR) map[ny][nx] = T_CANDLE;
+    }
+  } else if (roomType === 'chapel' && area >= 50) {
+    // Altar centerpiece at north
+    const altarY = y + 2;
+    if (map[altarY]?.[cx] === T_FLOOR) map[altarY][cx] = T_DECOR;
+    if (map[altarY]?.[cx - 1] === T_FLOOR) map[altarY][cx - 1] = T_CANDLE;
+    if (map[altarY]?.[cx + 1] === T_FLOOR) map[altarY][cx + 1] = T_CANDLE;
+    if (map[altarY + 1]?.[cx - 1] === T_FLOOR) map[altarY + 1][cx - 1] = T_BONES;
+    if (map[altarY + 1]?.[cx + 1] === T_FLOOR) map[altarY + 1][cx + 1] = T_BONES;
+    placeCarpetApproach(map, room, cy + 1);
+  } else if (roomType === 'library' && area >= 40) {
+    // Reading table in center
+    if (map[cy]?.[cx] === T_FLOOR) map[cy][cx] = T_TABLE;
+    if (map[cy]?.[cx + 1] === T_FLOOR) map[cy][cx + 1] = T_TABLE;
+    if (map[cy]?.[cx - 1] === T_FLOOR) map[cy][cx - 1] = T_CANDLE;
+  } else if (roomType === 'barracks' && area >= 45) {
+    // Center table for mess
+    if (map[cy]?.[cx] === T_FLOOR) map[cy][cx] = T_TABLE;
+    if (map[cy]?.[cx - 1] === T_FLOOR) map[cy][cx - 1] = T_TABLE;
+    if (map[cy]?.[cx + 1] === T_FLOOR) map[cy][cx + 1] = T_TABLE;
+  } else if (roomType === 'cave_shrine' && area >= 40) {
+    // Central fire / cauldron
+    placeCentral(map, room, T_BRAZIER);
+    if (map[cy + 1]?.[cx] === T_FLOOR) map[cy + 1][cx] = T_SKULL;
+  }
+
+  // ── Wall scenes ───────────────────────────────────────────────────────────
+  const scenePool =
+    SCENES_BY_TYPE[roomType] ??
+    (style === 'krypta' ? KRYPTA_SCENES : style === 'hoehle' ? HOEHLE_SCENES : KERKER_SCENES);
+  const sceneCount = area >= 70 ? 3 : area >= 40 ? 2 : 1;
+
   let placed = 0;
-  // First pass: one scene per wall direction
   for (const wall of shuffled) {
     if (placed >= sceneCount) break;
-    const scene = scenes[Math.floor(rng() * scenes.length)];
+    const scene = scenePool[Math.floor(rng() * scenePool.length)];
     if (placeAtWall(map, scene, room, wall, rng)) placed++;
   }
-  // Second pass if room is large enough for more
   let attempts = 0;
   while (placed < sceneCount && ++attempts < 50) {
     const wall = shuffled[Math.floor(rng() * 4)];
-    const scene = scenes[Math.floor(rng() * scenes.length)];
+    const scene = scenePool[Math.floor(rng() * scenePool.length)];
     if (placeAtWall(map, scene, room, wall, rng)) placed++;
   }
 }
@@ -722,10 +920,15 @@ export function generateDungeon(style: DungeonStyle, seed?: number): DungeonMap 
       lootRooms.push({ ...room, tier });
     }
 
-    // Furnish remaining rooms
+    // Furnish remaining rooms with purpose-driven types (reuse dist from exit BFS)
+    const maxBfsDist = Math.max(maxD, 1);
     for (const leaf of leaves) {
       const isLoot = lootRooms.some(lr => lr.x === leaf.room!.x && lr.y === leaf.room!.y);
-      if (!isLoot && leaf !== leaves[0]) furnishRoom(map, leaf.room!, style, rng);
+      if (isLoot || leaf === leaves[0]) continue;
+      const c = center(leaf.room!);
+      const d = dist[c.y]?.[c.x] ?? 0;
+      const roomType = assignRoomType(leaf.room!, style, d, maxBfsDist, rng);
+      furnishRoom(map, leaf.room!, style, rng, roomType);
     }
 
     // ─── Spawn enemies ──────────────────────────────────────────────────────

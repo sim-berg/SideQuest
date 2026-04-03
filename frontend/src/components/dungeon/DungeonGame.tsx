@@ -6,9 +6,21 @@ import {
   T_WEAPONS_STAND, T_ARMOR_STAND, T_SACK, T_CRATE,
   T_BONES, T_CANDLE, T_POT, T_LOOT_FLOOR,
   T_TABLE, T_PILLAR,
+  T_BED, T_BOOKSHELF, T_THRONE, T_CARPET, T_CHAIN, T_CAULDRON,
   DUNGEON_SOLID, type DungeonMap, type DungeonEnemy,
 } from './DungeonGenerator';
 import TouchControls from '../rpg/TouchControls';
+import { useDragonStore } from '../../stores/useDragonStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useInventoryStore } from '../../stores/useInventoryStore';
+import type { ItemSource } from '../../types/inventory';
+import {
+  WEAPON_UNLOCKS, ARMOR_UNLOCKS,
+  CHEST_UPGRADE_CHANCE, UPGRADE_MAG,
+  WEAPON_UPGRADABLE_STATS, ARMOR_UPGRADABLE_STATS,
+} from '../../constants/inventory';
+import { DRAGON_META } from '../../constants/dragons';
+import type { Dragon, DragonType, EvolutionStage } from '../../types/dragon';
 
 // ─── Loot system ─────────────────────────────────────────────────────────────
 
@@ -18,11 +30,12 @@ type LootItem = {
   rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
   type: 'gold' | 'potion' | 'weapon' | 'armor' | 'scroll' | 'tool' | 'key' | 'material' | 'gem' | 'accessory' | 'food' | 'ammo';
   value: number;
+  heal?: number;
 };
 
 const LOOT_COMMON: LootItem[] = [
   { name: 'Kupfermünzen',      desc: 'Eine Handvoll Kupferstücke',            rarity: 'common',   type: 'gold',    value: 80  },
-  { name: 'Kleiner Heiltrank', desc: 'Stellt etwas Lebensenergie wieder her', rarity: 'common',   type: 'potion',  value: 35  },
+  { name: 'Kleiner Heiltrank', desc: 'Stellt etwas Lebensenergie wieder her', rarity: 'common',   type: 'potion',  value: 35,  heal: 15 },
   { name: 'Feuerstahl',        desc: 'Zuverlässig zum Feuermachen',           rarity: 'common',   type: 'tool',    value: 20  },
   { name: 'Trockenfleisch',    desc: 'Hält lange und gibt Kraft',             rarity: 'common',   type: 'food',    value: 15  },
   { name: 'Hanfseil',          desc: '10 Meter stabiles Seil',                rarity: 'common',   type: 'tool',    value: 12  },
@@ -34,7 +47,7 @@ const LOOT_COMMON: LootItem[] = [
 ];
 const LOOT_RARE: LootItem[] = [
   { name: 'Silbermünzen',       desc: 'Kaiserliches Silbergepräge',           rarity: 'uncommon', type: 'gold',      value: 280 },
-  { name: 'Großer Heiltrank',   desc: 'Regeneriert Lebensenergie erheblich',  rarity: 'uncommon', type: 'potion',    value: 90  },
+  { name: 'Großer Heiltrank',   desc: 'Regeneriert Lebensenergie erheblich',  rarity: 'uncommon', type: 'potion',    value: 90,  heal: 30 },
   { name: 'Eisenschwert',       desc: '+8 Angriff, solide Schmiedearbeit',    rarity: 'uncommon', type: 'weapon',    value: 140 },
   { name: 'Kettenhemd',         desc: '+12 Verteidigung, mittelschwer',       rarity: 'uncommon', type: 'armor',     value: 180 },
   { name: 'Arkane Schriftrolle',desc: 'Enthält einen vergessenen Zauber',     rarity: 'rare',     type: 'scroll',    value: 200 },
@@ -53,7 +66,7 @@ const LOOT_LEGENDARY: LootItem[] = [
   { name: 'Leerekristall',           desc: 'Kann beliebige Magie speichern',         rarity: 'legendary', type: 'gem',       value: 1100 },
   { name: 'Amulett der Stärke',      desc: '+20 auf alle Attribute',                 rarity: 'legendary', type: 'accessory', value: 900  },
   { name: 'Ring der Unsichtbarkeit', desc: 'Macht den Träger unsichtbar',            rarity: 'legendary', type: 'accessory', value: 1800 },
-  { name: 'Trank der Unsterblichkeit',desc:'Verleiht kurze Unverwundbarkeit',        rarity: 'legendary', type: 'potion',    value: 600  },
+  { name: 'Trank der Unsterblichkeit',desc:'Verleiht kurze Unverwundbarkeit',        rarity: 'legendary', type: 'potion',    value: 600, heal: 60 },
   { name: 'Kaiserlicher Helm',       desc: '+18 Verteidigung, Krone des Imperiums',  rarity: 'rare',      type: 'armor',     value: 700  },
 ];
 
@@ -149,6 +162,7 @@ function ChestInventoryModal({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: rc, fontSize: 13, fontWeight: 'bold', margin: 0 }}>{item.name}</p>
                   <p style={{ color: 'rgba(180,155,100,0.55)', fontSize: 11, margin: 0 }}>{item.desc}</p>
+                  {item.heal && <p style={{ color: '#60e080', fontSize: 11, margin: '2px 0 0', fontWeight: 'bold' }}>+{item.heal} HP</p>}
                 </div>
                 <p style={{ color: '#d4a832', fontSize: 12, margin: 0, flexShrink: 0 }}>{item.value}g</p>
               </div>
@@ -194,8 +208,8 @@ const LIGHT_RADIUS = 7; // tiles visible around player
 const PLAYER_MAX_HP = 80;
 const PLAYER_DEF    = 4;
 const DETECT_RANGE  = 7;    // tiles until enemy detects player
-const ENEMY_MOVE_MS = 320;  // ms between enemy steps
-const ENEMY_ATK_MS  = 1100; // ms between enemy attacks
+const ENEMY_MOVE_MS = 337;  // ms between enemy steps
+const ENEMY_ATK_MS  = 1184; // ms between enemy attacks
 const LERP          = 0.22; // enemy smooth-position lerp speed
 
 type WeaponClass = 'sword' | 'dagger' | 'spear' | 'staff';
@@ -763,6 +777,187 @@ function drawDungeonTile(
       ctx.fillRect(px2 - Math.round(ts * 0.04), py2 + ph - Math.round(ts * 0.08), pw2 + Math.round(ts * 0.08), Math.round(ts * 0.08));
       break;
     }
+    case T_BED: {
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const bw4 = Math.round(ts * 0.72), bh4 = Math.round(ts * 0.58);
+      const bx4 = bx + Math.round((ts - bw4) / 2), by4 = by + Math.round(ts * 0.16);
+      // Frame
+      ctx.fillStyle = '#5a3c18';
+      ctx.fillRect(bx4, by4, bw4, bh4);
+      // Mattress
+      ctx.fillStyle = '#8a7050';
+      ctx.fillRect(bx4 + 2, by4 + 2, bw4 - 4, bh4 - 4);
+      // Pillow (top-left area)
+      ctx.fillStyle = '#d0c0a0';
+      ctx.fillRect(bx4 + 3, by4 + 3, Math.round(bw4 * 0.35), Math.round(bh4 * 0.38));
+      // Blanket wrinkle lines
+      ctx.fillStyle = '#7a6040';
+      ctx.fillRect(bx4 + 2, by4 + Math.round(bh4 * 0.52), bw4 - 4, 1);
+      ctx.fillRect(bx4 + 2, by4 + Math.round(bh4 * 0.72), bw4 - 4, 1);
+      // Headboard
+      ctx.fillStyle = '#3a2408';
+      ctx.fillRect(bx4, by4, bw4, Math.round(ts * 0.09));
+      ctx.fillStyle = '#5a3c18';
+      ctx.fillRect(bx4 + 2, by4 + 1, bw4 - 4, Math.round(ts * 0.05));
+      break;
+    }
+    case T_BOOKSHELF: {
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const sw3 = Math.round(ts * 0.82), sh3 = Math.round(ts * 0.72);
+      const sx3 = bx + Math.round((ts - sw3) / 2), sy3 = by + Math.round(ts * 0.1);
+      // Shelf body
+      ctx.fillStyle = '#5a3e18';
+      ctx.fillRect(sx3, sy3, sw3, sh3);
+      // Shelf planks (horizontal dividers)
+      ctx.fillStyle = '#3a2808';
+      for (const fy of [0.33, 0.65]) ctx.fillRect(sx3, sy3 + Math.round(sh3 * fy), sw3, 2);
+      // Books — row 1 (top shelf)
+      const bookColors = ['#8a3020','#2a5a8a','#3a6a3a','#8a7a20','#6a2a7a'];
+      const bookW = Math.round(sw3 / 5);
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = bookColors[i % bookColors.length];
+        const bkx = sx3 + i * bookW + 1;
+        const bky = sy3 + 2;
+        const bkh = Math.round(sh3 * 0.28) - 2;
+        ctx.fillRect(bkx, bky, bookW - 1, bkh);
+        // Spine highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(bkx, bky, 1, bkh);
+      }
+      // Books — row 2
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = bookColors[(i + 2) % bookColors.length];
+        const bkx = sx3 + i * (bookW + 1) + 2;
+        const bky = sy3 + Math.round(sh3 * 0.36);
+        const bkh = Math.round(sh3 * 0.26) - 1;
+        ctx.fillRect(bkx, bky, bookW, bkh);
+      }
+      // Side panels
+      ctx.fillStyle = '#3a2808';
+      ctx.fillRect(sx3, sy3, 2, sh3);
+      ctx.fillRect(sx3 + sw3 - 2, sy3, 2, sh3);
+      break;
+    }
+    case T_THRONE: {
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const tw4 = Math.round(ts * 0.64), th4 = Math.round(ts * 0.8);
+      const tx4 = bx + Math.round((ts - tw4) / 2), ty4 = by + Math.round(ts * 0.1);
+      // Back panel
+      ctx.fillStyle = '#3a1a06';
+      ctx.fillRect(tx4, ty4, tw4, th4);
+      // Seat
+      ctx.fillStyle = '#5a2e10';
+      ctx.fillRect(tx4 + 2, ty4 + Math.round(th4 * 0.5), tw4 - 4, Math.round(th4 * 0.3));
+      // Cushion
+      ctx.fillStyle = '#8a1a1a';
+      ctx.fillRect(tx4 + 3, ty4 + Math.round(th4 * 0.52), tw4 - 6, Math.round(th4 * 0.24));
+      // Back cushion
+      ctx.fillStyle = '#7a1218';
+      ctx.fillRect(tx4 + 3, ty4 + Math.round(th4 * 0.18), tw4 - 6, Math.round(th4 * 0.3));
+      // Gold trim on top
+      ctx.fillStyle = '#c8a030';
+      ctx.fillRect(tx4, ty4, tw4, Math.round(ts * 0.06));
+      ctx.fillRect(tx4, ty4, Math.round(ts * 0.06), Math.round(th4 * 0.55));
+      ctx.fillRect(tx4 + tw4 - Math.round(ts * 0.06), ty4, Math.round(ts * 0.06), Math.round(th4 * 0.55));
+      // Crown finial atop back
+      ctx.fillStyle = '#e0b828';
+      const finX = tx4 + Math.round(tw4 / 2);
+      ctx.fillRect(finX - 3, ty4 - 3, 6, 4);
+      ctx.fillRect(finX - 5, ty4 - 6, 3, 4);
+      ctx.fillRect(finX + 2, ty4 - 6, 3, 4);
+      ctx.fillRect(finX - 1, ty4 - 8, 2, 3);
+      break;
+    }
+    case T_CARPET: {
+      // Walkable — draws on top of existing floor
+      const checker = (col + row) % 2 === 0;
+      ctx.fillStyle = checker ? p.floor : p.floor2;
+      ctx.fillRect(bx, by, ts, ts);
+      // Carpet color varies by palette (kerker=red, krypta=purple, hoehle=green)
+      const carpetColor = p.decor === '#5a4a2a' ? 'rgba(140,30,30,' : p.decor === '#3a1a5a' ? 'rgba(80,30,120,' : 'rgba(30,90,30,';
+      ctx.fillStyle = carpetColor + '0.6)';
+      ctx.fillRect(bx + 2, by + 2, ts - 4, ts - 4);
+      // Border
+      ctx.fillStyle = carpetColor + '0.85)';
+      ctx.fillRect(bx + 2, by + 2, ts - 4, 2);
+      ctx.fillRect(bx + 2, by + ts - 4, ts - 4, 2);
+      ctx.fillRect(bx + 2, by + 2, 2, ts - 4);
+      ctx.fillRect(bx + ts - 4, by + 2, 2, ts - 4);
+      // Center diamond motif
+      const cx3 = bx + ts / 2, cy3 = by + ts / 2;
+      ctx.fillStyle = carpetColor + '0.4)';
+      ctx.fillRect(Math.round(cx3 - 2), Math.round(cy3 - 2), 4, 4);
+      break;
+    }
+    case T_CHAIN: {
+      // Solid — wall fixture
+      ctx.fillStyle = p.wallFront;
+      ctx.fillRect(bx, by, ts, ts);
+      ctx.fillStyle = p.wallTop;
+      ctx.fillRect(bx, by, ts, Math.round(ts * 0.28));
+      // Iron rings down the center
+      ctx.strokeStyle = '#6a6060';
+      ctx.lineWidth = 1.5;
+      const chx = bx + ts / 2;
+      for (let i = 0; i < 4; i++) {
+        const chy = by + ts * (0.18 + i * 0.18);
+        ctx.beginPath();
+        ctx.ellipse(Math.round(chx), Math.round(chy), Math.round(ts * 0.1), Math.round(ts * 0.06), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // Wall anchor at top
+      ctx.fillStyle = '#4a3a3a';
+      ctx.fillRect(Math.round(chx - ts * 0.08), Math.round(by + ts * 0.12), Math.round(ts * 0.16), Math.round(ts * 0.06));
+      break;
+    }
+    case T_CAULDRON: {
+      ctx.fillStyle = p.floor;
+      ctx.fillRect(bx, by, ts, ts);
+      const cx4 = bx + ts / 2;
+      const cy4 = by + ts * 0.58;
+      // Tripod legs
+      ctx.strokeStyle = '#4a3a1a';
+      ctx.lineWidth = 1.5;
+      for (const angle of [-0.4, 0, 0.4]) {
+        ctx.beginPath();
+        ctx.moveTo(Math.round(cx4), Math.round(cy4 + ts * 0.1));
+        ctx.lineTo(Math.round(cx4 + Math.sin(angle) * ts * 0.28), Math.round(cy4 + ts * 0.32));
+        ctx.stroke();
+      }
+      // Bowl
+      ctx.fillStyle = '#3a3030';
+      ctx.beginPath();
+      ctx.ellipse(Math.round(cx4), Math.round(cy4), Math.round(ts * 0.28), Math.round(ts * 0.22), 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Rim
+      ctx.fillStyle = '#5a4a3a';
+      ctx.beginPath();
+      ctx.ellipse(Math.round(cx4), Math.round(cy4 - ts * 0.08), Math.round(ts * 0.28), Math.round(ts * 0.09), 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Bubbling liquid
+      const bubble = 0.7 + 0.3 * Math.sin(frame * 0.14 + col * 1.3);
+      ctx.fillStyle = `rgba(60,180,60,${0.7 * bubble})`;
+      ctx.beginPath();
+      ctx.ellipse(Math.round(cx4), Math.round(cy4 - ts * 0.08), Math.round(ts * 0.2), Math.round(ts * 0.065), 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Bubble pops
+      if (bubble > 0.85) {
+        ctx.fillStyle = 'rgba(120,255,120,0.5)';
+        ctx.beginPath();
+        ctx.arc(Math.round(cx4 - ts * 0.06), Math.round(cy4 - ts * 0.15), Math.round(ts * 0.03), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Steam/glow
+      const sg = ctx.createRadialGradient(cx4, cy4 - ts * 0.15, 0, cx4, cy4 - ts * 0.15, ts * 0.45);
+      sg.addColorStop(0, `rgba(40,160,40,${0.18 * bubble})`);
+      sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(bx, by, ts, ts);
+      break;
+    }
   }
 }
 
@@ -1001,6 +1196,114 @@ function drawProjectile(
 }
 
 
+// ─── Pet dragon ───────────────────────────────────────────────────────────────
+
+interface PetAbilityDef { cd: number; desc: string; }
+const PET_ABILITY_DEF: Record<DragonType, Partial<Record<EvolutionStage, PetAbilityDef>>> = {
+  ember: {
+    hatchling:    { cd: 240, desc: 'Funke' },
+    whelp:        { cd: 200, desc: 'Feuerstrahl' },
+    drake:        { cd: 175, desc: 'Feuerring' },
+    elder_dragon: { cd: 150, desc: 'Flammensturm' },
+  },
+  tide: {
+    hatchling:    { cd: 360, desc: 'Heilung' },
+    whelp:        { cd: 300, desc: 'Heilwelle' },
+    drake:        { cd: 250, desc: 'Tidenruf' },
+    elder_dragon: { cd: 200, desc: 'Meeressegen' },
+  },
+  thorn: {
+    hatchling:    { cd: 280, desc: 'Dornenwall' },
+    whelp:        { cd: 240, desc: 'Steinschlag' },
+    drake:        { cd: 200, desc: 'Erdstoss' },
+    elder_dragon: { cd: 165, desc: 'Erdbeben' },
+  },
+  gloom: {
+    hatchling:    { cd: 260, desc: 'Schattenblitz' },
+    whelp:        { cd: 220, desc: 'Dunkelheit' },
+    drake:        { cd: 190, desc: 'Schreck' },
+    elder_dragon: { cd: 155, desc: 'Leere' },
+  },
+  spark: {
+    hatchling:    { cd: 200, desc: 'Statik' },
+    whelp:        { cd: 175, desc: 'Kettenblitz' },
+    drake:        { cd: 150, desc: 'Donnerschlag' },
+    elder_dragon: { cd: 130, desc: 'Gewittersturm' },
+  },
+};
+
+function drawPetDragon(
+  ctx: CanvasRenderingContext2D,
+  bx: number, by: number,
+  ts: number,
+  frame: number,
+  color: string,
+  flash: number,
+  abilityReady: boolean,
+) {
+  const s = ts * 0.52;
+  const cx = bx + ts * 0.5;
+  const cy = by + ts * 0.5 + Math.sin(frame * 0.13) * ts * 0.07;
+
+  ctx.save();
+
+  if (flash > 0) { ctx.shadowColor = color; ctx.shadowBlur = 14; }
+  if (flash > 0 && Math.floor(frame / 3) % 2 === 0) ctx.globalAlpha = 0.6;
+
+  // Wings (flapping, behind body)
+  const wf = Math.sin(frame * 0.2) * 0.35;
+  ctx.fillStyle = color + 'aa';
+  ctx.beginPath();
+  ctx.moveTo(cx - s * 0.05, cy - s * 0.05);
+  ctx.lineTo(cx - s * 0.62, cy - s * (0.42 + wf * 0.18));
+  ctx.lineTo(cx - s * 0.18, cy + s * 0.15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + s * 0.05, cy - s * 0.08);
+  ctx.lineTo(cx + s * 0.55, cy - s * (0.38 + wf * 0.15));
+  ctx.lineTo(cx + s * 0.12, cy + s * 0.12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, s * 0.1); ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s * 0.3, cy + s * 0.08);
+  ctx.quadraticCurveTo(cx - s * 0.58, cy + s * 0.38, cx - s * 0.48, cy + s * 0.58);
+  ctx.stroke();
+
+  // Body
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(cx, cy, s * 0.3, s * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+  // Head
+  ctx.beginPath(); ctx.ellipse(cx + s * 0.28, cy - s * 0.08, s * 0.17, s * 0.14, -0.25, 0, Math.PI * 2); ctx.fill();
+  // Horn
+  ctx.beginPath();
+  ctx.moveTo(cx + s * 0.2, cy - s * 0.18);
+  ctx.lineTo(cx + s * 0.17, cy - s * 0.3);
+  ctx.lineTo(cx + s * 0.25, cy - s * 0.19);
+  ctx.closePath(); ctx.fill();
+
+  // Eye
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx + s * 0.35, cy - s * 0.12, s * 0.045, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(cx + s * 0.36, cy - s * 0.12, s * 0.022, 0, Math.PI * 2); ctx.fill();
+
+  // Ability-ready glow ring
+  if (abilityReady) {
+    const pulse = 0.55 + 0.45 * Math.sin(frame * 0.18);
+    ctx.globalAlpha = pulse * 0.6;
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, ts * 0.06);
+    ctx.shadowColor = color; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.78, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 interface Props {
@@ -1049,6 +1352,18 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
   });
   const projectilesRef = useRef<Projectile[]>([]);
 
+  // User level (for weapon unlock display)
+  const userLevel = useAuthStore((s) => s.user?.level ?? 1);
+  const unlockedWeaponIds = WEAPON_UNLOCKS
+    .filter((u) => u.requiredLevel <= userLevel)
+    .map((u) => u.templateId) as WeaponClass[];
+
+  // Pet dragon
+  const dragon = useDragonStore(s => s.dragon);
+  const dragonRef = useRef<Dragon | null>(dragon);
+  dragonRef.current = dragon;
+  const petRef = useRef({ fx: dungeon.playerStart.x - 1, fy: dungeon.playerStart.y + 0.5, flash: 0, cd: 0, notif: '', notifTimer: 0 });
+
   const [completed,       setCompleted]      = useState(false);
   const [defeated,        setDefeated]       = useState(false);
   const [nearChest,       setNearChest]      = useState(false);
@@ -1089,6 +1404,7 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
     }));
     pcRef.current = { hp: PLAYER_MAX_HP, weapon: pcRef.current.weapon, attackCooldown: 0, attackAnim: null, hurtFlash: 0, invincible: 0 };
     projectilesRef.current = [];
+    petRef.current = { fx: dungeon.playerStart.x - 1, fy: dungeon.playerStart.y + 0.5, flash: 0, cd: 0, notif: '', notifTimer: 0 };
     playerKeysRef.current = 0;
     lastTimeRef.current = 0;
     defeatedRef.current = false;
@@ -1215,6 +1531,84 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
       }
     };
 
+    // Helper: fire pet dragon ability
+    const firePetAbility = (dr: Dragon, pet: typeof petRef.current, gs: typeof gsRef.current, pc: PlayerCombat) => {
+      const type = dr.type as DragonType;
+      const stage = dr.evolutionStage;
+      const enemies = enemiesRef.current.filter(e => e.state !== 'dead');
+      const spawnProj = (fdx: number, fdy: number, color: string, dmg: number, spd = 0.13, maxD = 4.5) => {
+        const norm = Math.hypot(fdx, fdy) || 1;
+        projectilesRef.current.push({ id: `pet${Date.now()}${Math.random()}`, fx: pet.fx, fy: pet.fy, dx: fdx / norm, dy: fdy / norm, speed: spd, dmg, maxDist: maxD, dist: 0, color });
+      };
+      switch (type) {
+        case 'ember': {
+          const dmg = stage === 'hatchling' ? 7 : stage === 'whelp' ? 11 : stage === 'drake' ? 15 : 20;
+          const count = stage === 'elder_dragon' ? 3 : 1;
+          const tgt = [...enemies].sort((a, b) => Math.hypot(a.fx - pet.fx, a.fy - pet.fy) - Math.hypot(b.fx - pet.fx, b.fy - pet.fy))[0];
+          if (tgt) {
+            for (let i = 0; i < count; i++) {
+              const sp = (i - (count - 1) / 2) * 0.4;
+              const pdx = tgt.fx - pet.fx, pdy = tgt.fy - pet.fy;
+              spawnProj(pdx + sp * Math.abs(pdy), pdy + sp * Math.abs(pdx), '#ff6020', dmg, 0.14, 5);
+            }
+          } else {
+            const dirMap: Record<string, [number, number]> = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] };
+            const [fdx, fdy] = dirMap[gs.facing] ?? [1, 0];
+            spawnProj(fdx, fdy, '#ff6020', dmg, 0.14, 5);
+          }
+          break;
+        }
+        case 'tide': {
+          const hp = stage === 'hatchling' ? 6 : stage === 'whelp' ? 10 : stage === 'drake' ? 15 : 22;
+          pc.hp = Math.min(PLAYER_MAX_HP, pc.hp + hp);
+          if (stage === 'drake' || stage === 'elder_dragon') pc.invincible = Math.max(pc.invincible, 80);
+          setPlayerHp(pc.hp);
+          break;
+        }
+        case 'thorn': {
+          const range = stage === 'elder_dragon' ? 4 : stage === 'drake' ? 3 : 2.5;
+          const dmg = stage === 'hatchling' ? 6 : stage === 'whelp' ? 9 : stage === 'drake' ? 13 : 18;
+          for (const en of enemies) {
+            if (Math.hypot(en.fx - pet.fx, en.fy - pet.fy) <= range) {
+              en.hp -= dmg; en.hurtFlash = 14;
+              if (en.hp <= 0) { en.state = 'dead'; awardKey(en); }
+            }
+          }
+          break;
+        }
+        case 'gloom': {
+          const dmg = stage === 'hatchling' ? 11 : stage === 'whelp' ? 15 : stage === 'drake' ? 20 : 26;
+          const count = stage === 'elder_dragon' ? 3 : stage === 'whelp' ? 2 : 1;
+          const sorted = [...enemies].sort((a, b) => Math.hypot(a.fx - pet.fx, a.fy - pet.fy) - Math.hypot(b.fx - pet.fx, b.fy - pet.fy));
+          for (let i = 0; i < Math.min(count, sorted.length); i++) {
+            const tgt = sorted[i];
+            spawnProj(tgt.fx - pet.fx, tgt.fy - pet.fy, '#8040c0', dmg, 0.1, 5.5);
+          }
+          if (stage === 'drake' || stage === 'elder_dragon') {
+            for (const en of enemies) {
+              if (Math.hypot(en.fx - pet.fx, en.fy - pet.fy) <= 3.5) en.state = 'idle';
+            }
+          }
+          break;
+        }
+        case 'spark': {
+          const range = stage === 'elder_dragon' ? 4.5 : stage === 'drake' ? 3.5 : 3;
+          const dmg = stage === 'hatchling' ? 8 : stage === 'whelp' ? 11 : stage === 'drake' ? 15 : 20;
+          const count = stage === 'elder_dragon' ? 999 : stage === 'drake' ? 3 : stage === 'whelp' ? 2 : 1;
+          const hits = [...enemies]
+            .filter(e => Math.hypot(e.fx - pet.fx, e.fy - pet.fy) <= range)
+            .sort((a, b) => Math.hypot(a.fx - pet.fx, a.fy - pet.fy) - Math.hypot(b.fx - pet.fx, b.fy - pet.fy))
+            .slice(0, count);
+          for (const en of hits) {
+            en.hp -= dmg; en.hurtFlash = 14;
+            if (en.hp <= 0) { en.state = 'dead'; awardKey(en); }
+            else if (stage === 'drake' || stage === 'elder_dragon') en.moveCooldown = Math.max(en.moveCooldown, 900);
+          }
+          break;
+        }
+      }
+    };
+
     const loop = (ts_ms: number) => {
       if (defeatedRef.current) { cancelAnimationFrame(rafRef.current); return; }
       const gs = gsRef.current;
@@ -1284,12 +1678,15 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
         en.fy += (en.y - en.fy) * LERP;
         if (en.hurtFlash > 0) en.hurtFlash--;
         const distSq = (gs.x - en.x) ** 2 + (gs.y - en.y) ** 2;
-        if (distSq <= DETECT_RANGE * DETECT_RANGE) en.state = 'chase';
+        const _dr = dragonRef.current;
+        const effDetect = _dr && _dr.evolutionStage !== 'egg' && _dr.type === 'gloom' ? DETECT_RANGE - 2 : DETECT_RANGE;
+        if (distSq <= effDetect * effDetect) en.state = 'chase';
         en.moveCooldown -= dt;
         en.attackCooldown -= dt;
         if (en.state === 'chase') {
           if (distSq <= 2.1 && en.attackCooldown <= 0 && pc.invincible <= 0) {
-            const dmg = Math.max(1, en.atk - PLAYER_DEF + Math.floor(Math.random() * 4) - 1);
+            const thornBonus = _dr && _dr.evolutionStage !== 'egg' && _dr.type === 'thorn' ? (_dr.evolutionStage === 'elder_dragon' ? 5 : _dr.evolutionStage === 'drake' ? 4 : _dr.evolutionStage === 'whelp' ? 3 : 2) : 0;
+            const dmg = Math.max(1, en.atk - PLAYER_DEF - thornBonus + Math.floor(Math.random() * 4) - 1);
             pc.hp = Math.max(0, pc.hp - dmg);
             pc.hurtFlash = 16; pc.invincible = 50;
             setPlayerHp(pc.hp);
@@ -1316,11 +1713,38 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
         }
       }
 
+      // ── Pet dragon AI ──
+      {
+        const _pet = petRef.current;
+        const _petDr = dragonRef.current;
+        const facingOff: Record<string, [number, number]> = { right: [-0.85, 0], left: [0.85, 0], up: [0, 0.85], down: [0, -0.85] };
+        const [ofx, ofy] = facingOff[gs.facing] ?? [-0.85, 0];
+        _pet.fx += (gs.x + ofx - _pet.fx) * 0.12;
+        _pet.fy += (gs.y + ofy - _pet.fy) * 0.12;
+        if (_pet.flash > 0) _pet.flash--;
+        if (_pet.notifTimer > 0) _pet.notifTimer--;
+        if (_petDr && _petDr.evolutionStage !== 'egg') {
+          if (_pet.cd > 0) { _pet.cd--; }
+          else {
+            const abilDef = PET_ABILITY_DEF[_petDr.type as DragonType]?.[_petDr.evolutionStage];
+            if (abilDef) {
+              _pet.cd = abilDef.cd;
+              _pet.flash = 22;
+              _pet.notif = abilDef.desc;
+              _pet.notifTimer = 90;
+              firePetAbility(_petDr, _pet, gs, pc);
+            }
+          }
+        }
+      }
+
       // ── Player input ──
       const keys = keysRef.current;
       const dpad = dpadRef.current;
       gs.moving = false;
-      if (ts_ms - gs.lastMove > MOVE_DELAY) {
+      const _sparkDr = dragonRef.current;
+      const effMoveDelay = _sparkDr && _sparkDr.type === 'spark' && _sparkDr.evolutionStage !== 'egg' ? MOVE_DELAY - 30 : MOVE_DELAY;
+      if (ts_ms - gs.lastMove > effMoveDelay) {
         let dx = 0, dy = 0;
         if      (keys.has('ArrowLeft')  || keys.has('a') || dpad.dx === -1) dx = -1;
         else if (keys.has('ArrowRight') || keys.has('d') || dpad.dx ===  1) dx =  1;
@@ -1491,6 +1915,31 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
       }
       ctx.restore();
 
+      // ── Pet dragon (drawn last → always on top of fog/vignette) ──
+      const _renderDr = dragonRef.current;
+      const _petColor = _renderDr && _renderDr.evolutionStage !== 'egg'
+        ? DRAGON_META[_renderDr.type as DragonType].color
+        : '#c8a030'; // fallback golden dragon
+      const _showPet = !_renderDr || _renderDr.evolutionStage !== 'egg'; // show always (fallback if no dragon loaded)
+      if (_showPet) {
+        const pet = petRef.current;
+        const petBx = (pet.fx - camX) * ts, petBy = (pet.fy - camY) * ts;
+        if (petBx > -ts * 2 && petBx < cw + ts * 2 && petBy > -ts * 2 && petBy < ch + ts * 2) {
+          drawPetDragon(ctx, petBx, petBy, ts, gs.frame, _petColor, pet.flash, pet.cd === 0 && !!_renderDr && _renderDr.evolutionStage !== 'egg');
+          if (pet.notifTimer > 0 && _renderDr) {
+            const alpha = Math.min(1, pet.notifTimer / 20);
+            const yOff = (90 - pet.notifTimer) * 0.25;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = `bold ${Math.max(9, Math.round(ts * 0.38))}px Georgia, serif`;
+            ctx.fillStyle = _petColor;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = _petColor; ctx.shadowBlur = 6;
+            ctx.fillText(pet.notif, petBx + ts * 0.5, petBy - yOff);
+            ctx.restore();
+          }
+        }
+      }
 
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -1538,6 +1987,17 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
               {playerHp}
             </span>
           </div>
+          {dragon && dragon.evolutionStage !== 'egg' && (() => {
+            const meta = DRAGON_META[dragon.type as DragonType];
+            return (
+              <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-2 py-1 backdrop-blur" style={{ border: `1px solid ${meta.color}44` }}>
+                <span style={{ fontSize: 13, lineHeight: 1 }}>{meta.emoji[dragon.evolutionStage]}</span>
+                <span className="text-[10px] font-semibold" style={{ color: meta.color, fontFamily: 'Georgia, serif', textShadow: `0 0 6px ${meta.color}` }}>
+                  {dragon.name ?? meta.name}
+                </span>
+              </div>
+            );
+          })()}
           {playerKeys > 0 && (
             <div className="flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 backdrop-blur">
               <span style={{ fontSize: 12 }}>🗝</span>
@@ -1588,35 +2048,50 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
           interactLabel={nearLocked ? (playerKeys > 0 ? '🗝 Öffnen' : '🔒 Gesperrt') : 'Öffnen'}
         />
 
-        {/* Weapon selector — bottom left */}
+        {/* Weapon selector — top left */}
         <div
-          className="pointer-events-auto absolute bottom-8 left-4 flex gap-2"
+          className="pointer-events-auto absolute top-3 left-3 flex flex-col gap-1.5"
           style={{ zIndex: 20 }}
         >
           {(Object.entries(WEAPON_DEF) as [WeaponClass, typeof WEAPON_DEF[WeaponClass]][]).map(([key, def]) => {
             const active = selectedWeapon === key;
+            const unlocked = unlockedWeaponIds.includes(key);
+            const reqLevel = WEAPON_UNLOCKS.find((u) => u.templateId === key)?.requiredLevel ?? 1;
             return (
               <button
                 key={key}
-                onTouchStart={(e) => { e.preventDefault(); setSelectedWeapon(key); pcRef.current.weapon = key; }}
-                onMouseDown={(e) => { e.preventDefault(); setSelectedWeapon(key); pcRef.current.weapon = key; }}
-                className="select-none touch-none flex flex-col items-center"
+                onTouchStart={(e) => { e.preventDefault(); if (unlocked) { setSelectedWeapon(key); pcRef.current.weapon = key; } }}
+                onMouseDown={(e) => { e.preventDefault(); if (unlocked) { setSelectedWeapon(key); pcRef.current.weapon = key; } }}
+                className="select-none touch-none flex items-center gap-1.5"
                 style={{
-                  width: 44, height: 44, borderRadius: 6,
-                  background: active
+                  width: 44, height: 36, borderRadius: 6,
+                  background: !unlocked
+                    ? 'rgba(0,0,0,0.3)'
+                    : active
                     ? `radial-gradient(circle at 40% 30%, ${def.color}55, rgba(0,0,0,0.7))`
                     : 'rgba(0,0,0,0.45)',
-                  border: `1.5px solid ${active ? def.color : 'rgba(255,255,255,0.15)'}`,
-                  boxShadow: active ? `0 0 12px ${def.color}88` : '0 2px 6px rgba(0,0,0,0.5)',
-                  color: active ? def.color : 'rgba(255,255,255,0.45)',
-                  fontSize: 18,
-                  cursor: 'pointer',
+                  border: `1.5px solid ${active && unlocked ? def.color : 'rgba(255,255,255,0.12)'}`,
+                  boxShadow: active && unlocked ? `0 0 10px ${def.color}66` : '0 2px 4px rgba(0,0,0,0.4)',
+                  color: !unlocked ? 'rgba(255,255,255,0.2)' : active ? def.color : 'rgba(255,255,255,0.45)',
+                  fontSize: 17,
+                  cursor: unlocked ? 'pointer' : 'default',
                   backdropFilter: 'blur(4px)',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  opacity: unlocked ? 1 : 0.55,
                 }}
-                aria-label={def.name}
-                title={def.name}
+                aria-label={unlocked ? def.name : `Level ${reqLevel}`}
               >
                 {def.icon}
+                {!unlocked && (
+                  <span style={{
+                    position: 'absolute', bottom: 1, right: 3,
+                    fontSize: 7, color: 'rgba(255,200,80,0.7)',
+                    fontFamily: 'Georgia, serif', fontWeight: 'bold',
+                  }}>
+                    {reqLevel}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -1628,7 +2103,57 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
         <ChestInventoryModal
           items={chestModal.items}
           tier={chestModal.tier}
-          onClose={() => setChestModal(null)}
+          onClose={() => {
+            const items = chestModal!.items;
+            const tier = chestModal!.tier;
+            const source: ItemSource = tier === 'legendary' ? 'chest_legendary' : tier === 'rare' ? 'chest_rare' : 'chest_common';
+            const inv = useInventoryStore.getState();
+            const now = new Date().toISOString();
+
+            // Apply healing
+            const totalHeal = items.reduce((sum, i) => sum + (i.heal ?? 0), 0);
+            if (totalHeal > 0) {
+              const pc = pcRef.current;
+              pc.hp = Math.min(PLAYER_MAX_HP, pc.hp + totalHeal);
+              setPlayerHp(pc.hp);
+            }
+
+            // Armor loot items → inventory
+            items.filter((i) => i.type === 'armor').forEach((i) => {
+              const tpl = ARMOR_UNLOCKS.find((a) => a.requiredLevel <= userLevel);
+              if (!tpl) return;
+              inv.addArmor({
+                id: `a-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                templateId: i.name.toLowerCase().replace(/\s+/g, '_'),
+                name: i.name,
+                description: i.desc,
+                rarity: i.rarity,
+                baseDefense: tpl.baseDefense,
+                obtainedAt: now,
+                source,
+                appliedEffects: [],
+                upgrades: [],
+              });
+            });
+
+            // Stat upgrade: chance per tier to buff a random owned weapon
+            const upgradeChance = CHEST_UPGRADE_CHANCE[source] ?? 0;
+            if (Math.random() < upgradeChance && inv.weapons.length > 0) {
+              const target = inv.weapons[Math.floor(Math.random() * inv.weapons.length)];
+              const mag = UPGRADE_MAG[tier === 'legendary' ? 'legendary' : tier === 'rare' ? 'rare' : 'common'];
+              const stat = WEAPON_UPGRADABLE_STATS[Math.floor(Math.random() * WEAPON_UPGRADABLE_STATS.length)];
+              inv.upgradeWeapon(target.id, { stat, value: mag[stat], source, obtainedAt: now });
+            }
+            // Chance to buff a random owned armor
+            if (Math.random() < upgradeChance && inv.armor.length > 0) {
+              const target = inv.armor[Math.floor(Math.random() * inv.armor.length)];
+              const mag = UPGRADE_MAG[tier === 'legendary' ? 'legendary' : tier === 'rare' ? 'rare' : 'common'];
+              const stat = ARMOR_UPGRADABLE_STATS[Math.floor(Math.random() * ARMOR_UPGRADABLE_STATS.length)];
+              inv.upgradeArmor(target.id, { stat, value: mag[stat], source, obtainedAt: now });
+            }
+
+            setChestModal(null);
+          }}
         />
       )}
 

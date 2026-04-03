@@ -47,7 +47,10 @@ export default function DungeonView() {
     );
   }
 
-  const enter = (style: DungeonStyle) => {
+  const enter = async (style: DungeonStyle) => {
+    if (!document.fullscreenElement) {
+      try { await document.documentElement.requestFullscreen(); } catch { /* not supported */ }
+    }
     setActiveDungeon(generateDungeon(style));
   };
 

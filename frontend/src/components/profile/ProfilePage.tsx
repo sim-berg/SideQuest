@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { useInventoryStore } from '../../stores/useInventoryStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
 import DragonDisplay from '../dragon/DragonDisplay';
+import InventorySection from './InventorySection';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -52,6 +54,11 @@ export default function ProfilePage() {
   };
 
   const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const weapons     = useInventoryStore((s) => s.weapons);
+  const armor       = useInventoryStore((s) => s.armor);
+  const effects     = useInventoryStore((s) => s.effects);
+  const applyEffect = useInventoryStore((s) => s.applyEffect);
+  const removeEffect = useInventoryStore((s) => s.removeEffect);
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-slate-900">
@@ -138,6 +145,18 @@ export default function ProfilePage() {
               Quests
             </p>
           </div>
+        </div>
+
+        {/* Inventory */}
+        <div className="mb-6">
+          <InventorySection
+            weapons={weapons}
+            armor={armor}
+            effects={effects}
+            userLevel={user.level}
+            onApplyEffect={applyEffect}
+            onRemoveEffect={removeEffect}
+          />
         </div>
 
         {/* Save Button */}
