@@ -986,23 +986,82 @@ function drawPlayer(
   ctx.beginPath(); ctx.arc(cx, Math.round(by + ts * 0.26), Math.max(2, Math.round(ts * 0.15)), 0, Math.PI * 2); ctx.fill();
 }
 
+// ─── Enemy sprite system ─────────────────────────────────────────────────────
+
+interface SpriteAnim { y: number; frames: number; w: number; h: number; }
+interface EnemySpriteConfig {
+  path: string;
+  idle: SpriteAnim;
+  attack?: SpriteAnim;
+  move?: SpriteAnim;
+}
+
+const ENEMY_SPRITES: Record<string, EnemySpriteConfig> = {
+  bat_blue: {
+    path: '/dungeon/enemies/bat_blue/spritesheet.png',
+    idle:   { y: 0,  frames: 16, w: 64,  h: 64 },
+    move:   { y: 64, frames: 8,  w: 64,  h: 64 },
+  },
+  hell_skull_blue: {
+    path: '/dungeon/enemies/hell_skull_blue/spritesheet.png',
+    idle: { y: 0, frames: 10, w: 48, h: 96 },
+  },
+  mudman_green: {
+    path: '/dungeon/enemies/mudman_green/spritesheet.png',
+    idle:   { y: 96,  frames: 16, w: 48, h: 48 },
+    move:   { y: 144, frames: 10, w: 48, h: 48 },
+  },
+  skull_beetle_blue: {
+    path: '/dungeon/enemies/skull_beetle_blue/spritesheet.png',
+    idle:   { y: 48, frames: 12, w: 96, h: 48 },
+    attack: { y: 0,  frames: 9,  w: 96, h: 48 },
+    move:   { y: 96, frames: 8,  w: 96, h: 48 },
+  },
+  wraith_blue: {
+    path: '/dungeon/enemies/wraith_blue/spritesheet.png',
+    idle:   { y: 64, frames: 10, w: 128, h: 64 },
+    attack: { y: 0,  frames: 17, w: 128, h: 64 },
+  },
+  wraith_violet: {
+    path: '/dungeon/enemies/wraith_violet/spritesheet.png',
+    idle:   { y: 64, frames: 10, w: 128, h: 64 },
+    attack: { y: 0,  frames: 17, w: 128, h: 64 },
+  },
+};
+
+const ENEMY_SPRITE_MAP: Record<DungeonEnemy['type'], string> = {
+  bat:      'bat_blue',
+  goblin:   'mudman_green',
+  golem:    'skull_beetle_blue',
+  guard:    'hell_skull_blue',
+  knight:   'skull_beetle_blue',
+  darkelf:  'wraith_violet',
+  skeleton: 'hell_skull_blue',
+  zombie:   'mudman_green',
+  lich:     'wraith_blue',
+};
+
+type EnemySpriteAtlas = Record<string, { img: HTMLImageElement; loaded: boolean }>;
+
+const ENEMY_ANIM_SPEED = 8; // game frames between sprite changes
+
 // ─── Enemy drawing ───────────────────────────────────────────────────────────
 
 function drawLiveEnemy(
   ctx: CanvasRenderingContext2D,
   enemy: LiveEnemy,
   bx: number, by: number, ts: number, frame: number,
+  atlas: EnemySpriteAtlas,
 ) {
-  const fill = ENEMY_FILL[enemy.type] ?? '#808090';
   const glow = ENEMY_GLOW[enemy.type] ?? 'rgba(128,128,128,';
   const pulse = 0.6 + 0.4 * Math.sin(frame * 0.12 + enemy.x * 0.7 + enemy.y * 0.5);
-  const r = Math.max(3, Math.round(ts * 0.32));
   const cx = bx + ts / 2, cy = by + ts * 0.5;
 
   ctx.save();
   if (enemy.hurtFlash > 0 && Math.floor(frame / 2) % 2 === 0) ctx.globalAlpha = 0.4;
 
   // Glow halo
+  const r = Math.max(3, Math.round(ts * 0.32));
   const gGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.2);
   gGrad.addColorStop(0, glow + (enemy.state === 'attack' ? 0.7 : 0.38 * pulse) + ')');
   gGrad.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1010,22 +1069,62 @@ function drawLiveEnemy(
   ctx.fillRect(bx, by, ts, ts);
   ctx.globalAlpha = enemy.hurtFlash > 0 && Math.floor(frame / 2) % 2 === 0 ? 0.4 : 1;
 
-  // Body
-  ctx.fillStyle = enemy.hurtFlash > 0 ? '#ff5040' : fill;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.beginPath(); ctx.arc(cx - r * 0.25, cy - r * 0.3, r * 0.45, 0, Math.PI * 2); ctx.fill();
+  const spriteKey = ENEMY_SPRITE_MAP[enemy.type];
+  const config = ENEMY_SPRITES[spriteKey];
+  const entry = atlas[spriteKey];
 
-  // Eyes — offset based on facing
-  const ex0 = enemy.facing === 'right' ? 0.18 : enemy.facing === 'left' ? -0.18 : 0;
-  const ey0 = enemy.facing === 'down'  ? 0.12 : enemy.facing === 'up'   ? -0.12 : 0;
-  ctx.fillStyle = '#fff8e8';
-  ctx.beginPath(); ctx.arc(cx + (ex0 - 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.22), 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + (ex0 + 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.22), 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1a0a0a';
-  ctx.beginPath(); ctx.arc(cx + (ex0 - 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.12), 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + (ex0 + 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.12), 0, Math.PI * 2); ctx.fill();
+  if (config && entry?.loaded) {
+    // Pick animation: attack > move/chase > idle
+    let anim: SpriteAnim;
+    if (enemy.state === 'attack' && config.attack) anim = config.attack;
+    else if (enemy.state === 'chase' && config.move) anim = config.move;
+    else anim = config.idle;
+
+    const col = Math.floor(frame / ENEMY_ANIM_SPEED) % anim.frames;
+    const sx = col * anim.w;
+    const sy = anim.y;
+
+    // Scale sprite to fit tile width, maintain aspect ratio
+    const drawW = ts;
+    const drawH = ts * (anim.h / anim.w);
+    const drawX = Math.round(bx);
+    const drawY = Math.round(by + ts - drawH); // anchor at tile bottom
+
+    // Flip when facing left
+    if (enemy.facing === 'left') {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(entry.img, sx, sy, anim.w, anim.h,
+        -(drawX + drawW), drawY, drawW, drawH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(entry.img, sx, sy, anim.w, anim.h,
+        drawX, drawY, drawW, drawH);
+    }
+
+    // Hurt tint overlay
+    if (enemy.hurtFlash > 0) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,80,64,0.5)';
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    // Fallback: simple circle
+    const fill = ENEMY_FILL[enemy.type] ?? '#808090';
+    ctx.fillStyle = enemy.hurtFlash > 0 ? '#ff5040' : fill;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.arc(cx - r * 0.25, cy - r * 0.3, r * 0.45, 0, Math.PI * 2); ctx.fill();
+    const ex0 = enemy.facing === 'right' ? 0.18 : enemy.facing === 'left' ? -0.18 : 0;
+    const ey0 = enemy.facing === 'down'  ? 0.12 : enemy.facing === 'up'   ? -0.12 : 0;
+    ctx.fillStyle = '#fff8e8';
+    ctx.beginPath(); ctx.arc(cx + (ex0 - 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.22), 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + (ex0 + 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.22), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a0a0a';
+    ctx.beginPath(); ctx.arc(cx + (ex0 - 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.12), 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + (ex0 + 0.28) * r, cy + ey0 * r - r * 0.08, Math.max(1, r * 0.12), 0, Math.PI * 2); ctx.fill();
+  }
 
   // HP bar above
   ctx.globalAlpha = 1;
@@ -1328,6 +1427,7 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
   const dpadRef    = useRef({ dx: 0, dy: 0 });
   const tileSizeRef = useRef(32);
   const imgRef = useRef<{ char: HTMLImageElement | null; loaded: boolean }>({ char: null, loaded: false });
+  const enemyAtlasRef = useRef<EnemySpriteAtlas>({});
   // Fog of war: -1=unseen, 0=explored (dim), 1=visible
   const fogRef = useRef<number[][]>(
     Array.from({ length: dungeon.height }, () => new Array(dungeon.width).fill(-1))
@@ -1435,6 +1535,15 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
     img.onload = () => { imgRef.current.loaded = true; };
     img.src = '/rpg/character_walk.png';
     imgRef.current.char = img;
+  }, []);
+
+  useEffect(() => {
+    for (const [key, config] of Object.entries(ENEMY_SPRITES)) {
+      const img = new Image();
+      img.onload = () => { enemyAtlasRef.current[key] = { img, loaded: true }; };
+      img.src = config.path;
+      enemyAtlasRef.current[key] = { img, loaded: false };
+    }
   }, []);
 
   const canWalk = useCallback((x: number, y: number) => {
@@ -1864,7 +1973,7 @@ export default function DungeonGame({ dungeon, onExit, onComplete }: Props) {
       for (const en of enemiesRef.current) {
         if (en.state === 'dead') continue;
         if ((fog[Math.round(en.fy)]?.[Math.round(en.fx)] ?? -1) < 1) continue;
-        drawLiveEnemy(ctx, en, (en.fx - camX) * ts, (en.fy - camY) * ts, ts, gs.frame);
+        drawLiveEnemy(ctx, en, (en.fx - camX) * ts, (en.fy - camY) * ts, ts, gs.frame, enemyAtlasRef.current);
       }
 
       // ── Projectiles ──
