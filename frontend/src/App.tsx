@@ -12,13 +12,20 @@ import NewQuestFAB from './components/navigation/NewQuestFAB';
 import ChatInbox from './components/chat/ChatInbox';
 import ChatView from './components/chat/ChatView';
 import ProfilePage from './components/profile/ProfilePage';
+import CelebrationOverlay from './components/effects/CelebrationOverlay';
+import SideQuestModal from './components/sidequest/SideQuestModal';
+import LogbookPage from './components/logbook/LogbookPage';
+import LogbookFAB from './components/logbook/LogbookFAB';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
+import { useSideQuestSpawner } from './hooks/useSideQuestSpawner';
 import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
 import { useDragonStore } from './stores/useDragonStore';
+import { useAchievementStore } from './stores/useAchievementStore';
+import { useDailySideQuestStore } from './stores/useDailySideQuestStore';
 import { fetchQuests } from './services/quest.service';
 import { refreshToken } from './services/auth.service';
 import { getUnreadCount } from './services/message.service';
@@ -33,6 +40,7 @@ function ChatViewWrapper() {
 function AppContent() {
   useUserLocation();
   useRealtimeMessages();
+  useSideQuestSpawner();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -43,6 +51,8 @@ function AppContent() {
   const activeTab = useUIStore((s) => s.activeTab);
   const setTotalUnread = useChatStore((s) => s.setTotalUnread);
   const fetchDragon = useDragonStore((s) => s.fetchDragon);
+  const fetchAchievements = useAchievementStore((s) => s.fetchAchievements);
+  const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
 
   // Silent refresh on mount — non-blocking, app works without auth
   useEffect(() => {
@@ -72,6 +82,13 @@ function AppContent() {
       fetchDragon();
     }
   }, [isAuthenticated, user?.hasDragon, fetchDragon]);
+
+  // Load achievements + daily side quests when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void fetchAchievements();
+    void fetchDaily();
+  }, [isAuthenticated, fetchAchievements, fetchDaily]);
 
   // Show dragon selection overlay for authenticated users without a dragon
   const showDragonSelection = isAuthenticated && user && user.hasDragon === false;
@@ -112,11 +129,23 @@ function AppContent() {
       {/* Dragon selection overlay */}
       {showDragonSelection && <DragonSelection />}
 
+      {/* SideQuest modal (Google-Maps-style, round action buttons) */}
+      <SideQuestModal />
+
+      {/* Logbook overlay (XP, achievements, daily side quests) */}
+      <LogbookPage />
+
+      {/* Celebration animations (accept / complete / evolution / achievement) */}
+      <CelebrationOverlay />
+
       {/* Top Navigation */}
       <TopNavBar />
 
       {/* New Quest FAB */}
       <NewQuestFAB />
+
+      {/* Logbook FAB */}
+      <LogbookFAB />
     </AppShell>
   );
 }

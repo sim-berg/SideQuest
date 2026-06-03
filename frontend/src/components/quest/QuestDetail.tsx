@@ -17,9 +17,16 @@ export default function QuestDetail({ quest }: QuestDetailProps) {
   return (
     <div className="flex flex-col gap-4 bg-white px-5 pb-8 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-          {quest.title}
-        </h2>
+        <div className="min-w-0">
+          {quest.isSideQuest && (
+            <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              ✨ SideQuest
+            </span>
+          )}
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            {quest.title}
+          </h2>
+        </div>
         <CategoryBadge category={quest.category} />
       </div>
 
