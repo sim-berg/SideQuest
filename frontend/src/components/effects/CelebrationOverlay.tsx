@@ -30,7 +30,7 @@ function Confetti({ count = 80 }: { count?: number }) {
   );
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
       {pieces.map((p) => (
         <motion.span
           key={p.id}
@@ -52,20 +52,18 @@ function Confetti({ count = 80 }: { count?: number }) {
 
 function Rays() {
   return (
-    <motion.div
-      className="pointer-events-none absolute inset-0 flex items-center justify-center"
-      initial={{ opacity: 0, rotate: 0 }}
-      animate={{ opacity: [0, 0.6, 0.3], rotate: 90 }}
-      transition={{ duration: 2.5, ease: 'easeOut' }}
-    >
-      <div
-        className="h-[140vmax] w-[140vmax]"
+    <div className="pointer-events-none fixed inset-0 flex items-center justify-center overflow-hidden">
+      <motion.div
+        className="h-[300vmax] w-[300vmax] shrink-0"
         style={{
           background:
             'repeating-conic-gradient(rgba(255,255,255,0.18) 0deg 8deg, transparent 8deg 16deg)',
         }}
+        initial={{ opacity: 0, rotate: 0 }}
+        animate={{ opacity: [0, 0.6, 0.3], rotate: 90 }}
+        transition={{ duration: 2.5, ease: 'easeOut' }}
       />
-    </motion.div>
+    </div>
   );
 }
 
