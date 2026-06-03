@@ -13,7 +13,7 @@ import ChatInbox from './components/chat/ChatInbox';
 import ChatView from './components/chat/ChatView';
 import ProfilePage from './components/profile/ProfilePage';
 import CelebrationOverlay from './components/effects/CelebrationOverlay';
-import SideQuestModal from './components/sidequest/SideQuestModal';
+import SideQuestDetailScreen from './components/sidequest/SideQuestDetailScreen';
 import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
 import { useUserLocation } from './hooks/useUserLocation';
@@ -129,8 +129,8 @@ function AppContent() {
       {/* Dragon selection overlay */}
       {showDragonSelection && <DragonSelection />}
 
-      {/* SideQuest modal (Google-Maps-style, round action buttons) */}
-      <SideQuestModal />
+      {/* SideQuest detail screen (full page + logbook comments) */}
+      <SideQuestDetailScreen />
 
       {/* Logbook overlay (XP, achievements, daily side quests) */}
       <LogbookPage />
