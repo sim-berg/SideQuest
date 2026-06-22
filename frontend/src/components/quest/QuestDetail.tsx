@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
+import { Navigation, Swords, CircleCheck, Info, Share2 } from 'lucide-react';
 import type { Quest } from '../../types/quest';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
+import { useQuestActions } from '../../hooks/useQuestActions';
 import { formatDistance } from '../../utils/format';
 import { toSlug } from '../../utils/slug';
 import { fetchQuestImage } from '../../services/quest.service';
@@ -9,6 +11,7 @@ import { CATEGORY_META } from '../../constants/categories';
 import CategoryBadge from './CategoryBadge';
 import QuestReward from './QuestReward';
 import QuestTimeLimit from './QuestTimeLimit';
+import RoundActionButton from '../sidequest/RoundActionButton';
 
 interface QuestDetailProps {
   quest: Quest;
@@ -16,8 +19,17 @@ interface QuestDetailProps {
 
 export default function QuestDetail({ quest }: QuestDetailProps) {
   const distance = useQuestDistance(quest.lat, quest.lng);
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
   const meta = CATEGORY_META[quest.category];
+  const {
+    loading,
+    error,
+    isAcceptedByMe,
+    accept,
+    complete,
+    navigate: routeTo,
+    share,
+  } = useQuestActions(quest);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imgReady, setImgReady] = useState(false);
@@ -91,12 +103,39 @@ export default function QuestDetail({ quest }: QuestDetailProps) {
         )}
       </div>
 
-      <button
-        onClick={() => navigate(`/quest/${toSlug(quest.title, quest.id)}`)}
-        className="mt-1 w-full rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 py-3.5 text-base font-bold text-white shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98] active:brightness-95"
-      >
-        Mehr Infos →
-      </button>
+      {error && (
+        <div className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      {/* actions: route / accept (or complete) / details / share */}
+      <div className="mt-1 flex items-start justify-around gap-2 rounded-2xl bg-slate-50 py-4 dark:bg-slate-800/50">
+        <RoundActionButton icon={Navigation} label="Route" onClick={routeTo} />
+        {isAcceptedByMe ? (
+          <RoundActionButton
+            icon={CircleCheck}
+            label={loading ? '...' : 'Fertig'}
+            onClick={complete}
+            disabled={loading}
+            variant="success"
+          />
+        ) : (
+          <RoundActionButton
+            icon={Swords}
+            label={loading ? '...' : 'Annehmen'}
+            onClick={accept}
+            disabled={loading || !!quest.acceptedBy}
+            variant="primary"
+          />
+        )}
+        <RoundActionButton
+          icon={Info}
+          label="Details"
+          onClick={() => setLocation(`/quest/${toSlug(quest.title, quest.id)}`)}
+        />
+        <RoundActionButton icon={Share2} label="Teilen" onClick={share} />
+      </div>
     </div>
   );
 }
