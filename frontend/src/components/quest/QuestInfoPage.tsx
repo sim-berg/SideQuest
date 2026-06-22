@@ -41,7 +41,7 @@ function InfoRow({
   );
 }
 
-function QuestInfoContent({ quest }: { quest: Quest }) {
+export function QuestInfoContent({ quest }: { quest: Quest }) {
   const distance = useQuestDistance(quest.lat, quest.lng);
   const meta = CATEGORY_META[quest.category];
   const diffMeta = DIFFICULTY_META[quest.difficulty ?? 'medium'];

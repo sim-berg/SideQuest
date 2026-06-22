@@ -42,6 +42,15 @@ export class CommentService {
     return docs.map(toPlain);
   }
 
+  async listByUser(userId: string, limit = 10) {
+    const docs = await this.commentModel
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+    return docs.map(toPlain);
+  }
+
   async create(
     questId: string,
     userId: string,

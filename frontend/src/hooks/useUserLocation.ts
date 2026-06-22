@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMapStore } from '../stores/useMapStore';
+import { useDistanceStore } from '../stores/useDistanceStore';
 import {
   watchUserLocation,
   clearWatch,
@@ -10,6 +11,7 @@ export function useUserLocation() {
   const setLocationError = useMapStore((s) => s.setLocationError);
   const setViewState = useMapStore((s) => s.setViewState);
   const viewState = useMapStore((s) => s.viewState);
+  const addPosition = useDistanceStore((s) => s.addPosition);
   const hasCentered = useRef(false);
 
   useEffect(() => {
@@ -17,6 +19,7 @@ export function useUserLocation() {
       (coords) => {
         setUserLocation(coords);
         setLocationError(null);
+        addPosition(coords.lat, coords.lng);
         if (!hasCentered.current) {
           hasCentered.current = true;
           setViewState({

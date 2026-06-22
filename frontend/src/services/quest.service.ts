@@ -43,6 +43,14 @@ export async function fetchMyActiveQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/my/active');
 }
 
+/** Lazily generated illustrative image (Replicate) for a quest's detail modal. */
+export async function fetchQuestImage(id: string): Promise<string | null> {
+  const res = await api.get<{ imageUrl: string | null }>(
+    `/sidequests/${id}/image`,
+  );
+  return res.imageUrl;
+}
+
 export async function fetchMyCompletedQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/my/completed');
 }

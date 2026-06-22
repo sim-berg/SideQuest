@@ -21,6 +21,6 @@ import {
   ],
   controllers: [AchievementController],
   providers: [AchievementService, ReplicateService],
-  exports: [AchievementService],
+  exports: [AchievementService, ReplicateService],
 })
 export class AchievementModule {}

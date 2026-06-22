@@ -14,6 +14,8 @@ import { GeoService } from '../geo/geo.service.js';
 import { DragonService } from '../dragon/dragon.service.js';
 import { UserService } from '../user/user.service.js';
 import { AchievementService } from '../achievement/achievement.service.js';
+import { ReplicateService } from '../achievement/replicate.service.js';
+import { Category } from './enums/category.enum.js';
 import { SIDEQUEST_TEMPLATES } from './sidequest-templates.js';
 import {
   DailySideQuest,
@@ -59,6 +61,17 @@ const XP_BY_DIFFICULTY: Record<string, number> = {
 
 const DAILY_SIDEQUEST_COUNT = 3; // daily side quests generated per user
 
+// Per-category styling for the generated side quest scene (emoji + gradient
+// colors drive the fallback image when no Replicate token is configured).
+const SCENE_STYLE: Record<Category, { emoji: string; colors: [string, string] }> =
+  {
+    [Category.SPORT]: { emoji: '🏃', colors: ['#22c55e', '#0ea5e9'] },
+    [Category.SOCIAL]: { emoji: '🤝', colors: ['#3b82f6', '#8b5cf6'] },
+    [Category.ADVENTURE]: { emoji: '🧭', colors: ['#f59e0b', '#ef4444'] },
+    [Category.SKILL]: { emoji: '🧠', colors: ['#a855f7', '#ec4899'] },
+    [Category.MYSTERY]: { emoji: '🔮', colors: ['#6366f1', '#ef4444'] },
+  };
+
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 }
@@ -89,7 +102,45 @@ export class QuestService {
     private readonly dragonService: DragonService,
     private readonly userService: UserService,
     private readonly achievementService: AchievementService,
+    private readonly replicate: ReplicateService,
   ) {}
+
+  // De-dupes concurrent image requests for the same key so we never kick off
+  // two Replicate runs for the same template at once.
+  private readonly imageInflight = new Map<string, Promise<string>>();
+
+  /**
+   * Illustrative image for a quest's detail modal. Cached by template (so all
+   * spawns of the same side quest share one image) and generated lazily.
+   */
+  async getSideQuestImage(id: string): Promise<{ imageUrl: string }> {
+    const doc = await this.questModel.findById(id).exec();
+    if (!doc) throw new NotFoundException(`Quest ${id} not found`);
+
+    const key = `sq_${doc.templateId ?? doc._id.toString()}`;
+    const pending = this.imageInflight.get(key);
+    if (pending) return { imageUrl: await pending };
+
+    const style = SCENE_STYLE[doc.category] ?? SCENE_STYLE[Category.ADVENTURE];
+    const prompt =
+      `Vibrant stylized illustration for a mobile adventure game quest card. ` +
+      `Quest: "${doc.title}". ${doc.description} ` +
+      `Theme: ${doc.category}. Colorful, dynamic lighting, painterly digital ` +
+      `art, epic yet playful mood, no text, no words, no letters.`;
+
+    const task = this.replicate.generateScene({
+      key,
+      prompt,
+      emoji: style.emoji,
+      colors: style.colors,
+    });
+    this.imageInflight.set(key, task);
+    try {
+      return { imageUrl: await task };
+    } finally {
+      this.imageInflight.delete(key);
+    }
+  }
 
   async findAll(filter: QuestFilterDto) {
     const query: Record<string, unknown> = {};

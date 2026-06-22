@@ -38,6 +38,12 @@ export class SideQuestController {
     return this.questService.getDailySideQuests(req.user.userId);
   }
 
+  /** Lazily generated illustrative image for a quest's detail modal. */
+  @Get(':id/image')
+  image(@Param('id') id: string) {
+    return this.questService.getSideQuestImage(id);
+  }
+
   @Post('daily/:id/complete')
   @UseGuards(JwtAuthGuard)
   completeDaily(@Param('id') id: string, @Request() req: any) {
