@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
@@ -24,6 +25,11 @@ export class UserController {
   @Patch('me')
   updateMe(@Request() req, @Body() dto: UpdateProfileDto) {
     return this.userService.updateProfile(req.user.userId, dto);
+  }
+
+  @Post('me/checkin')
+  dailyCheckin(@Request() req) {
+    return this.userService.dailyCheckin(req.user.userId);
   }
 
   @Get(':id')

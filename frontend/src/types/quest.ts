@@ -37,6 +37,9 @@ export interface Quest {
   acceptedAt: string | null;
   completedBy: string | null;
   completedAt: string | null;
+  isSideQuest?: boolean;
+  expiresAt?: string | null;
+  templateId?: string | null;
   createdAt: string;
 }
 

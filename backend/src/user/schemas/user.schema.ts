@@ -38,6 +38,15 @@ export class User {
 
   @Prop({ default: false })
   hasDragon: boolean;
+
+  @Prop({ default: 0 })
+  totalXp: number;
+
+  @Prop({ default: 0 })
+  loginStreak: number;
+
+  @Prop({ type: Date, default: null })
+  lastLoginDate: Date | null;
 }
 
 export type UserDocument = User & Document;

@@ -1,6 +1,13 @@
 import { api } from './api';
 import type { Quest } from '../types/quest';
 import type { XpResult } from '../types/dragon';
+import type { Achievement } from '../types/achievement';
+
+export interface CompleteQuestResult {
+  quest: Quest;
+  xpResult: XpResult | null;
+  achievements: Achievement[];
+}
 
 export async function fetchQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests');
@@ -24,11 +31,8 @@ export async function completeQuest(
   id: string,
   lat: number,
   lng: number,
-): Promise<{ quest: Quest; xpResult: XpResult }> {
-  return api.post<{ quest: Quest; xpResult: XpResult }>(
-    `/quests/${id}/complete`,
-    { lat, lng },
-  );
+): Promise<CompleteQuestResult> {
+  return api.post<CompleteQuestResult>(`/quests/${id}/complete`, { lat, lng });
 }
 
 export async function abandonQuest(id: string): Promise<Quest> {
@@ -37,6 +41,14 @@ export async function abandonQuest(id: string): Promise<Quest> {
 
 export async function fetchMyActiveQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/my/active');
+}
+
+/** Lazily generated illustrative image (Replicate) for a quest's detail modal. */
+export async function fetchQuestImage(id: string): Promise<string | null> {
+  const res = await api.get<{ imageUrl: string | null }>(
+    `/sidequests/${id}/image`,
+  );
+  return res.imageUrl;
 }
 
 export async function fetchMyCompletedQuests(): Promise<Quest[]> {

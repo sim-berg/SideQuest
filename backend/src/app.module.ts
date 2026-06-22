@@ -6,6 +6,8 @@ import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { MessageModule } from './message/message.module.js';
 import { DragonModule } from './dragon/dragon.module.js';
+import { AchievementModule } from './achievement/achievement.module.js';
+import { CommentModule } from './comment/comment.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -22,6 +24,8 @@ import { HealthController } from './health/health.controller.js';
     AuthModule,
     MessageModule,
     DragonModule,
+    AchievementModule,
+    CommentModule,
   ],
   controllers: [HealthController],
 })

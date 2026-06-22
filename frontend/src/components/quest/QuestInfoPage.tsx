@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import type { Quest } from '../../types/quest';
-import type { XpResult } from '../../types/dragon';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { useUIStore } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
+import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDragonStore } from '../../stores/useDragonStore';
+import { useCelebrationStore } from '../../stores/useCelebrationStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance, formatReward, formatTimeRemaining } from '../../utils/format';
@@ -14,7 +15,6 @@ import {
   completeQuest,
   abandonQuest,
 } from '../../services/quest.service';
-import XpToast from '../dragon/XpToast';
 import { cn } from '../../utils/cn';
 
 function InfoRow({
@@ -41,7 +41,7 @@ function InfoRow({
   );
 }
 
-function QuestInfoContent({ quest }: { quest: Quest }) {
+export function QuestInfoContent({ quest }: { quest: Quest }) {
   const distance = useQuestDistance(quest.lat, quest.lng);
   const meta = CATEGORY_META[quest.category];
   const diffMeta = DIFFICULTY_META[quest.difficulty ?? 'medium'];
@@ -55,11 +55,21 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
   const updateQuestInList = useQuestStore((s) => s.updateQuestInList);
+  const updateSideQuestInList = useSideQuestStore((s) => s.updateSideQuestInList);
+  const removeSideQuest = useSideQuestStore((s) => s.removeSideQuest);
   const setDragon = useDragonStore((s) => s.setDragon);
+  const celebrate = useCelebrationStore((s) => s.celebrate);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [xpResult, setXpResult] = useState<XpResult | null>(null);
+
+  const syncQuest = useCallback(
+    (q: Quest) => {
+      updateQuestInList(q);
+      if (q.isSideQuest) updateSideQuestInList(q);
+    },
+    [updateQuestInList, updateSideQuestInList],
+  );
 
   const isAcceptedByMe = quest.acceptedBy === userId;
   const isAcceptedByOther = quest.acceptedBy && quest.acceptedBy !== userId;
@@ -74,13 +84,14 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
     setError(null);
     try {
       const updated = await acceptQuest(quest.id);
-      updateQuestInList(updated);
+      syncQuest(updated);
+      celebrate({ type: 'accept', title: updated.title });
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Annehmen');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, quest.id, setShowAuthPrompt, updateQuestInList]);
+  }, [isAuthenticated, quest.id, setShowAuthPrompt, syncQuest, celebrate]);
 
   const handleComplete = useCallback(async () => {
     setLoading(true);
@@ -92,15 +103,24 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           timeout: 10000,
         }),
       );
+      const prevStage = useDragonStore.getState().dragon?.evolutionStage;
       const result = await completeQuest(
         quest.id,
         pos.coords.latitude,
         pos.coords.longitude,
       );
-      updateQuestInList(result.quest);
+      syncQuest(result.quest);
+      // Side quests vanish from the map once completed.
+      if (result.quest.isSideQuest) removeSideQuest(result.quest.id);
+
+      celebrate({ type: 'complete', title: result.quest.title, xpResult: result.xpResult ?? undefined });
+
       if (result.xpResult) {
-        setXpResult(result.xpResult);
         setDragon(result.xpResult.dragon);
+        const newStage = result.xpResult.dragon.evolutionStage;
+        if (prevStage && newStage !== prevStage) {
+          celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
+        }
       }
     } catch (e: any) {
       const msg =
@@ -109,20 +129,20 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
     } finally {
       setLoading(false);
     }
-  }, [quest.id, updateQuestInList, setDragon]);
+  }, [quest.id, syncQuest, removeSideQuest, setDragon, celebrate]);
 
   const handleAbandon = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const updated = await abandonQuest(quest.id);
-      updateQuestInList(updated);
+      syncQuest(updated);
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Aufgeben');
     } finally {
       setLoading(false);
     }
-  }, [quest.id, updateQuestInList]);
+  }, [quest.id, syncQuest]);
 
   return (
     <div className="flex flex-col gap-0 px-5 pb-10">
@@ -256,11 +276,6 @@ function QuestInfoContent({ quest }: { quest: Quest }) {
           </button>
         )}
       </div>
-
-      {/* XP Toast */}
-      {xpResult && (
-        <XpToast xpResult={xpResult} onDone={() => setXpResult(null)} />
-      )}
     </div>
   );
 }

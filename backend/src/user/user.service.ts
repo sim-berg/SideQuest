@@ -72,6 +72,49 @@ export class UserService {
       .exec();
   }
 
+  async dailyCheckin(id: string): Promise<{
+    streak: number;
+    isNewDay: boolean;
+    totalXp: number;
+    questsCompleted: number;
+  }> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const lastStr = user.lastLoginDate
+      ? user.lastLoginDate.toISOString().slice(0, 10)
+      : null;
+
+    if (lastStr === todayStr) {
+      return {
+        streak: user.loginStreak,
+        isNewDay: false,
+        totalXp: user.totalXp,
+        questsCompleted: user.questsCompleted,
+      };
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const newStreak = lastStr === yesterdayStr ? user.loginStreak + 1 : 1;
+
+    await this.userModel
+      .findByIdAndUpdate(id, {
+        $set: { loginStreak: newStreak, lastLoginDate: now },
+      })
+      .exec();
+
+    return {
+      streak: newStreak,
+      isNewDay: true,
+      totalXp: user.totalXp,
+      questsCompleted: user.questsCompleted,
+    };
+  }
+
   async getPublicProfile(id: string): Promise<Partial<User>> {
     const user = await this.userModel
       .findById(id)

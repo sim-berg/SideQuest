@@ -27,3 +27,15 @@ body {
 .dark {
   color-scheme: dark;
 }
+
+/* SideQuest map card (Popup) — strip default MapLibre popup chrome so our
+   own card (the "Kachel" next to the marker) controls the styling. */
+.sidequest-popup .maplibregl-popup-content {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0.75rem;
+}
+.sidequest-popup .maplibregl-popup-tip {
+  display: none;
+}
