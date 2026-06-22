@@ -12,14 +12,16 @@ interface SideQuestMarkerProps {
 
 export default function SideQuestMarker({ quest, isNew }: SideQuestMarkerProps) {
   const setSelected = useSideQuestStore((s) => s.setSelected);
+  const openDetail = useSideQuestStore((s) => s.openDetail);
   const meta = CATEGORY_META[quest.category];
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setSelected(quest);
+      openDetail();
     },
-    [quest, setSelected],
+    [quest, setSelected, openDetail],
   );
 
   return (
