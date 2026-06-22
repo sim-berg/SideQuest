@@ -47,7 +47,8 @@
       "Bash(node -e \"require.resolve\\('playwright-core'\\); console.log\\('playwright-core ok'\\)\")",
       "Read(//home/dizzle/.cache/**)",
       "Bash(sed -i \"s|import { chromium } from '/tmp/node_modules/playwright-core/index.js';|import pkg from '/tmp/node_modules/playwright-core/index.js';\\\\nconst { chromium } = pkg;|\" drive.mjs)",
-      "Bash(node /tmp/drive.mjs)"
+      "Bash(node /tmp/drive.mjs)",
+      "Bash(echo \"started pid $!\")"
     ]
   }
 }
