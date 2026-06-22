@@ -40,7 +40,14 @@
       "Bash(curl -s -o /dev/null -w \"3000 uploads: %{http_code}\\\\n\" \"http://localhost:3000/uploads/sidequests/sq_sq_photo_landmark.webp\")",
       "Bash(ps -o pid,ppid,cmd -p 610960)",
       "Bash(pstree -ap 610960)",
-      "Bash(ps -o pid,cmd --ppid 610960)"
+      "Bash(ps -o pid,cmd --ppid 610960)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/api/health)",
+      "Bash(node -e \"require.resolve\\('playwright'\\); console.log\\('playwright ok'\\)\")",
+      "Bash(node -e \"require.resolve\\('playwright-core'\\); console.log\\('playwright-core ok'\\)\")",
+      "Read(//home/dizzle/.cache/**)",
+      "Bash(sed -i \"s|import { chromium } from '/tmp/node_modules/playwright-core/index.js';|import pkg from '/tmp/node_modules/playwright-core/index.js';\\\\nconst { chromium } = pkg;|\" drive.mjs)",
+      "Bash(node /tmp/drive.mjs)"
     ]
   }
 }
