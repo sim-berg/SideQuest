@@ -1,5 +1,6 @@
 import { Marker } from 'react-map-gl/maplibre';
 import { useFilteredQuests } from '../../hooks/useFilteredQuests';
+import { useAuthStore } from '../../stores/useAuthStore';
 import QuestMarker from './QuestMarker';
 
 /**
@@ -9,6 +10,7 @@ import QuestMarker from './QuestMarker';
  */
 export default function QuestMarkerLayer() {
   const filteredQuests = useFilteredQuests();
+  const userId = useAuthStore((s) => s.user?.id);
 
   return (
     <>
@@ -18,7 +20,11 @@ export default function QuestMarkerLayer() {
           longitude={quest.lng}
           latitude={quest.lat}
         >
-          <QuestMarker questId={quest.id} category={quest.category} />
+          <QuestMarker
+            questId={quest.id}
+            category={quest.category}
+            acceptedByMe={!!userId && quest.acceptedBy === userId}
+          />
         </Marker>
       ))}
     </>
