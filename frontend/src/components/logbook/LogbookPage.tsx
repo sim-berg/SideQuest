@@ -7,7 +7,6 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useLocation } from 'wouter';
 import { useLogbookStore } from '../../stores/useLogbookStore';
 import { useAchievementStore } from '../../stores/useAchievementStore';
 import { useDailySideQuestStore } from '../../stores/useDailySideQuestStore';
@@ -23,7 +22,6 @@ import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
 import { fetchMyActiveQuests } from '../../services/quest.service';
 import { fetchMyComments } from '../../services/user.service';
-import { toSlug } from '../../utils/slug';
 import { Category } from '../../types/quest';
 import type { Quest } from '../../types/quest';
 import type { DailySideQuest } from '../../types/sidequest';
@@ -305,7 +303,7 @@ export default function LogbookPage() {
   const setSelected = useSideQuestStore((s) => s.setSelected);
   const openDetail = useSideQuestStore((s) => s.openDetail);
   const selectQuest = useQuestStore((s) => s.selectQuest);
-  const [, setLocation] = useLocation();
+  const openQuestDetail = useQuestStore((s) => s.openDetail);
 
   const questsCompleted = useAuthStore((s) => s.user?.questsCompleted ?? 0);
   const dragonXp = useDragonStore((s) => s.dragon?.xp ?? 0);
@@ -340,11 +338,11 @@ export default function LogbookPage() {
         setSelected(q);
         openDetail();
       } else {
-        selectQuest(null);
-        setLocation(`/quest/${toSlug(q.title, q.id)}`);
+        selectQuest(q);
+        openQuestDetail();
       }
     },
-    [close, setSelected, openDetail, selectQuest, setLocation],
+    [close, setSelected, openDetail, selectQuest, openQuestDetail],
   );
 
   const categoryCounts = daily.reduce<Record<string, number>>((acc, d) => {

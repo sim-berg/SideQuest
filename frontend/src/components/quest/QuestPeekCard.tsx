@@ -1,5 +1,4 @@
 import { Popup } from 'react-map-gl/maplibre';
-import { useLocation } from 'wouter';
 import {
   Share2,
   Swords,
@@ -14,32 +13,30 @@ import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance } from '../../utils/format';
-import { toSlug } from '../../utils/slug';
 import RoundActionButton from '../sidequest/RoundActionButton';
 
 /**
  * Google-Maps-style card anchored directly above the selected quest marker.
  * Quick summary + actions, and a "Details" button that opens the full detail
- * screen (/quest/:slug). Rendered inside <Map> so it tracks the marker.
+ * screen. Rendered inside <Map> so it tracks the marker.
  */
 export default function QuestPeekCard() {
   const quest = useQuestStore((s) => s.selectedQuest);
+  const detailOpen = useQuestStore((s) => s.detailOpen);
   const selectQuest = useQuestStore((s) => s.selectQuest);
-  const [, setLocation] = useLocation();
+  const openFullDetail = useQuestStore((s) => s.openDetail);
 
   const { loading, isAcceptedByMe, accept, complete, share } =
     useQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
 
-  if (!quest) return null;
+  // Hide the card once a quest is selected but the full screen has opened.
+  if (!quest || detailOpen) return null;
 
   const meta = CATEGORY_META[quest.category];
   const diff = DIFFICULTY_META[quest.difficulty ?? 'medium'];
 
-  const openDetail = () => {
-    setLocation(`/quest/${toSlug(quest.title, quest.id)}`);
-    selectQuest(null);
-  };
+  const openDetail = () => openFullDetail();
 
   return (
     <Popup

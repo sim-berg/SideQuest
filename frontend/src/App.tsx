@@ -15,6 +15,7 @@ import ProfilePage from './components/profile/ProfilePage';
 import CelebrationOverlay from './components/effects/CelebrationOverlay';
 import DailyStreakModal from './components/effects/DailyStreakModal';
 import SideQuestDetailScreen from './components/sidequest/SideQuestDetailScreen';
+import QuestDetailScreen from './components/quest/QuestDetailScreen';
 import Toast from './components/ui/Toast';
 import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
@@ -149,6 +150,9 @@ function AppContent() {
 
       {/* SideQuest detail screen (full page + logbook comments) */}
       <SideQuestDetailScreen />
+
+      {/* Quest detail screen (full page + logbook comments) */}
+      <QuestDetailScreen />
 
       {/* URL routing: /quest/:slug opens QuestInfoPage */}
       <Switch>
