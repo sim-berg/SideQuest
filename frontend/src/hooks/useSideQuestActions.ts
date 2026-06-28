@@ -6,7 +6,9 @@ import { useUIStore } from '../stores/useUIStore';
 import { useDragonStore } from '../stores/useDragonStore';
 import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
+import { useToastStore } from '../stores/useToastStore';
 import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.service';
+import { toSlug } from '../utils/slug';
 
 /**
  * Shared accept / complete / abandon / navigate / share logic for a side quest,
@@ -18,6 +20,7 @@ export function useSideQuestActions(quest: Quest | null) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
+  const showToast = useToastStore((s) => s.showToast);
   const setDragon = useDragonStore((s) => s.setDragon);
   const celebrate = useCelebrationStore((s) => s.celebrate);
   const addAchievements = useAchievementStore((s) => s.addAchievements);
@@ -121,13 +124,19 @@ export function useSideQuestActions(quest: Quest | null) {
 
   const share = useCallback(() => {
     if (!quest) return;
-    const text = `SideQuest: ${quest.title} – ${quest.description}`;
+    const url = `${window.location.origin}/quest/${toSlug(quest.title, quest.id)}`;
+    // Mobile: native share sheet. Desktop browser: copy the link + toast.
     if (navigator.share) {
-      void navigator.share({ title: quest.title, text }).catch(() => {});
+      void navigator
+        .share({ title: quest.title, text: `SideQuest: ${quest.title}`, url })
+        .catch(() => {});
     } else {
-      void navigator.clipboard?.writeText(text).catch(() => {});
+      void navigator.clipboard
+        ?.writeText(url)
+        .then(() => showToast('Link kopiert'))
+        .catch(() => {});
     }
-  }, [quest]);
+  }, [quest, showToast]);
 
   return {
     loading,
