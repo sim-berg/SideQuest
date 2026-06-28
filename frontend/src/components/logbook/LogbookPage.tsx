@@ -7,12 +7,12 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLocation } from 'wouter';
 import { useLogbookStore } from '../../stores/useLogbookStore';
 import { useAchievementStore } from '../../stores/useAchievementStore';
 import { useDailySideQuestStore } from '../../stores/useDailySideQuestStore';
 import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useQuestStore } from '../../stores/useQuestStore';
-import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDragonStore } from '../../stores/useDragonStore';
 import { useCelebrationStore } from '../../stores/useCelebrationStore';
@@ -23,6 +23,7 @@ import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
 import { fetchMyActiveQuests } from '../../services/quest.service';
 import { fetchMyComments } from '../../services/user.service';
+import { toSlug } from '../../utils/slug';
 import { Category } from '../../types/quest';
 import type { Quest } from '../../types/quest';
 import type { DailySideQuest } from '../../types/sidequest';
@@ -304,7 +305,7 @@ export default function LogbookPage() {
   const setSelected = useSideQuestStore((s) => s.setSelected);
   const openDetail = useSideQuestStore((s) => s.openDetail);
   const selectQuest = useQuestStore((s) => s.selectQuest);
-  const openBottomSheet = useUIStore((s) => s.openBottomSheet);
+  const [, setLocation] = useLocation();
 
   const questsCompleted = useAuthStore((s) => s.user?.questsCompleted ?? 0);
   const dragonXp = useDragonStore((s) => s.dragon?.xp ?? 0);
@@ -339,11 +340,11 @@ export default function LogbookPage() {
         setSelected(q);
         openDetail();
       } else {
-        selectQuest(q);
-        openBottomSheet();
+        selectQuest(null);
+        setLocation(`/quest/${toSlug(q.title, q.id)}`);
       }
     },
-    [close, setSelected, openDetail, selectQuest, openBottomSheet],
+    [close, setSelected, openDetail, selectQuest, setLocation],
   );
 
   const categoryCounts = daily.reduce<Record<string, number>>((acc, d) => {

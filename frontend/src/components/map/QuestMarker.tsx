@@ -3,7 +3,6 @@ import { Check } from 'lucide-react';
 import type { Category } from '../../types/quest';
 import { CATEGORY_META } from '../../constants/categories';
 import { useQuestStore } from '../../stores/useQuestStore';
-import { useUIStore } from '../../stores/useUIStore';
 
 interface QuestMarkerProps {
   questId: string;
@@ -15,19 +14,17 @@ interface QuestMarkerProps {
 export default function QuestMarker({ questId, category, acceptedByMe }: QuestMarkerProps) {
   const quests = useQuestStore((s) => s.quests);
   const selectQuest = useQuestStore((s) => s.selectQuest);
-  const openBottomSheet = useUIStore((s) => s.openBottomSheet);
   const meta = CATEGORY_META[category];
 
+  // Clicking a marker shows the compact peek card (QuestPeekCard) over the
+  // marker. The full detail screen is opened from that card.
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       const quest = quests.find((q) => q.id === questId);
-      if (quest) {
-        selectQuest(quest);
-        openBottomSheet();
-      }
+      if (quest) selectQuest(quest);
     },
-    [questId, quests, selectQuest, openBottomSheet],
+    [questId, quests, selectQuest],
   );
 
   return (

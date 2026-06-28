@@ -3,7 +3,6 @@ import { Router, Route, Switch } from 'wouter';
 import { MapProvider } from 'react-map-gl/maplibre';
 import AppShell from './components/layout/AppShell';
 import QuestMap from './components/map/QuestMap';
-import QuestBottomSheet from './components/quest/BottomSheet';
 import CreateQuestPage from './components/quest/CreateQuestPage';
 import QuestRoute from './components/quest/QuestRoute';
 import AuthPrompt from './components/auth/AuthPrompt';
@@ -122,7 +121,6 @@ function AppContent() {
         <div className="h-full w-full">
           <QuestMap />
         </div>
-        <QuestBottomSheet />
 
         {/* Location error banner */}
         {locationError && (
