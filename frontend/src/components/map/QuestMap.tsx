@@ -7,6 +7,7 @@ import { MAP_STYLE_LIGHT, MAP_STYLE_DARK } from '../../constants/map';
 import UserLocationMarker from './UserLocationMarker';
 import QuestMarkerLayer from './QuestMarkerLayer';
 import SideQuestMarkerLayer from './SideQuestMarkerLayer';
+import SideQuestPeekCard from '../sidequest/SideQuestPeekCard';
 import NearbyUsersLayer from './NearbyUsersLayer';
 import { useLocationSharing } from '../../hooks/useLocationSharing';
 
@@ -65,6 +66,9 @@ export default function QuestMap() {
         <QuestMarkerLayer />
         <SideQuestMarkerLayer />
         <NearbyUsersLayer />
+
+        {/* Floating card above the selected side quest marker */}
+        <SideQuestPeekCard />
 
         {/* Dropped pin during location picking */}
         {pickingLocation && droppedPin && (

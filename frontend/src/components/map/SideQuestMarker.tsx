@@ -12,16 +12,16 @@ interface SideQuestMarkerProps {
 
 export default function SideQuestMarker({ quest, isNew }: SideQuestMarkerProps) {
   const setSelected = useSideQuestStore((s) => s.setSelected);
-  const openDetail = useSideQuestStore((s) => s.openDetail);
   const meta = CATEGORY_META[quest.category];
 
+  // Clicking a marker shows the compact peek card first (setSelected leaves
+  // detailOpen=false). The full-screen detail is opened from that card.
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setSelected(quest);
-      openDetail();
     },
-    [quest, setSelected, openDetail],
+    [quest, setSelected],
   );
 
   return (
