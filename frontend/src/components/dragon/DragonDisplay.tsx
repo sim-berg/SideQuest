@@ -2,6 +2,7 @@ import { useDragonStore } from '../../stores/useDragonStore';
 import { DRAGON_META, EVOLUTION_LABELS, MOOD_META } from '../../constants/dragons';
 import { getDragonMood, getNextEvolutionThreshold } from '../../utils/dragon';
 import { formatXp } from '../../utils/format';
+import AnimatedDragon from './AnimatedDragon';
 
 export default function DragonDisplay() {
   const dragon = useDragonStore((s) => s.dragon);
@@ -24,12 +25,16 @@ export default function DragonDisplay() {
   return (
     <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/50">
       <div className="flex items-center gap-4">
-        {/* Dragon emoji */}
+        {/* Dragon — animated, fire-breathing SVG once hatched (egg stays an emoji) */}
         <div
           className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl"
           style={{ backgroundColor: meta.color + '20' }}
         >
-          {emoji}
+          {dragon.evolutionStage === 'egg' ? (
+            emoji
+          ) : (
+            <AnimatedDragon color={meta.color} size={64} />
+          )}
         </div>
 
         <div className="min-w-0 flex-1">

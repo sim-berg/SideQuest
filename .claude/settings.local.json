@@ -48,7 +48,9 @@
       "Read(//home/dizzle/.cache/**)",
       "Bash(sed -i \"s|import { chromium } from '/tmp/node_modules/playwright-core/index.js';|import pkg from '/tmp/node_modules/playwright-core/index.js';\\\\nconst { chromium } = pkg;|\" drive.mjs)",
       "Bash(node /tmp/drive.mjs)",
-      "Bash(echo \"started pid $!\")"
+      "Bash(echo \"started pid $!\")",
+      "Bash(curl -s -o /dev/null -w \"frontend:%{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"backend:%{http_code}\\\\n\" http://localhost:3002/api/health)"
     ]
   }
 }

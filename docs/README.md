@@ -21,6 +21,10 @@ Standort-Sharing zwischen Spielern.
 | [sidequests.md](./sidequests.md) | Auto-spawnende SideQuests + Game-Animationen |
 | [realtime.md](./realtime.md) | Socket.IO: Chat, Typing, Standort-Sharing |
 | [sidequest_master_plan.md](./sidequest_master_plan.md) | Produkt-Vision & Roadmap (Brainstorm) |
+| [blockchain-vision.md](./blockchain-vision.md) | Web3-Vision: on-chain Tausch-Ökonomie, Stack, Hybrid-Architektur |
+| [smart_contract/web3-speicher-tangle-und-methoden.md](./smart_contract/web3-speicher-tangle-und-methoden.md) | Smart Contracts & Tangle erklärt, On-chain- vs. Mesh-Speicher, effektivste Methoden + Beispiel-`.sol` |
+| [blockchain-backend-integration.md](./blockchain-backend-integration.md) | Architektur des `chain`-Backend-Moduls: Indexer, Oracle, Relayer, Mesh, Schemas, Flows |
+| [blockchain-rollout-plan.md](./blockchain-rollout-plan.md) | Phasenweiser Web3-Rollout, Architektur-Entscheidungen (ADR) & Risiken |
 
 ## Tech-Stack auf einen Blick
 
