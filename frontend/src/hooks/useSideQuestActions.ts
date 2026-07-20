@@ -7,8 +7,9 @@ import { useDragonStore } from '../stores/useDragonStore';
 import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
 import { useToastStore } from '../stores/useToastStore';
+import { useRouteStore } from '../stores/useRouteStore';
 import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.service';
-import { toSlug } from '../utils/slug';
+import { shareQuest } from '../utils/share';
 
 /**
  * Shared accept / complete / abandon / navigate / share logic for a side quest,
@@ -17,6 +18,7 @@ import { toSlug } from '../utils/slug';
 export function useSideQuestActions(quest: Quest | null) {
   const updateSideQuestInList = useSideQuestStore((s) => s.updateSideQuestInList);
   const removeSideQuest = useSideQuestStore((s) => s.removeSideQuest);
+  const setSelected = useSideQuestStore((s) => s.setSelected);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
@@ -114,28 +116,26 @@ export function useSideQuestActions(quest: Quest | null) {
     }
   }, [quest, updateSideQuestInList]);
 
-  const navigate = useCallback(() => {
+  /** Draw a walking route to the quest on the map, revealing it behind the detail screen. */
+  const planRoute = useCallback(() => {
     if (!quest) return;
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${quest.lat},${quest.lng}`,
-      '_blank',
-    );
-  }, [quest]);
+    setSelected(null); // also closes the detail screen
+    void useRouteStore.getState().planRoute(quest);
+  }, [quest, setSelected]);
+
+  /** Jump straight into the Adventure-mode compass, routing in the background. */
+  const openCompass = useCallback(() => {
+    if (!quest) return;
+    setSelected(null);
+    void useRouteStore.getState().planRoute(quest);
+    useRouteStore.getState().openCompass(quest);
+  }, [quest, setSelected]);
 
   const share = useCallback(() => {
     if (!quest) return;
-    const url = `${window.location.origin}/quest/${toSlug(quest.title, quest.id)}`;
-    // Mobile: native share sheet. Desktop browser: copy the link + toast.
-    if (navigator.share) {
-      void navigator
-        .share({ title: quest.title, text: `SideQuest: ${quest.title}`, url })
-        .catch(() => {});
-    } else {
-      void navigator.clipboard
-        ?.writeText(url)
-        .then(() => showToast('Link kopiert'))
-        .catch(() => {});
-    }
+    void shareQuest(quest).then((copied) => {
+      if (copied) showToast('Link kopiert');
+    });
   }, [quest, showToast]);
 
   return {
@@ -146,7 +146,8 @@ export function useSideQuestActions(quest: Quest | null) {
     accept,
     complete,
     abandon,
-    navigate,
+    planRoute,
+    openCompass,
     share,
   };
 }

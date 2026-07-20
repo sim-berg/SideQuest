@@ -6,8 +6,6 @@ export type ActiveTab = 'map' | 'chat' | 'create' | 'profile';
 export type CreateWizardStep = 0 | 1 | 2 | 3 | 4;
 
 interface UIState {
-  bottomSheetOpen: boolean;
-  infoPageOpen: boolean;
   createQuestOpen: boolean;
   darkMode: boolean;
   activeTab: ActiveTab;
@@ -21,10 +19,6 @@ interface UIState {
   createWizardStep: CreateWizardStep;
   /** Picked location coordinates */
   pickedLocation: { lat: number; lng: number } | null;
-  openBottomSheet: () => void;
-  closeBottomSheet: () => void;
-  openInfoPage: () => void;
-  closeInfoPage: () => void;
   openCreateQuest: () => void;
   closeCreateQuest: () => void;
   startPickingLocation: () => void;
@@ -41,8 +35,6 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  bottomSheetOpen: false,
-  infoPageOpen: false,
   createQuestOpen: false,
   darkMode: localStorage.getItem('sidequest-dark') === 'true',
   activeTab: 'map',
@@ -53,12 +45,7 @@ export const useUIStore = create<UIState>((set) => ({
   pickingLocation: false,
   createWizardStep: 0,
   pickedLocation: null,
-  openBottomSheet: () => set({ bottomSheetOpen: true }),
-  closeBottomSheet: () => set({ bottomSheetOpen: false }),
-  openInfoPage: () => set({ infoPageOpen: true, bottomSheetOpen: false }),
-  closeInfoPage: () => set({ infoPageOpen: false }),
-  openCreateQuest: () =>
-    set({ createQuestOpen: true, bottomSheetOpen: false, activeTab: 'create' }),
+  openCreateQuest: () => set({ createQuestOpen: true, activeTab: 'create' }),
   closeCreateQuest: () =>
     set({
       createQuestOpen: false,
@@ -73,7 +60,6 @@ export const useUIStore = create<UIState>((set) => ({
       pickedLocation: null,
       createWizardStep: 0,
       activeTab: 'map',
-      bottomSheetOpen: false,
       createQuestOpen: true,
     }),
   confirmLocation: (lat, lng) =>
@@ -104,7 +90,6 @@ export const useUIStore = create<UIState>((set) => ({
         pickedLocation: null,
         createWizardStep: 0,
         createQuestOpen: true,
-        bottomSheetOpen: false,
       });
     }
     return set({ activeTab, createQuestOpen: false, pickingLocation: false, createWizardStep: 0, pickedLocation: null });
