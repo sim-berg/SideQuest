@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Zap,
-  Trophy,
   CircleCheck,
   Sparkles,
   MapPin,
@@ -13,6 +11,7 @@ import { useLogbookStore } from '../../stores/useLogbookStore';
 import { useAchievementStore } from '../../stores/useAchievementStore';
 import { useDailySideQuestStore } from '../../stores/useDailySideQuestStore';
 import { useSideQuestStore } from '../../stores/useSideQuestStore';
+import { useQuestStore } from '../../stores/useQuestStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDragonStore } from '../../stores/useDragonStore';
 import { useCelebrationStore } from '../../stores/useCelebrationStore';
@@ -21,8 +20,10 @@ import { useDistanceStore } from '../../stores/useDistanceStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
+import { fetchMyActiveQuests } from '../../services/quest.service';
 import { fetchMyComments } from '../../services/user.service';
 import { Category } from '../../types/quest';
+import type { Quest } from '../../types/quest';
 import type { DailySideQuest } from '../../types/sidequest';
 import type { Comment } from '../../types/comment';
 
@@ -299,10 +300,11 @@ export default function LogbookPage() {
   const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
   const updateDaily = useDailySideQuestStore((s) => s.updateDaily);
 
-  const sideQuests = useSideQuestStore((s) => s.sideQuests);
   const setSelected = useSideQuestStore((s) => s.setSelected);
+  const openDetail = useSideQuestStore((s) => s.openDetail);
+  const selectQuest = useQuestStore((s) => s.selectQuest);
+  const openQuestDetail = useQuestStore((s) => s.openDetail);
 
-  const userId = useAuthStore((s) => s.user?.id);
   const questsCompleted = useAuthStore((s) => s.user?.questsCompleted ?? 0);
   const dragonXp = useDragonStore((s) => s.dragon?.xp ?? 0);
   const setDragon = useDragonStore((s) => s.setDragon);
@@ -314,6 +316,7 @@ export default function LogbookPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [myComments, setMyComments] = useState<Comment[]>([]);
+  const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -322,10 +325,24 @@ export default function LogbookPage() {
     fetchMyComments()
       .then(setMyComments)
       .catch(() => {});
+    fetchMyActiveQuests()
+      .then(setActiveQuests)
+      .catch(() => {});
   }, [open, fetchAchievements, fetchDaily]);
 
-  const activeSideQuests = sideQuests.filter(
-    (q) => q.acceptedBy === userId && !q.completedBy,
+  // Open the right detail view for a quest, depending on its type.
+  const openQuest = useCallback(
+    (q: Quest) => {
+      close();
+      if (q.isSideQuest) {
+        setSelected(q);
+        openDetail();
+      } else {
+        selectQuest(q);
+        openQuestDetail();
+      }
+    },
+    [close, setSelected, openDetail, selectQuest, openQuestDetail],
   );
 
   const categoryCounts = daily.reduce<Record<string, number>>((acc, d) => {
@@ -423,17 +440,21 @@ export default function LogbookPage() {
           </div>
         </AnimatePresence>
 
-        {/* Active map side quests */}
-        {activeSideQuests.length > 0 && (
+        {/* My accepted, not-yet-completed quests (side + regular) */}
+        {activeQuests.length > 0 && (
           <>
-            <SectionTitle>Aktive SideQuests</SectionTitle>
+            <SectionTitle
+              right={<span className="text-xs text-slate-400">{activeQuests.length}</span>}
+            >
+              Meine aktiven Quests
+            </SectionTitle>
             <div className="flex flex-col gap-2">
-              {activeSideQuests.map((q) => {
+              {activeQuests.map((q) => {
                 const meta = CATEGORY_META[q.category];
                 return (
                   <button
                     key={q.id}
-                    onClick={() => { setSelected(q); close(); }}
+                    onClick={() => openQuest(q)}
                     className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left dark:border-slate-800"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: `${meta.color}22` }}>
@@ -442,10 +463,14 @@ export default function LogbookPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{q.title}</p>
                       <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                        <MapPin className="h-3 w-3" /> Auf der Karte
+                        <MapPin className="h-3 w-3" /> {q.address || 'Auf der Karte'}
                       </p>
                     </div>
-                    <Sparkles className="h-5 w-5 shrink-0 text-amber-400" />
+                    {q.isSideQuest ? (
+                      <Sparkles className="h-5 w-5 shrink-0 text-amber-400" />
+                    ) : (
+                      <CircleCheck className="h-5 w-5 shrink-0 text-emerald-400" />
+                    )}
                   </button>
                 );
               })}

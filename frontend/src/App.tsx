@@ -3,7 +3,6 @@ import { Router, Route, Switch } from 'wouter';
 import { MapProvider } from 'react-map-gl/maplibre';
 import AppShell from './components/layout/AppShell';
 import QuestMap from './components/map/QuestMap';
-import QuestBottomSheet from './components/quest/BottomSheet';
 import CreateQuestPage from './components/quest/CreateQuestPage';
 import QuestRoute from './components/quest/QuestRoute';
 import AuthPrompt from './components/auth/AuthPrompt';
@@ -16,6 +15,10 @@ import ProfilePage from './components/profile/ProfilePage';
 import CelebrationOverlay from './components/effects/CelebrationOverlay';
 import DailyStreakModal from './components/effects/DailyStreakModal';
 import SideQuestDetailScreen from './components/sidequest/SideQuestDetailScreen';
+import QuestDetailScreen from './components/quest/QuestDetailScreen';
+import RouteBanner from './components/route/RouteBanner';
+import CompassView from './components/compass/CompassView';
+import Toast from './components/ui/Toast';
 import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
 import { useUserLocation } from './hooks/useUserLocation';
@@ -121,7 +124,6 @@ function AppContent() {
         <div className="h-full w-full">
           <QuestMap />
         </div>
-        <QuestBottomSheet />
 
         {/* Location error banner */}
         {locationError && (
@@ -151,10 +153,17 @@ function AppContent() {
       {/* SideQuest detail screen (full page + logbook comments) */}
       <SideQuestDetailScreen />
 
-      {/* URL routing: /quest/:slug opens QuestInfoPage */}
+      {/* Quest detail screen (full page + logbook comments) */}
+      <QuestDetailScreen />
+
+      {/* Shared links: /quest/:slug opens the quest's detail screen */}
       <Switch>
         <Route path="/quest/:slug" component={QuestRoute} />
       </Switch>
+
+      {/* Active route summary (map only) + Adventure-mode compass (full screen) */}
+      {activeTab === 'map' && <RouteBanner />}
+      <CompassView />
 
       {/* Logbook overlay (XP, achievements, daily side quests) */}
       <LogbookPage />
@@ -173,6 +182,9 @@ function AppContent() {
 
       {/* Logbook FAB */}
       <LogbookFAB />
+
+      {/* Global toast notifications */}
+      <Toast />
     </AppShell>
   );
 }

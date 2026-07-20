@@ -6,21 +6,20 @@ import {
   CircleCheck,
   Flag,
   Share2,
-  Sparkles,
   MapPin,
   Coins,
   Zap,
   Clock,
   User,
 } from 'lucide-react';
-import { useSideQuestStore } from '../../stores/useSideQuestStore';
-import { useSideQuestActions } from '../../hooks/useSideQuestActions';
+import { useQuestStore } from '../../stores/useQuestStore';
+import { useQuestActions } from '../../hooks/useQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
-import { formatDistance } from '../../utils/format';
-import RoundActionButton from './RoundActionButton';
-import CommentSection from './CommentSection';
+import { formatDistance, formatTimeRemaining } from '../../utils/format';
+import RoundActionButton from '../sidequest/RoundActionButton';
+import CommentSection from '../sidequest/CommentSection';
 import type { LucideIcon } from 'lucide-react';
 
 function InfoChip({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
@@ -34,18 +33,10 @@ function InfoChip({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   );
 }
 
-function minutesLeft(expiresAt?: string | null): string | null {
-  if (!expiresAt) return null;
-  const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return 'Abgelaufen';
-  const m = Math.round(ms / 60000);
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`;
-}
-
-export default function SideQuestDetailScreen() {
-  const quest = useSideQuestStore((s) => s.selected);
-  const detailOpen = useSideQuestStore((s) => s.detailOpen);
-  const closeDetail = useSideQuestStore((s) => s.closeDetail);
+export default function QuestDetailScreen() {
+  const quest = useQuestStore((s) => s.selectedQuest);
+  const detailOpen = useQuestStore((s) => s.detailOpen);
+  const closeDetail = useQuestStore((s) => s.closeDetail);
 
   const {
     loading,
@@ -57,14 +48,13 @@ export default function SideQuestDetailScreen() {
     planRoute,
     openCompass,
     share,
-  } = useSideQuestActions(quest);
+  } = useQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
 
   if (!quest || !detailOpen) return null;
 
   const meta = CATEGORY_META[quest.category];
   const diff = DIFFICULTY_META[quest.difficulty ?? 'medium'];
-  const expiry = minutesLeft(quest.expiresAt);
 
   return (
     <div className="fixed inset-0 z-[95] flex flex-col bg-white dark:bg-slate-900">
@@ -78,7 +68,7 @@ export default function SideQuestDetailScreen() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-          SideQuest
+          Quest
         </span>
       </div>
 
@@ -97,8 +87,11 @@ export default function SideQuestDetailScreen() {
             >
               {meta.icon}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-              <Sparkles className="h-3.5 w-3.5" /> SideQuest
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white"
+              style={{ backgroundColor: meta.color }}
+            >
+              {meta.label}
             </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -122,7 +115,9 @@ export default function SideQuestDetailScreen() {
             {quest.reward != null && quest.reward > 0 && (
               <InfoChip icon={Coins} text={`${quest.reward}`} />
             )}
-            {expiry && <InfoChip icon={Clock} text={expiry} />}
+            {quest.timeLimit && (
+              <InfoChip icon={Clock} text={formatTimeRemaining(quest.timeLimit)} />
+            )}
           </div>
 
           {error && (

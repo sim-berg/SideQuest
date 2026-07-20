@@ -21,7 +21,11 @@ export default function SideQuestMarkerLayer() {
         .filter((q) => !q.acceptedBy || q.acceptedBy === userId)
         .map((q) => (
           <Marker key={`sidequest-${q.id}`} longitude={q.lng} latitude={q.lat}>
-            <SideQuestMarker quest={q} isNew={!seenIds.has(q.id)} />
+            <SideQuestMarker
+              quest={q}
+              isNew={!seenIds.has(q.id)}
+              acceptedByMe={!!userId && q.acceptedBy === userId}
+            />
           </Marker>
         ))}
     </>

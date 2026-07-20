@@ -39,3 +39,55 @@ body {
 .sidequest-popup .maplibregl-popup-tip {
   display: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Animated dragon (AnimatedDragon.tsx)
+   Per-instance colour comes from the `--dg` CSS variable set inline on the
+   root <svg>; all shades are derived from it via color-mix so every dragon
+   type re-uses the same markup. Fire colours are fixed (it's *fire*).
+--------------------------------------------------------------------------- */
+.dragon-svg { overflow: visible; }
+.dragon-svg .db { fill: color-mix(in srgb, var(--dg), #0b0b1a 16%); }   /* body      */
+.dragon-svg .dl { fill: color-mix(in srgb, var(--dg), #ffffff 34%); }  /* belly     */
+.dragon-svg .dw { fill: color-mix(in srgb, var(--dg), #0b0b1a 38%); }  /* wing      */
+.dragon-svg .dk { fill: color-mix(in srgb, var(--dg), #0b0b1a 52%); }  /* spikes    */
+.dragon-svg .de { fill: #fff3b0; }                                     /* eye       */
+
+/* idle motion */
+.dg-float { animation: dgFloat 3.4s ease-in-out infinite; }
+.dg-wing  { animation: dgWing 0.9s ease-in-out infinite;
+            transform-box: view-box; transform-origin: 56px 50px; }
+.dg-tail  { animation: dgTail 2.6s ease-in-out infinite;
+            transform-box: view-box; transform-origin: 26px 60px; }
+.dg-eye   { animation: dgEye 2.2s ease-in-out infinite; }
+
+/* fire breath */
+.dg-breath { transform-box: view-box; transform-origin: 106px 46px;
+             animation: dgBreath 3.2s ease-in-out infinite; }
+.dg-flame  { transform-box: view-box; transform-origin: 106px 46px;
+             animation: dgFlame 0.45s ease-in-out infinite; }
+.dg-glow   { filter: blur(4px); animation: dgGlow 3.2s ease-in-out infinite; }
+.dg-spark  { animation: dgSpark 0.9s ease-out infinite; }
+
+@keyframes dgFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes dgWing  { 0%, 100% { transform: rotate(4deg); }  50% { transform: rotate(-20deg); } }
+@keyframes dgTail  { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(9deg); } }
+@keyframes dgEye   { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes dgFlame {
+  0%   { transform: scale(1) translateX(0);            opacity: 0.95; }
+  25%  { transform: scaleX(1.14) scaleY(0.9) translateX(2px);  opacity: 1; }
+  50%  { transform: scaleX(0.9) scaleY(1.1) translateX(-1px);  opacity: 0.85; }
+  75%  { transform: scaleX(1.08) scaleY(0.94) translateX(1px); opacity: 1; }
+  100% { transform: scale(1) translateX(0);            opacity: 0.95; }
+}
+@keyframes dgBreath { 0%, 55%, 100% { transform: scaleX(1); } 72% { transform: scaleX(1.22); } }
+@keyframes dgGlow   { 0%, 55%, 100% { opacity: 0.25; } 72% { opacity: 0.5; } }
+@keyframes dgSpark  {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(28px, var(--sy, 0)) scale(0.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-float, .dg-wing, .dg-tail, .dg-eye,
+  .dg-breath, .dg-flame, .dg-glow, .dg-spark { animation: none; }
+}

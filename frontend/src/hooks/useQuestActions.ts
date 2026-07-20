@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { Quest } from '../types/quest';
-import { useSideQuestStore } from '../stores/useSideQuestStore';
+import { useQuestStore } from '../stores/useQuestStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useDragonStore } from '../stores/useDragonStore';
@@ -12,17 +12,19 @@ import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.serv
 import { shareQuest } from '../utils/share';
 
 /**
- * Shared accept / complete / abandon / navigate / share logic for a side quest,
- * used by both the map card and the detail screen.
+ * Accept / complete / abandon / navigate / share logic for a regular quest,
+ * mirroring useSideQuestActions but updating the quest store. Used by the
+ * quest detail modal so quest markers get the same actions as side quests.
  */
-export function useSideQuestActions(quest: Quest | null) {
-  const updateSideQuestInList = useSideQuestStore((s) => s.updateSideQuestInList);
-  const removeSideQuest = useSideQuestStore((s) => s.removeSideQuest);
-  const setSelected = useSideQuestStore((s) => s.setSelected);
+export function useQuestActions(quest: Quest | null) {
+  const updateQuestInList = useQuestStore((s) => s.updateQuestInList);
+  const quests = useQuestStore((s) => s.quests);
+  const setQuests = useQuestStore((s) => s.setQuests);
+  const selectQuest = useQuestStore((s) => s.selectQuest);
+  const showToast = useToastStore((s) => s.showToast);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
-  const showToast = useToastStore((s) => s.showToast);
   const setDragon = useDragonStore((s) => s.setDragon);
   const celebrate = useCelebrationStore((s) => s.celebrate);
   const addAchievements = useAchievementStore((s) => s.addAchievements);
@@ -31,7 +33,6 @@ export function useSideQuestActions(quest: Quest | null) {
   const [error, setError] = useState<string | null>(null);
 
   const isAcceptedByMe = !!quest && quest.acceptedBy === userId;
-  const isOpen = !!quest && !quest.acceptedBy && !quest.completedBy;
 
   const accept = useCallback(async () => {
     if (!quest) return;
@@ -43,14 +44,14 @@ export function useSideQuestActions(quest: Quest | null) {
     setError(null);
     try {
       const updated = await acceptQuest(quest.id);
-      updateSideQuestInList(updated);
+      updateQuestInList(updated);
       celebrate({ type: 'accept', title: updated.title });
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Annehmen');
     } finally {
       setLoading(false);
     }
-  }, [quest, isAuthenticated, setShowAuthPrompt, updateSideQuestInList, celebrate]);
+  }, [quest, isAuthenticated, setShowAuthPrompt, updateQuestInList, celebrate]);
 
   const complete = useCallback(async () => {
     if (!quest) return;
@@ -92,7 +93,8 @@ export function useSideQuestActions(quest: Quest | null) {
           });
         }
       }
-      removeSideQuest(result.quest.id);
+      setQuests(quests.filter((q) => q.id !== result.quest.id));
+      selectQuest(null);
     } catch (e: any) {
       setError(
         e?.message || 'Fehler beim Abschliessen. Bist du nah genug am Ziel?',
@@ -100,7 +102,7 @@ export function useSideQuestActions(quest: Quest | null) {
     } finally {
       setLoading(false);
     }
-  }, [quest, setDragon, celebrate, addAchievements, removeSideQuest]);
+  }, [quest, quests, setQuests, selectQuest, setDragon, celebrate, addAchievements]);
 
   const abandon = useCallback(async () => {
     if (!quest) return;
@@ -108,28 +110,28 @@ export function useSideQuestActions(quest: Quest | null) {
     setError(null);
     try {
       const updated = await abandonQuest(quest.id);
-      updateSideQuestInList(updated);
+      updateQuestInList(updated);
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Aufgeben');
     } finally {
       setLoading(false);
     }
-  }, [quest, updateSideQuestInList]);
+  }, [quest, updateQuestInList]);
 
   /** Draw a walking route to the quest on the map, revealing it behind the detail screen. */
   const planRoute = useCallback(() => {
     if (!quest) return;
-    setSelected(null); // also closes the detail screen
+    selectQuest(null); // also closes the detail screen
     void useRouteStore.getState().planRoute(quest);
-  }, [quest, setSelected]);
+  }, [quest, selectQuest]);
 
   /** Jump straight into the Adventure-mode compass, routing in the background. */
   const openCompass = useCallback(() => {
     if (!quest) return;
-    setSelected(null);
+    selectQuest(null);
     void useRouteStore.getState().planRoute(quest);
     useRouteStore.getState().openCompass(quest);
-  }, [quest, setSelected]);
+  }, [quest, selectQuest]);
 
   const share = useCallback(() => {
     if (!quest) return;
@@ -142,7 +144,6 @@ export function useSideQuestActions(quest: Quest | null) {
     loading,
     error,
     isAcceptedByMe,
-    isOpen,
     accept,
     complete,
     abandon,
