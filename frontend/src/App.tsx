@@ -16,6 +16,8 @@ import CelebrationOverlay from './components/effects/CelebrationOverlay';
 import DailyStreakModal from './components/effects/DailyStreakModal';
 import SideQuestDetailScreen from './components/sidequest/SideQuestDetailScreen';
 import QuestDetailScreen from './components/quest/QuestDetailScreen';
+import RouteBanner from './components/route/RouteBanner';
+import CompassView from './components/compass/CompassView';
 import Toast from './components/ui/Toast';
 import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
@@ -154,10 +156,14 @@ function AppContent() {
       {/* Quest detail screen (full page + logbook comments) */}
       <QuestDetailScreen />
 
-      {/* URL routing: /quest/:slug opens QuestInfoPage */}
+      {/* Shared links: /quest/:slug opens the quest's detail screen */}
       <Switch>
         <Route path="/quest/:slug" component={QuestRoute} />
       </Switch>
+
+      {/* Active route summary (map only) + Adventure-mode compass (full screen) */}
+      {activeTab === 'map' && <RouteBanner />}
+      <CompassView />
 
       {/* Logbook overlay (XP, achievements, daily side quests) */}
       <LogbookPage />

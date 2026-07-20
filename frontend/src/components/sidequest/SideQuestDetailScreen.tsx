@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
-  Navigation,
+  Route,
+  Compass,
   Swords,
   CircleCheck,
   Flag,
@@ -46,8 +47,17 @@ export default function SideQuestDetailScreen() {
   const detailOpen = useSideQuestStore((s) => s.detailOpen);
   const closeDetail = useSideQuestStore((s) => s.closeDetail);
 
-  const { loading, error, isAcceptedByMe, accept, complete, abandon, navigate, share } =
-    useSideQuestActions(quest);
+  const {
+    loading,
+    error,
+    isAcceptedByMe,
+    accept,
+    complete,
+    abandon,
+    planRoute,
+    openCompass,
+    share,
+  } = useSideQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
 
   if (!quest || !detailOpen) return null;
@@ -121,9 +131,24 @@ export default function SideQuestDetailScreen() {
             </div>
           )}
 
+          {/* route planner */}
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={planRoute}
+              className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-indigo-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98]"
+            >
+              <Route className="h-4 w-4" /> Route generieren
+            </button>
+            <button
+              onClick={openCompass}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 py-3.5 text-sm font-bold text-slate-700 transition-all active:scale-[0.98] dark:border-slate-600 dark:text-slate-200"
+            >
+              <Compass className="h-4 w-4" /> Kompass
+            </button>
+          </div>
+
           {/* actions */}
           <div className="mb-6 flex items-start justify-around gap-2 rounded-2xl bg-slate-50 py-4 dark:bg-slate-800/50">
-            <RoundActionButton icon={Navigation} label="Route" onClick={navigate} />
             {isAcceptedByMe ? (
               <>
                 <RoundActionButton

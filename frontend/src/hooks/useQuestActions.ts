@@ -6,7 +6,10 @@ import { useUIStore } from '../stores/useUIStore';
 import { useDragonStore } from '../stores/useDragonStore';
 import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
+import { useToastStore } from '../stores/useToastStore';
+import { useRouteStore } from '../stores/useRouteStore';
 import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.service';
+import { shareQuest } from '../utils/share';
 
 /**
  * Accept / complete / abandon / navigate / share logic for a regular quest,
@@ -18,6 +21,7 @@ export function useQuestActions(quest: Quest | null) {
   const quests = useQuestStore((s) => s.quests);
   const setQuests = useQuestStore((s) => s.setQuests);
   const selectQuest = useQuestStore((s) => s.selectQuest);
+  const showToast = useToastStore((s) => s.showToast);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
@@ -114,23 +118,27 @@ export function useQuestActions(quest: Quest | null) {
     }
   }, [quest, updateQuestInList]);
 
-  const navigate = useCallback(() => {
+  /** Draw a walking route to the quest on the map, revealing it behind the detail screen. */
+  const planRoute = useCallback(() => {
     if (!quest) return;
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${quest.lat},${quest.lng}`,
-      '_blank',
-    );
-  }, [quest]);
+    selectQuest(null); // also closes the detail screen
+    void useRouteStore.getState().planRoute(quest);
+  }, [quest, selectQuest]);
+
+  /** Jump straight into the Adventure-mode compass, routing in the background. */
+  const openCompass = useCallback(() => {
+    if (!quest) return;
+    selectQuest(null);
+    void useRouteStore.getState().planRoute(quest);
+    useRouteStore.getState().openCompass(quest);
+  }, [quest, selectQuest]);
 
   const share = useCallback(() => {
     if (!quest) return;
-    const text = `Quest: ${quest.title} – ${quest.description}`;
-    if (navigator.share) {
-      void navigator.share({ title: quest.title, text }).catch(() => {});
-    } else {
-      void navigator.clipboard?.writeText(text).catch(() => {});
-    }
-  }, [quest]);
+    void shareQuest(quest).then((copied) => {
+      if (copied) showToast('Link kopiert');
+    });
+  }, [quest, showToast]);
 
   return {
     loading,
@@ -139,7 +147,8 @@ export function useQuestActions(quest: Quest | null) {
     accept,
     complete,
     abandon,
-    navigate,
+    planRoute,
+    openCompass,
     share,
   };
 }

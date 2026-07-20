@@ -1,65 +1,77 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { idFromSlug } from '../../utils/slug';
 import { fetchQuestById } from '../../services/quest.service';
 import { useQuestStore } from '../../stores/useQuestStore';
-import { QuestInfoContent } from './QuestInfoPage';
+import { useSideQuestStore } from '../../stores/useSideQuestStore';
+import { useToastStore } from '../../stores/useToastStore';
 import type { Quest } from '../../types/quest';
 
+/**
+ * Landing point for shared links (`/quest/:slug`).
+ *
+ * Headless: it resolves the slug to a quest, hands it to the matching store and
+ * opens the regular detail screen, then rewrites the URL back to `/`. A shared
+ * link therefore drops the visitor straight into the normal app flow — with
+ * Route / Kompass / Annehmen — rather than a separate read-only page.
+ */
 export default function QuestRoute() {
   const { slug } = useParams<{ slug: string }>();
   const [, navigate] = useLocation();
-  const quests = useQuestStore((s) => s.quests);
+  const showToast = useToastStore((s) => s.showToast);
 
-  const [quest, setQuest] = useState<Quest | null>(null);
-  const [loading, setLoading] = useState(true);
+  /** Guards against re-resolving the same link when the component re-renders. */
+  const handled = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!slug) { navigate('/', { replace: true }); return; }
-    const id = idFromSlug(slug);
-    if (!id) { navigate('/', { replace: true }); return; }
+    if (!slug || handled.current === slug) return;
+    handled.current = slug;
 
-    const cached = quests.find((q) => q.id === id);
-    if (cached) {
-      setQuest(cached);
-      setLoading(false);
+    const id = idFromSlug(slug);
+    if (!id) {
+      showToast('Ungültiger Quest-Link');
+      navigate('/', { replace: true });
       return;
     }
 
-    setLoading(true);
+    const open = (quest: Quest) => {
+      if (quest.isSideQuest) {
+        const store = useSideQuestStore.getState();
+        store.updateSideQuestInList(quest); // make sure it's on the map too
+        store.setSelected(quest);
+        store.openDetail();
+      } else {
+        const store = useQuestStore.getState();
+        store.selectQuest(quest);
+        store.openDetail();
+      }
+      navigate('/', { replace: true });
+    };
+
+    // Prefer a copy we already hold so the screen opens without a round trip.
+    const cached = [
+      ...useQuestStore.getState().quests,
+      ...useSideQuestStore.getState().sideQuests,
+    ].find((q) => q.id === id);
+
+    if (cached) {
+      open(cached);
+      return;
+    }
+
     fetchQuestById(id)
-      .then((q) => setQuest(q))
-      .catch(() => navigate('/', { replace: true }))
-      .finally(() => setLoading(false));
-  }, [slug, quests, navigate]);
+      .then(open)
+      .catch(() => {
+        showToast('Quest nicht gefunden');
+        navigate('/', { replace: true });
+      });
+  }, [slug, navigate, showToast]);
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-slate-900">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!quest) return null;
-
+  // Resolving always ends in navigate('/'), which unmounts this route — so the
+  // spinner is simply what's on screen for as long as we're still working.
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900">
-      <div className="flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2">
-        <button
-          onClick={() => navigate('/')}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          aria-label="Zurück"
-        >
-          ←
-        </button>
-        <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-          Quest Details
-        </span>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <QuestInfoContent quest={quest} />
-      </div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-slate-900">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
     </div>
   );
 }

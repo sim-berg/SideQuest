@@ -7,6 +7,7 @@ import { MAP_STYLE_LIGHT, MAP_STYLE_DARK } from '../../constants/map';
 import UserLocationMarker from './UserLocationMarker';
 import QuestMarkerLayer from './QuestMarkerLayer';
 import SideQuestMarkerLayer from './SideQuestMarkerLayer';
+import RouteLayer from './RouteLayer';
 import SideQuestPeekCard from '../sidequest/SideQuestPeekCard';
 import QuestPeekCard from '../quest/QuestPeekCard';
 import NearbyUsersLayer from './NearbyUsersLayer';
@@ -63,6 +64,9 @@ export default function QuestMap() {
         style={{ width: '100%', height: '100%' }}
         attributionControl={false}
       >
+        {/* route sits under the markers so pins stay tappable */}
+        <RouteLayer />
+
         <UserLocationMarker />
         <QuestMarkerLayer />
         <SideQuestMarkerLayer />

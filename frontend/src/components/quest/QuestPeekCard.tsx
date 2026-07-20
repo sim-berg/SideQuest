@@ -1,6 +1,7 @@
 import { Popup } from 'react-map-gl/maplibre';
 import {
   Share2,
+  Route,
   Swords,
   CircleCheck,
   Info,
@@ -26,7 +27,7 @@ export default function QuestPeekCard() {
   const selectQuest = useQuestStore((s) => s.selectQuest);
   const openFullDetail = useQuestStore((s) => s.openDetail);
 
-  const { loading, isAcceptedByMe, accept, complete, share } =
+  const { loading, isAcceptedByMe, accept, complete, share, planRoute } =
     useQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
 
@@ -89,9 +90,9 @@ export default function QuestPeekCard() {
 
         <div className="flex items-start justify-around gap-1">
           <RoundActionButton
-            icon={Share2}
-            label="Teilen"
-            onClick={share}
+            icon={Route}
+            label="Route"
+            onClick={planRoute}
             size="sm"
           />
           {isAcceptedByMe ? (
@@ -113,6 +114,12 @@ export default function QuestPeekCard() {
               size="sm"
             />
           )}
+          <RoundActionButton
+            icon={Share2}
+            label="Teilen"
+            onClick={share}
+            size="sm"
+          />
           <RoundActionButton
             icon={Info}
             label="Details"
