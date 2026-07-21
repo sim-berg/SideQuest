@@ -16,6 +16,7 @@ import {
 import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useSideQuestActions } from '../../hooks/useSideQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance } from '../../utils/format';
@@ -59,6 +60,8 @@ export default function SideQuestDetailScreen() {
     share,
   } = useSideQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
+
+  useBackDismiss(!!quest && detailOpen, closeDetail);
 
   if (!quest || !detailOpen) return null;
 
@@ -131,29 +134,13 @@ export default function SideQuestDetailScreen() {
             </div>
           )}
 
-          {/* route planner */}
-          <div className="mb-4 flex gap-2">
-            <button
-              onClick={planRoute}
-              className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-indigo-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98]"
-            >
-              <Route className="h-4 w-4" /> Route generieren
-            </button>
-            <button
-              onClick={openCompass}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 py-3.5 text-sm font-bold text-slate-700 transition-all active:scale-[0.98] dark:border-slate-600 dark:text-slate-200"
-            >
-              <Compass className="h-4 w-4" /> Kompass
-            </button>
-          </div>
-
           {/* actions */}
-          <div className="mb-6 flex items-start justify-around gap-2 rounded-2xl bg-slate-50 py-4 dark:bg-slate-800/50">
+          <div className="mb-6 flex flex-wrap items-start justify-around gap-y-3 rounded-2xl bg-slate-50 px-1 py-4 dark:bg-slate-800/50">
             {isAcceptedByMe ? (
               <>
                 <RoundActionButton
                   icon={CircleCheck}
-                  label={loading ? '...' : 'Abschliessen'}
+                  label={loading ? '...' : 'Fertig'}
                   onClick={complete}
                   disabled={loading}
                   variant="success"
@@ -175,6 +162,8 @@ export default function SideQuestDetailScreen() {
                 variant="primary"
               />
             )}
+            <RoundActionButton icon={Route} label="Route" onClick={planRoute} />
+            <RoundActionButton icon={Compass} label="Kompass" onClick={openCompass} />
             <RoundActionButton icon={Share2} label="Teilen" onClick={share} />
           </div>
 
