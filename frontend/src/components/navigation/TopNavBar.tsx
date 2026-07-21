@@ -5,6 +5,7 @@ import { CATEGORY_META } from '../../constants/categories';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
 import { useChatStore } from '../../stores/useChatStore';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
@@ -30,6 +31,10 @@ export default function TopNavBar() {
   const timedOnly = useFilterStore((s) => s.timedOnly);
   const togglePaidOnly = useFilterStore((s) => s.togglePaidOnly);
   const toggleTimedOnly = useFilterStore((s) => s.toggleTimedOnly);
+
+  // Back closes an open dropdown first.
+  useBackDismiss(filterPanelOpen, closeFilterPanel);
+  useBackDismiss(menuOpen, closeMenu);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
