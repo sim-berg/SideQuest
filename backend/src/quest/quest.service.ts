@@ -15,6 +15,7 @@ import { DragonService } from '../dragon/dragon.service.js';
 import { UserService } from '../user/user.service.js';
 import { AchievementService } from '../achievement/achievement.service.js';
 import { ReplicateService } from '../achievement/replicate.service.js';
+import { TreasureService } from '../treasure/treasure.service.js';
 import { Category } from './enums/category.enum.js';
 import { SIDEQUEST_TEMPLATES } from './sidequest-templates.js';
 import {
@@ -103,6 +104,7 @@ export class QuestService {
     private readonly userService: UserService,
     private readonly achievementService: AchievementService,
     private readonly replicate: ReplicateService,
+    private readonly treasureService: TreasureService,
   ) {}
 
   // De-dupes concurrent image requests for the same key so we never kick off
@@ -224,9 +226,14 @@ export class QuestService {
     doc.completedAt = new Date();
     await doc.save();
 
-    // Award XP
+    // Award XP — carried treasure items can boost the multiplier
     const baseXp = XP_BY_DIFFICULTY[doc.difficulty ?? Difficulty.MEDIUM] ?? 50;
-    const xpResult = await this.dragonService.recordQuestCompletion(userId, baseXp);
+    const treasureMultiplier = await this.treasureService.getXpMultiplier(userId);
+    const xpResult = await this.dragonService.recordQuestCompletion(
+      userId,
+      baseXp,
+      treasureMultiplier,
+    );
 
     // Increment user questsCompleted
     await this.userService.incrementQuestsCompleted(userId);
@@ -438,6 +445,7 @@ export class QuestService {
     const xpResult = await this.dragonService.recordQuestCompletion(
       userId,
       doc.xpReward,
+      await this.treasureService.getXpMultiplier(userId),
     );
     await this.userService.incrementQuestsCompleted(userId);
 

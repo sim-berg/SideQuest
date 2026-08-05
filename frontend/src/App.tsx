@@ -21,9 +21,13 @@ import CompassView from './components/compass/CompassView';
 import Toast from './components/ui/Toast';
 import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
+import TreasuryPage from './components/treasure/TreasuryPage';
+import TreasureFAB from './components/treasure/TreasureFAB';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useSideQuestSpawner } from './hooks/useSideQuestSpawner';
+import { useTreasureSpawner } from './hooks/useTreasureSpawner';
+import { useTreasureStore } from './stores/useTreasureStore';
 import { useBackDismiss } from './hooks/useBackDismiss';
 import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
@@ -49,6 +53,7 @@ function AppContent() {
   useUserLocation();
   useRealtimeMessages();
   useSideQuestSpawner();
+  useTreasureSpawner();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -61,6 +66,7 @@ function AppContent() {
   const fetchDragon = useDragonStore((s) => s.fetchDragon);
   const fetchAchievements = useAchievementStore((s) => s.fetchAchievements);
   const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
+  const fetchTreasureInventory = useTreasureStore((s) => s.fetchInventory);
   const showStreakModal = useStreakStore((s) => s.showStreakModal);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
 
@@ -96,12 +102,13 @@ function AppContent() {
     }
   }, [isAuthenticated, user?.hasDragon, fetchDragon]);
 
-  // Load achievements + daily side quests when authenticated
+  // Load achievements + daily side quests + treasure inventory when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;
     void fetchAchievements();
     void fetchDaily();
-  }, [isAuthenticated, fetchAchievements, fetchDaily]);
+    void fetchTreasureInventory();
+  }, [isAuthenticated, fetchAchievements, fetchDaily, fetchTreasureInventory]);
 
   // Daily streak checkin — fires once per day on first open
   useEffect(() => {
@@ -173,6 +180,9 @@ function AppContent() {
       {/* Logbook overlay (XP, achievements, daily side quests) */}
       <LogbookPage />
 
+      {/* Schatzkammer overlay (inventory + crafting) */}
+      <TreasuryPage />
+
       {/* Celebration animations (accept / complete / evolution / achievement) */}
       <CelebrationOverlay />
 
@@ -187,6 +197,9 @@ function AppContent() {
 
       {/* Logbook FAB */}
       <LogbookFAB />
+
+      {/* Schatzkammer FAB */}
+      <TreasureFAB />
 
       {/* Global toast notifications */}
       <Toast />

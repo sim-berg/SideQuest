@@ -46,7 +46,11 @@ export class DragonService {
     return toPlain(doc);
   }
 
-  async recordQuestCompletion(userId: string, baseXp: number) {
+  async recordQuestCompletion(
+    userId: string,
+    baseXp: number,
+    treasureMultiplier = 1,
+  ) {
     const doc = await this.dragonModel.findOne({ userId }).exec();
     if (!doc) return null;
 
@@ -70,7 +74,9 @@ export class DragonService {
     }
 
     const streakMultiplier = 1 + newStreak * 0.1;
-    const totalXp = Math.round((baseXp + firstOfDayBonus) * streakMultiplier);
+    const totalXp = Math.round(
+      (baseXp + firstOfDayBonus) * streakMultiplier * treasureMultiplier,
+    );
     const newXp = doc.xp + totalXp;
     const newStage = this.calculateEvolutionStage(newXp);
 
@@ -90,6 +96,7 @@ export class DragonService {
         firstOfDayBonus,
         streakMultiplier,
         streak: newStreak,
+        treasureMultiplier,
       },
       dragon: toPlain(doc),
     };

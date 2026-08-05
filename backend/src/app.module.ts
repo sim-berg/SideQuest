@@ -8,6 +8,7 @@ import { MessageModule } from './message/message.module.js';
 import { DragonModule } from './dragon/dragon.module.js';
 import { AchievementModule } from './achievement/achievement.module.js';
 import { CommentModule } from './comment/comment.module.js';
+import { TreasureModule } from './treasure/treasure.module.js';
 import { ShareModule } from './share/share.module.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -27,6 +28,7 @@ import { HealthController } from './health/health.controller.js';
     DragonModule,
     AchievementModule,
     CommentModule,
+    TreasureModule,
     ShareModule,
   ],
   controllers: [HealthController],
