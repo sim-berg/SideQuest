@@ -12,6 +12,7 @@ import { GeoModule } from '../geo/geo.module.js';
 import { DragonModule } from '../dragon/dragon.module.js';
 import { UserModule } from '../user/user.module.js';
 import { AchievementModule } from '../achievement/achievement.module.js';
+import { TreasureModule } from '../treasure/treasure.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AchievementModule } from '../achievement/achievement.module.js';
     DragonModule,
     UserModule,
     AchievementModule,
+    TreasureModule,
   ],
   controllers: [QuestController, SideQuestController],
   providers: [QuestService],
