@@ -26,18 +26,20 @@ export default function RoundActionButton({
 }) {
   const dim = size === 'sm' ? 'h-11 w-11' : 'h-14 w-14';
   const iconDim = size === 'sm' ? 'h-5 w-5' : 'h-6 w-6';
+  // The fixed button width keeps a row of five actions aligned and on one line
+  // down to a 360px-wide phone.
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex shrink-0 flex-col items-center gap-1.5 disabled:opacity-50"
+      className="flex w-14 shrink-0 flex-col items-center gap-1.5 disabled:opacity-50"
     >
       <span
         className={`flex items-center justify-center rounded-full transition-all active:scale-90 ${dim} ${VARIANTS[variant]}`}
       >
         <Icon className={iconDim} strokeWidth={2.2} />
       </span>
-      <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+      <span className="text-center text-[11px] font-medium leading-tight text-slate-600 dark:text-slate-300">
         {label}
       </span>
     </button>

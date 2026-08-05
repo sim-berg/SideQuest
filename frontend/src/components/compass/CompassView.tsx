@@ -5,6 +5,7 @@ import { useMapStore } from '../../stores/useMapStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useDeviceHeading } from '../../hooks/useDeviceHeading';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { haversineDistance } from '../../services/distance.service';
 import { bearingTo, compassPoint, formatDuration, walkingDurationMin } from '../../utils/geo';
 import { CATEGORY_META } from '../../constants/categories';
@@ -88,6 +89,8 @@ export default function CompassView() {
           (b.distanceKm / NEARBY_RADIUS_KM) * (BLIP_RADIUS_MAX - BLIP_RADIUS_MIN),
       }));
   }, [userLocation, destination, quests, sideQuests]);
+
+  useBackDismiss(compassOpen && !!destination, closeCompass);
 
   if (!compassOpen || !destination) return null;
 
