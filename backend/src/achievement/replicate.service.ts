@@ -52,7 +52,7 @@ export class ReplicateService {
       'black-forest-labs/flux-schnell',
     );
     this.appUrl = this.config
-      .get<string>('APP_URL', 'http://localhost:3000')
+      .get<string>('APP_URL', 'http://localhost:5173')
       .replace(/\/$/, '');
   }
 
