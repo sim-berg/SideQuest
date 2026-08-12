@@ -3,7 +3,7 @@ import type { Socket } from 'socket.io-client';
 
 const SOCKET_URL =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace('/api', '') ||
-  'http://localhost:3000';
+  'http://localhost:3002';
 
 let socket: Socket | null = null;
 

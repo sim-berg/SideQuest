@@ -61,6 +61,17 @@ export class Quest {
   @Prop({ type: Date, default: null })
   completedAt: Date | null;
 
+  // --- SideQuest fields ---
+  // Auto-spawned, ephemeral mini-quests around the player.
+  @Prop({ default: false })
+  isSideQuest: boolean;
+
+  @Prop({ type: Date, default: null })
+  expiresAt: Date | null;
+
+  @Prop({ type: String, default: null })
+  templateId: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

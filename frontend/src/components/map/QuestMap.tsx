@@ -6,6 +6,13 @@ import { useUIStore } from '../../stores/useUIStore';
 import { MAP_STYLE_LIGHT, MAP_STYLE_DARK } from '../../constants/map';
 import UserLocationMarker from './UserLocationMarker';
 import QuestMarkerLayer from './QuestMarkerLayer';
+import SideQuestMarkerLayer from './SideQuestMarkerLayer';
+import RouteLayer from './RouteLayer';
+import TreasureMarkerLayer from './TreasureMarkerLayer';
+import ChainMarkerLayer from './ChainMarkerLayer';
+import SideQuestPeekCard from '../sidequest/SideQuestPeekCard';
+import QuestPeekCard from '../quest/QuestPeekCard';
+import TreasurePeekCard from '../treasure/TreasurePeekCard';
 import NearbyUsersLayer from './NearbyUsersLayer';
 import { useLocationSharing } from '../../hooks/useLocationSharing';
 
@@ -60,9 +67,20 @@ export default function QuestMap() {
         style={{ width: '100%', height: '100%' }}
         attributionControl={false}
       >
+        {/* route sits under the markers so pins stay tappable */}
+        <RouteLayer />
+
         <UserLocationMarker />
         <QuestMarkerLayer />
+        <SideQuestMarkerLayer />
+        <TreasureMarkerLayer />
+        <ChainMarkerLayer />
         <NearbyUsersLayer />
+
+        {/* Floating cards above the selected marker (Google-Maps style) */}
+        <SideQuestPeekCard />
+        <QuestPeekCard />
+        <TreasurePeekCard />
 
         {/* Dropped pin during location picking */}
         {pickingLocation && droppedPin && (

@@ -5,7 +5,10 @@ import { QuestModule } from './quest/quest.module.js';
 import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { MessageModule } from './message/message.module.js';
-import { DragonModule } from './dragon/dragon.module.js';
+import { PetModule } from './pet/pet.module.js';
+import { AchievementModule } from './achievement/achievement.module.js';
+import { CommentModule } from './comment/comment.module.js';
+import { TreasureModule } from './treasure/treasure.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -21,7 +24,10 @@ import { HealthController } from './health/health.controller.js';
     UserModule,
     AuthModule,
     MessageModule,
-    DragonModule,
+    PetModule,
+    AchievementModule,
+    CommentModule,
+    TreasureModule,
   ],
   controllers: [HealthController],
 })

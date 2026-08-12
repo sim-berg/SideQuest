@@ -38,6 +38,26 @@ export class User {
 
   @Prop({ default: false })
   hasDragon: boolean;
+
+  @Prop({ default: 0 })
+  totalXp: number;
+
+  @Prop({ default: 0 })
+  loginStreak: number;
+
+  @Prop({ type: Date, default: null })
+  lastLoginDate: Date | null;
+
+  /** Consecutive days on which all daily quests were cleared. */
+  @Prop({ default: 0 })
+  dailyQuestStreak: number;
+
+  @Prop({ default: 0 })
+  longestDailyQuestStreak: number;
+
+  /** Day bucket (YYYY-MM-DD) of the last fully cleared daily board. */
+  @Prop({ type: String, default: null })
+  lastDailyQuestDate: string | null;
 }
 
 export type UserDocument = User & Document;

@@ -4,7 +4,6 @@ import { User, UserSchema } from './schemas/user.schema.js';
 import { Quest, QuestSchema } from '../quest/schemas/quest.schema.js';
 import { UserService } from './user.service.js';
 import { UserController } from './user.controller.js';
-
 @Module({
   imports: [
     MongooseModule.forFeature([

@@ -63,7 +63,10 @@ async function request<T>(
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  // Endpoints may return null (e.g. "no chain offer today") — that arrives
+  // as an empty body, which res.json() would choke on.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
 }
 
 export const api = {

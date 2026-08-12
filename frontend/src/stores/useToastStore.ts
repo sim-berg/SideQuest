@@ -14,9 +14,11 @@ interface ToastState {
   toasts: Toast[];
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
+  /** Convenience one-liner used across quest/pet flows. */
+  showToast: (message: string) => void;
 }
 
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   addToast: (toast) =>
     set((state) => ({
@@ -32,4 +34,6 @@ export const useToastStore = create<ToastState>((set) => ({
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     })),
+  showToast: (message) =>
+    get().addToast({ type: 'success', title: message, duration: 3500 }),
 }));

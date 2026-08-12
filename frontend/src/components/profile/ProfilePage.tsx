@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
-import { logout } from '../../services/auth.service'; // Needed for auth patch call
-import DragonDisplay from '../dragon/DragonDisplay';
+import { logout } from '../../services/auth.service';
+import PetDisplay from '../pet/PetDisplay';
 import { ContributionCalendar } from './ContributionCalendar';
 
 export default function ProfilePage() {
@@ -43,7 +43,6 @@ export default function ProfilePage() {
   };
 
   const setActiveTab = useUIStore((s) => s.setActiveTab);
-  const setShowDragonSelection = useUIStore((s) => s.setShowDragonSelection);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -83,28 +82,9 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* Dragon Section */}
+        {/* Companion + menagerie */}
         <div className="mb-6">
-          {!user.hasDragon ? (
-            <button
-              onClick={() => setShowDragonSelection(true)}
-              className="relative w-full overflow-hidden rounded-3xl bg-black py-8 text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-              style={{
-                backgroundImage: 'url(/dragon-onboarding.png)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            >
-              {/* Dark overlay */}
-              <div className="absolute inset-0 bg-black/50" />
-              {/* Content */}
-              <div className="relative z-10">
-                <p className="text-2xl font-bold">Dragon Onboarding</p>
-              </div>
-            </button>
-          ) : (
-            <DragonDisplay />
-          )}
+          <PetDisplay />
         </div>
 
         {/* Contributions Calendar */}
