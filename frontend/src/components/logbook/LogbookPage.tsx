@@ -5,6 +5,7 @@ import {
   MapPin,
   Lock,
   MessageSquare,
+  User,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLogbookStore } from '../../stores/useLogbookStore';
@@ -13,19 +14,20 @@ import { useDailySideQuestStore } from '../../stores/useDailySideQuestStore';
 import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useChatStore } from '../../stores/useChatStore';
+import { useUIStore } from '../../stores/useUIStore';
 import { useDragonStore } from '../../stores/useDragonStore';
 import { useCelebrationStore } from '../../stores/useCelebrationStore';
-import { useStreakStore } from '../../stores/useStreakStore';
 import { useDistanceStore } from '../../stores/useDistanceStore';
+import { useToastStore } from '../../stores/useToastStore';
 import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
 import { fetchMyActiveQuests } from '../../services/quest.service';
 import { fetchMyComments } from '../../services/user.service';
-import { Category } from '../../types/quest';
 import type { Quest } from '../../types/quest';
-import type { DailySideQuest } from '../../types/sidequest';
+import type { DailyBoard, DailySideQuest } from '../../types/sidequest';
 import type { Comment } from '../../types/comment';
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
@@ -60,12 +62,14 @@ function StreakStatsBlock({
   achievements,
   questsCompleted,
   kmToday,
+  longestStreak,
 }: {
   streak: number;
   xp: number;
   achievements: number;
   questsCompleted: number;
   kmToday: number;
+  longestStreak: number;
 }) {
   const flames = Math.min(streak, 7);
   const kmDisplay = kmToday >= 1 ? `${kmToday.toFixed(1)}` : `${Math.round(kmToday * 1000)}m`;
@@ -118,61 +122,64 @@ function StreakStatsBlock({
         <StatCard value={xp} label="XP" emoji="⚡" color="#eab308" />
         <StatCard value={achievements} label="Badges" emoji="🏅" color="#f59e0b" />
         <StatCard value={questsCompleted} label="Quests" emoji="⚔️" color="#22c55e" />
-        <StatCard value={kmDisplay} label={kmLabel} emoji="🗺️" color="#3b82f6" />
+        <StatCard
+          value={longestStreak > streak ? longestStreak : kmDisplay}
+          label={longestStreak > streak ? 'Rekord-Streak' : kmLabel}
+          emoji={longestStreak > streak ? '🏔️' : '🗺️'}
+          color="#3b82f6"
+        />
       </div>
     </div>
   );
 }
 
-// ─── Category pills ───────────────────────────────────────────────────────────
+// ─── Daily board header ───────────────────────────────────────────────────────
 
-const ALL_CATEGORIES = [null, ...Object.values(Category)] as (Category | null)[];
+/** Three dots: filled = done. Makes "3 per day" readable at a glance. */
+function BoardProgress({ board }: { board: DailyBoard }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {board.quests.map((q) => (
+        <motion.span
+          key={q.id}
+          layout
+          className={`h-2.5 w-2.5 rounded-full ${
+            q.completed ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
-function CategoryPills({
-  selected,
-  onChange,
-  counts,
-}: {
-  selected: Category | null;
-  onChange: (c: Category | null) => void;
-  counts: Record<string, number>;
-}) {
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+function DailyBoardHeader({ board }: { board: DailyBoard }) {
+  const open = board.total - board.completed;
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-      {ALL_CATEGORIES.map((cat) => {
-        const meta = cat ? CATEGORY_META[cat] : null;
-        const count = cat ? (counts[cat] ?? 0) : total;
-        if (count === 0 && cat !== null) return null;
-        const active = selected === cat;
-        const color = meta?.color ?? '#6366f1';
-
-        return (
-          <button
-            key={cat ?? 'all'}
-            onClick={() => onChange(cat)}
-            className="shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95"
-            style={
-              active
-                ? { backgroundColor: color, color: '#fff' }
-                : { backgroundColor: 'transparent', color, border: `1.5px solid ${color}` }
-            }
-          >
-            <span>{meta?.icon ?? '✨'}</span>
-            <span>{meta?.label ?? 'Alle'}</span>
-            <span
-              className="rounded-full px-1 text-[10px] font-black"
-              style={{
-                background: active ? 'rgba(255,255,255,0.25)' : `${color}22`,
-                color: active ? '#fff' : color,
-              }}
-            >
-              {count}
-            </span>
-          </button>
-        );
-      })}
+    <div
+      className={`mt-6 flex items-center gap-3 rounded-2xl border p-3.5 ${
+        board.allDone
+          ? 'border-emerald-400/60 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10'
+          : 'border-slate-100 dark:border-slate-800'
+      }`}
+    >
+      <span className="text-2xl">{board.allDone ? '🔥' : '📜'}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-slate-900 dark:text-white">
+          Tagesquests
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {board.total === 0
+            ? 'Heute keine Aufgaben.'
+            : board.allDone
+            ? `Tag gesichert — Streak: ${board.streak} ${board.streak === 1 ? 'Tag' : 'Tage'}`
+            : `Noch ${open} ${open === 1 ? 'Aufgabe' : 'Aufgaben'} bis der Tag gesichert ist`}
+        </p>
+      </div>
+      <BoardProgress board={board} />
+      <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+        {board.completed}/{board.total}
+      </span>
     </div>
   );
 }
@@ -196,20 +203,41 @@ function DailyRow({
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3 dark:border-slate-800"
+      className={`flex items-start gap-3 rounded-2xl border p-3 ${
+        daily.completed
+          ? 'border-slate-100 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/30'
+          : 'border-slate-100 dark:border-slate-800'
+      }`}
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl"
         style={{ backgroundColor: `${meta.color}22` }}
       >
-        {meta.icon}
+        {daily.emoji || meta.icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm font-semibold ${daily.completed ? 'text-slate-400 line-through dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}>
+        <p
+          className={`text-sm font-semibold ${
+            daily.completed
+              ? 'text-slate-400 line-through dark:text-slate-600'
+              : 'text-slate-900 dark:text-white'
+          }`}
+        >
           {daily.title}
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {diff.label} · {daily.xpReward} XP
+        {!daily.completed && (
+          <p className="mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400">
+            {daily.description}
+          </p>
+        )}
+        <p className="mt-1 flex items-center gap-1.5 text-[11px] font-medium">
+          <span style={{ color: diff.color }}>{diff.label}</span>
+          <span className="text-slate-300 dark:text-slate-600">·</span>
+          <span className="text-slate-500 dark:text-slate-400">
+            {daily.xpReward} XP
+          </span>
+          <span className="text-slate-300 dark:text-slate-600">·</span>
+          <span style={{ color: meta.color }}>{meta.label}</span>
         </p>
       </div>
       {daily.completed ? (
@@ -297,9 +325,10 @@ export default function LogbookPage() {
   const fetchAchievements = useAchievementStore((s) => s.fetchAchievements);
   const addAchievements = useAchievementStore((s) => s.addAchievements);
 
-  const daily = useDailySideQuestStore((s) => s.daily);
+  const board = useDailySideQuestStore((s) => s.board);
   const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
   const updateDaily = useDailySideQuestStore((s) => s.updateDaily);
+  const setBoard = useDailySideQuestStore((s) => s.setBoard);
 
   const setSelected = useSideQuestStore((s) => s.setSelected);
   const openDetail = useSideQuestStore((s) => s.openDetail);
@@ -307,15 +336,17 @@ export default function LogbookPage() {
   const openQuestDetail = useQuestStore((s) => s.openDetail);
 
   const questsCompleted = useAuthStore((s) => s.user?.questsCompleted ?? 0);
+  const avatarUrl = useAuthStore((s) => s.user?.avatarUrl);
   const dragonXp = useDragonStore((s) => s.dragon?.xp ?? 0);
   const setDragon = useDragonStore((s) => s.setDragon);
   const celebrate = useCelebrationStore((s) => s.celebrate);
 
-  const streak = useStreakStore((s) => s.streak);
+  const totalUnread = useChatStore((s) => s.totalUnread);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const showToast = useToastStore((s) => s.showToast);
   const kmToday = useDistanceStore((s) => s.kmToday);
 
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [myComments, setMyComments] = useState<Comment[]>([]);
   const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
 
@@ -346,16 +377,14 @@ export default function LogbookPage() {
     [close, setSelected, openDetail, selectQuest, openQuestDetail],
   );
 
-  const categoryCounts = daily.reduce<Record<string, number>>((acc, d) => {
-    acc[d.category] = (acc[d.category] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const filteredDaily = activeCategory
-    ? daily.filter((d) => d.category === activeCategory)
-    : daily;
-
-  const completedToday = daily.filter((d) => d.completed).length;
+  /** Jump from the logbook to another tab (profile / chat). */
+  const goToTab = useCallback(
+    (tab: 'profile' | 'chat') => {
+      close();
+      setActiveTab(tab);
+    },
+    [close, setActiveTab],
+  );
 
   const handleCompleteDaily = useCallback(
     async (d: DailySideQuest) => {
@@ -364,7 +393,13 @@ export default function LogbookPage() {
         const prevStage = useDragonStore.getState().dragon?.evolutionStage;
         const result = await completeDailySideQuest(d.id);
         updateDaily(result.daily);
+        setBoard(result.board);
         celebrate({ type: 'complete', title: result.daily.title, xpResult: result.xpResult ?? undefined });
+        if (result.bonusXp > 0) {
+          showToast(
+            `🔥 Tag gesichert! ${result.board.streak} ${result.board.streak === 1 ? 'Tag' : 'Tage'} Streak (+${result.bonusXp} XP)`,
+          );
+        }
         if (result.xpResult) {
           setDragon(result.xpResult.dragon);
           const newStage = result.xpResult.dragon.evolutionStage;
@@ -384,7 +419,7 @@ export default function LogbookPage() {
         setBusyId(null);
       }
     },
-    [updateDaily, celebrate, setDragon, addAchievements],
+    [updateDaily, setBoard, celebrate, setDragon, addAchievements, showToast],
   );
 
   useBackDismiss(open, close);
@@ -393,7 +428,7 @@ export default function LogbookPage() {
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-white dark:bg-slate-900">
-      {/* Top bar */}
+      {/* Top bar — back, title, chat + profile shortcuts */}
       <div className="flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2">
         <button
           onClick={close}
@@ -403,41 +438,57 @@ export default function LogbookPage() {
           ←
         </button>
         <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Logbuch</span>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => goToTab('chat')}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            aria-label="Chat öffnen"
+          >
+            <MessageSquare className="h-5 w-5" />
+            {totalUnread > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => goToTab('profile')}
+            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            aria-label="Profil öffnen"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profil" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-10">
 
         {/* Streak banner + 4 stat cards */}
         <StreakStatsBlock
-          streak={streak}
+          streak={board.streak}
+          longestStreak={board.longestStreak}
           xp={dragonXp}
           achievements={achievements.length}
           questsCompleted={questsCompleted}
           kmToday={kmToday}
         />
 
-        {/* Daily sidequests — no heading, just pills + counter */}
-        <div className="mt-6 flex items-center justify-between">
-          <CategoryPills
-            selected={activeCategory}
-            onChange={setActiveCategory}
-            counts={categoryCounts}
-          />
-          {daily.length > 0 && (
-            <span className="ml-2 shrink-0 text-xs text-slate-400 dark:text-slate-500">
-              {completedToday}/{daily.length}
-            </span>
-          )}
-        </div>
+        {/* Today's three daily quests — clearing all three secures the day */}
+        <DailyBoardHeader board={board} />
 
         <AnimatePresence mode="popLayout">
           <div className="mt-2 flex flex-col gap-2">
-            {filteredDaily.length === 0 && (
+            {board.quests.length === 0 && (
               <motion.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-slate-400">
-                {daily.length === 0 ? 'Keine täglichen SideQuests.' : 'Keine SideQuests in dieser Kategorie.'}
+                Keine Tagesquests — schau später nochmal rein.
               </motion.p>
             )}
-            {filteredDaily.map((d) => (
+            {board.quests.map((d) => (
               <DailyRow key={d.id} daily={d} onComplete={handleCompleteDaily} busy={busyId === d.id} />
             ))}
           </div>

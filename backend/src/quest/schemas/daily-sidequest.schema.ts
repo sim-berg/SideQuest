@@ -34,6 +34,10 @@ export class DailySideQuest {
   @Prop({ required: true, enum: Difficulty })
   difficulty: Difficulty;
 
+  /** Flavor icon from the template. */
+  @Prop({ default: '' })
+  emoji: string;
+
   @Prop({ required: true })
   xpReward: number;
 

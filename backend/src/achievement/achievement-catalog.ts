@@ -67,6 +67,49 @@ const MILESTONE_ACHIEVEMENTS: AchievementDef[] = [
     color: '#06b6d4',
     sideQuestTemplateId: null,
   },
+  {
+    key: 'ach_board_cleared',
+    title: 'Reine Tafel',
+    description: 'Schließe an einem Tag alle drei Tagesquests ab.',
+    prompt: `${PROMPT_BASE}, theme: three golden checkmarks in a row on a slate board`,
+    emoji: '✅',
+    color: '#22c55e',
+    sideQuestTemplateId: null,
+  },
+  {
+    key: 'ach_streak_3',
+    title: 'Dreitagefeuer',
+    description: 'Sichere dir drei Tage in Folge.',
+    prompt: `${PROMPT_BASE}, theme: a small campfire with the number three, warm embers`,
+    emoji: '🔥',
+    color: '#f97316',
+    sideQuestTemplateId: null,
+  },
+  {
+    key: 'ach_streak_7',
+    title: 'Wochenheld',
+    description: 'Sichere dir sieben Tage in Folge.',
+    prompt: `${PROMPT_BASE}, theme: a blazing seven-day flame crest, laurel wreath`,
+    emoji: '🏆',
+    color: '#eab308',
+    sideQuestTemplateId: null,
+  },
+  {
+    key: 'ach_streak_30',
+    title: 'Monatslegende',
+    description: 'Sichere dir dreißig Tage in Folge.',
+    prompt: `${PROMPT_BASE}, theme: a legendary golden calendar crown wreathed in fire`,
+    emoji: '👑',
+    color: '#a855f7',
+    sideQuestTemplateId: null,
+  },
+];
+
+/** Streak length → milestone achievement unlocked at exactly that length. */
+export const STREAK_MILESTONES: { days: number; key: string }[] = [
+  { days: 3, key: 'ach_streak_3' },
+  { days: 7, key: 'ach_streak_7' },
+  { days: 30, key: 'ach_streak_30' },
 ];
 
 export const ACHIEVEMENT_CATALOG: AchievementDef[] = [
