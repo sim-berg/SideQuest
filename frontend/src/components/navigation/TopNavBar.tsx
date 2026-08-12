@@ -6,6 +6,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { cn } from '../../utils/cn';
+import NextQuestsSheet, { NextQuestsTrigger } from './NextQuestsSheet';
 
 const ALL_CATEGORIES = Object.values(Category);
 
@@ -174,10 +175,8 @@ export default function TopNavBar() {
           )}
         </div>
 
-        {/* Center: Logo / Title */}
-        <h1 className="text-lg font-bold text-slate-800 drop-shadow-sm dark:text-white">
-          SideQuest
-        </h1>
+        {/* Center: Logo / Title — doubles as the top sheet handle */}
+        <NextQuestsTrigger />
 
         {/* Right: Menu dropdown */}
         <div ref={menuRef} className="relative">
@@ -287,6 +286,9 @@ export default function TopNavBar() {
           )}
         </div>
       </div>
+
+      {/* Top sheet: nearest quests as cards */}
+      <NextQuestsSheet />
     </div>
   );
 }

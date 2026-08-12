@@ -28,6 +28,46 @@ body {
   color-scheme: dark;
 }
 
+/* ---------------------------------------------------------------------------
+   Top sheet (NextQuestsSheet.tsx)
+   The nearest quest card gets a slow light sweep so the eye lands on it first.
+--------------------------------------------------------------------------- */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.sq-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.55) 48%,
+    rgba(255, 255, 255, 0.85) 52%,
+    transparent 66%
+  );
+  transform: translateX(-130%);
+  animation: sqShimmer 3.2s ease-in-out infinite;
+}
+.dark .sq-shimmer::after {
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.1) 48%,
+    rgba(255, 255, 255, 0.22) 52%,
+    transparent 66%
+  );
+}
+@keyframes sqShimmer {
+  0% { transform: translateX(-130%); }
+  55%, 100% { transform: translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sq-shimmer::after { animation: none; opacity: 0; }
+}
+
 /* SideQuest map card (Popup) — strip default MapLibre popup chrome so our
    own card (the "Kachel" next to the marker) controls the styling. */
 .sidequest-popup .maplibregl-popup-content {
