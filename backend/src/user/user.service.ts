@@ -4,6 +4,23 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
+export interface DailyQuestStreak {
+  streak: number;
+  longestStreak: number;
+  /** Whether today's board is already secured (streak counted for today). */
+  securedToday: boolean;
+}
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dayBefore(date: string): string {
+  const d = new Date(`${date}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 @Injectable()
 export class UserService {
   constructor(
@@ -113,6 +130,73 @@ export class UserService {
       totalXp: user.totalXp,
       questsCompleted: user.questsCompleted,
     };
+  }
+
+  /**
+   * A stored streak only still counts if the last cleared day was today or
+   * yesterday — otherwise the chain is broken and the streak reads as 0.
+   */
+  private effectiveStreak(
+    stored: number,
+    lastDate: string | null,
+    today: string,
+  ): number {
+    if (!lastDate) return 0;
+    return lastDate === today || lastDate === dayBefore(today) ? stored : 0;
+  }
+
+  async getDailyQuestStreak(id: string): Promise<DailyQuestStreak> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+
+    const today = todayKey();
+    return {
+      streak: this.effectiveStreak(
+        user.dailyQuestStreak,
+        user.lastDailyQuestDate,
+        today,
+      ),
+      longestStreak: user.longestDailyQuestStreak,
+      securedToday: user.lastDailyQuestDate === today,
+    };
+  }
+
+  /**
+   * Record that a user cleared their whole daily board for `date`. Idempotent:
+   * clearing the same day twice does not advance the streak twice.
+   */
+  async recordDailyBoardCleared(
+    id: string,
+    date: string,
+  ): Promise<DailyQuestStreak> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+
+    if (user.lastDailyQuestDate === date) {
+      return {
+        streak: user.dailyQuestStreak,
+        longestStreak: user.longestDailyQuestStreak,
+        securedToday: true,
+      };
+    }
+
+    const streak =
+      user.lastDailyQuestDate === dayBefore(date)
+        ? user.dailyQuestStreak + 1
+        : 1;
+    const longestStreak = Math.max(streak, user.longestDailyQuestStreak);
+
+    await this.userModel
+      .findByIdAndUpdate(id, {
+        $set: {
+          dailyQuestStreak: streak,
+          longestDailyQuestStreak: longestStreak,
+          lastDailyQuestDate: date,
+        },
+      })
+      .exec();
+
+    return { streak, longestStreak, securedToday: true };
   }
 
   async getPublicProfile(id: string): Promise<Partial<User>> {

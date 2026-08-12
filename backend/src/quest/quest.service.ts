@@ -19,6 +19,10 @@ import { TreasureService } from '../treasure/treasure.service.js';
 import { Category } from './enums/category.enum.js';
 import { SIDEQUEST_TEMPLATES } from './sidequest-templates.js';
 import {
+  DAILY_QUEST_TEMPLATES,
+  type DailyQuestTemplate,
+} from './daily-templates.js';
+import {
   DailySideQuest,
   DailySideQuestDocument,
 } from './schemas/daily-sidequest.schema.js';
@@ -61,6 +65,16 @@ const XP_BY_DIFFICULTY: Record<string, number> = {
 };
 
 const DAILY_SIDEQUEST_COUNT = 3; // daily side quests generated per user
+// Don't hand out a template again while it is still fresh in memory.
+const DAILY_REPEAT_COOLDOWN_DAYS = 10;
+// Difficulty shape of a day's board: keep it comfortably clearable.
+const DAILY_DIFFICULTY_PLAN = [
+  Difficulty.EASY,
+  Difficulty.EASY,
+  Difficulty.MEDIUM,
+];
+// Extra XP for clearing the whole board — the reward for securing the day.
+const DAILY_BOARD_BONUS_XP = 40;
 
 // Per-category styling for the generated side quest scene (emoji + gradient
 // colors drive the fallback image when no Replicate token is configured).
@@ -77,6 +91,13 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 }
 
+/** The day bucket `days` days before `date` (YYYY-MM-DD). */
+function daysBefore(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
 function toPlainDaily(doc: DailySideQuestDocument) {
   const obj = doc.toObject();
   return {
@@ -86,11 +107,25 @@ function toPlainDaily(doc: DailySideQuestDocument) {
     description: obj.description,
     category: obj.category,
     difficulty: obj.difficulty,
+    emoji: obj.emoji ?? '',
     xpReward: obj.xpReward,
     completed: obj.completed,
     completedAt: obj.completedAt?.toISOString?.() ?? null,
     date: obj.date,
   };
+}
+
+/** Today's daily quests plus the streak they feed. */
+export interface DailyBoardView {
+  date: string;
+  quests: ReturnType<typeof toPlainDaily>[];
+  completed: number;
+  total: number;
+  allDone: boolean;
+  streak: number;
+  longestStreak: number;
+  /** Today already counted towards the streak. */
+  secured: boolean;
 }
 
 @Injectable()
@@ -384,8 +419,8 @@ export class QuestService {
 
   // --- Daily SideQuests (per user) ----------------------------------------
 
-  /** Today's daily side quests for a user, generating the set on first call. */
-  async getDailySideQuests(userId: string) {
+  /** Today's daily quest board for a user, generating the set on first call. */
+  async getDailySideQuests(userId: string): Promise<DailyBoardView> {
     const date = todayKey();
     let docs = await this.dailyModel
       .find({ userId, date })
@@ -395,17 +430,63 @@ export class QuestService {
     if (docs.length === 0) {
       docs = await this.generateDailySideQuests(userId, date);
     }
-    return docs.map(toPlainDaily);
+    return this.buildBoard(userId, date, docs);
   }
 
+  private async buildBoard(
+    userId: string,
+    date: string,
+    docs: DailySideQuestDocument[],
+  ): Promise<DailyBoardView> {
+    const quests = docs.map(toPlainDaily);
+    const completed = quests.filter((q) => q.completed).length;
+    const { streak, longestStreak, securedToday } =
+      await this.userService.getDailyQuestStreak(userId);
+
+    return {
+      date,
+      quests,
+      completed,
+      total: quests.length,
+      allDone: quests.length > 0 && completed === quests.length,
+      streak,
+      longestStreak,
+      secured: securedToday,
+    };
+  }
+
+  /**
+   * Draw a day's board: distinct templates the user hasn't seen recently,
+   * shaped by DAILY_DIFFICULTY_PLAN so a day is always clearable.
+   */
   private async generateDailySideQuests(userId: string, date: string) {
-    // Pick N distinct random templates for the day.
-    const pool = [...SIDEQUEST_TEMPLATES];
-    const picked: typeof SIDEQUEST_TEMPLATES = [];
-    const n = Math.min(DAILY_SIDEQUEST_COUNT, pool.length);
-    for (let i = 0; i < n; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      picked.push(pool.splice(idx, 1)[0]);
+    const recent = await this.dailyModel
+      .find({
+        userId,
+        date: { $gte: daysBefore(date, DAILY_REPEAT_COOLDOWN_DAYS) },
+      })
+      .select('templateId')
+      .exec();
+    const onCooldown = new Set(recent.map((d) => d.templateId));
+
+    let pool = DAILY_QUEST_TEMPLATES.filter((t) => !onCooldown.has(t.id));
+    // Tiny pool left (long streak, short cooldown window) — fall back to all.
+    if (pool.length < DAILY_SIDEQUEST_COUNT) pool = [...DAILY_QUEST_TEMPLATES];
+
+    const picked: DailyQuestTemplate[] = [];
+    const takeRandom = (candidates: DailyQuestTemplate[]) => {
+      if (candidates.length === 0) return;
+      const t = candidates[Math.floor(Math.random() * candidates.length)];
+      picked.push(t);
+      pool = pool.filter((p) => p.id !== t.id);
+    };
+
+    for (const difficulty of DAILY_DIFFICULTY_PLAN.slice(
+      0,
+      DAILY_SIDEQUEST_COUNT,
+    )) {
+      const sameDifficulty = pool.filter((t) => t.difficulty === difficulty);
+      takeRandom(sameDifficulty.length > 0 ? sameDifficulty : pool);
     }
 
     const created = await Promise.all(
@@ -418,6 +499,7 @@ export class QuestService {
           description: t.description,
           category: t.category,
           difficulty: t.difficulty,
+          emoji: t.emoji,
           xpReward: XP_BY_DIFFICULTY[t.difficulty] ?? 50,
         }),
       ),
@@ -442,9 +524,20 @@ export class QuestService {
     doc.completedAt = new Date();
     await doc.save();
 
+    // Was this the last open quest of the day? If so the day is secured: the
+    // streak advances and the board bonus rides along on this XP award.
+    const docs = await this.dailyModel
+      .find({ userId, date: doc.date })
+      .sort({ createdAt: 1 })
+      .exec();
+    const boardCleared = docs.every((d) => d.completed);
+    const streakBefore = await this.userService.getDailyQuestStreak(userId);
+    const alreadySecured = streakBefore.securedToday;
+    const bonusXp = boardCleared && !alreadySecured ? DAILY_BOARD_BONUS_XP : 0;
+
     const xpResult = await this.dragonService.recordQuestCompletion(
       userId,
-      doc.xpReward,
+      doc.xpReward + bonusXp,
       await this.treasureService.getXpMultiplier(userId),
     );
     await this.userService.incrementQuestsCompleted(userId);
@@ -456,6 +549,25 @@ export class QuestService {
       { daily: true },
     );
 
-    return { daily: toPlainDaily(doc), xpResult, achievements };
+    if (boardCleared) {
+      const streakInfo = await this.userService.recordDailyBoardCleared(
+        userId,
+        doc.date,
+      );
+      achievements.push(
+        ...(await this.achievementService.awardDailyStreakMilestones(
+          userId,
+          streakInfo.streak,
+        )),
+      );
+    }
+
+    return {
+      daily: toPlainDaily(doc),
+      xpResult,
+      achievements,
+      bonusXp,
+      board: await this.buildBoard(userId, doc.date, docs),
+    };
   }
 }

@@ -11,6 +11,7 @@ import {
 } from './schemas/user-achievement.schema.js';
 import {
   ACHIEVEMENT_CATALOG,
+  STREAK_MILESTONES,
   getAchievementDef,
   getAchievementForTemplate,
   type AchievementDef,
@@ -147,6 +148,28 @@ export class AchievementService {
 
     if (opts.daily) {
       const a = await this.award(userId, 'ach_daily_streak', sourceSideQuestId);
+      if (a) awarded.push(a);
+    }
+
+    return awarded;
+  }
+
+  /**
+   * Award the "cleared the whole board" badge plus any streak milestone the
+   * user just reached. Called when a daily board is fully cleared.
+   */
+  async awardDailyStreakMilestones(
+    userId: string,
+    streak: number,
+  ): Promise<AwardedAchievement[]> {
+    const awarded: AwardedAchievement[] = [];
+
+    const cleared = await this.award(userId, 'ach_board_cleared');
+    if (cleared) awarded.push(cleared);
+
+    for (const milestone of STREAK_MILESTONES) {
+      if (streak < milestone.days) continue;
+      const a = await this.award(userId, milestone.key);
       if (a) awarded.push(a);
     }
 

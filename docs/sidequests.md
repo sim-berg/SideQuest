@@ -113,21 +113,47 @@ Bilder werden statisch unter `/uploads` ausgeliefert (`main.ts`
 
 **Endpoints:** `GET /api/achievements/mine`, `GET /api/achievements/catalog` (beide JWT).
 
-## Daily SideQuests (pro Nutzer)
+## Tagesquests (Daily SideQuests, pro Nutzer)
 
-`DailySideQuest`-Schema: pro Nutzer wird täglich ein Satz von **3** SideQuests aus
-dem Template-Pool generiert (`getDailySideQuests`, Tagesbucket `YYYY-MM-DD`).
-Abschluss per Selbstmeldung (kein GPS) über
-`POST /api/sidequests/daily/:id/complete` → Drachen-XP + Achievement(s).
-`GET /api/sidequests/daily` liefert/erzeugt das heutige Set (JWT).
+`DailySideQuest`-Schema: pro Nutzer werden täglich **3** Aufgaben aus dem
+eigenen Pool `quest/daily-templates.ts` (`DAILY_QUEST_TEMPLATES`, >50 Einträge)
+gezogen (`getDailySideQuests`, Tagesbucket `YYYY-MM-DD`). Der Pool ist bewusst
+getrennt von `SIDEQUEST_TEMPLATES`: Tagesquests sind kleine, überall erledigbare
+Alltagsaufgaben ohne Ort, TTL oder Quest-Giver.
+
+**Ziehung:** Templates der letzten `DAILY_REPEAT_COOLDOWN_DAYS` (10) Tage sind
+gesperrt, damit sich nichts wiederholt; die Schwierigkeit folgt
+`DAILY_DIFFICULTY_PLAN` (2× leicht, 1× mittel), damit ein Tag immer schaffbar
+bleibt. Ist der Pool durch die Sperre zu klein, fällt die Ziehung auf den
+Gesamtpool zurück.
+
+**Streak:** Wer alle 3 Aufgaben eines Tages erledigt, **sichert den Tag** —
+`UserService.recordDailyBoardCleared` erhöht `dailyQuestStreak` (bzw. setzt auf
+1, wenn die Kette gerissen ist) und führt `longestDailyQuestStreak` mit. Beim
+Lesen zählt ein gespeicherter Streak nur, wenn der letzte gesicherte Tag heute
+oder gestern war. Das Klarmachen der Tafel gibt zusätzlich
+`DAILY_BOARD_BONUS_XP` (40) auf die XP des letzten Abschlusses und vergibt die
+Meilensteine `ach_board_cleared`, `ach_streak_3|7|30`.
+
+**Endpoints (JWT):** `GET /api/sidequests/daily` liefert/erzeugt das heutige
+Board als `DailyBoardView` (`quests`, `completed`, `total`, `allDone`, `streak`,
+`longestStreak`, `secured`). `POST /api/sidequests/daily/:id/complete` meldet
+eine Aufgabe selbst als erledigt (kein GPS) → Drachen-XP, Achievements,
+`bonusXp` und das aktualisierte `board`.
 
 ## Logbuch
 
 `components/logbook/LogbookPage.tsx` (Overlay, geöffnet über den `LogbookFAB`,
 `BookOpen`-Icon unten rechts auf der Karte) zeigt:
 
-- **Statistik:** XP (Drache), Anzahl Errungenschaften, abgeschlossene Quests
-- **Heutige SideQuests:** Daily-Liste mit „Erledigt"-Buttons
+- **Kopfzeile:** Zurück, Titel sowie Direktsprünge zu **Chat** (mit
+  Ungelesen-Zähler) und **Profil** — beide schließen das Logbuch und wechseln
+  den Tab
+- **Statistik:** Streak-Banner (Tagesquest-Streak), XP (Drache), Errungen-
+  schaften, abgeschlossene Quests, km heute bzw. Rekord-Streak
+- **Tagesquests:** Board-Kopf mit Fortschritt (3 Punkte, `x/3`) und Hinweis, wie
+  viele Aufgaben bis zum gesicherten Tag fehlen; darunter die 3 Aufgaben mit
+  Beschreibung und „Erledigt"-Button
 - **Aktive SideQuests:** vom Nutzer angenommene Karten-SideQuests (Klick → Modal)
 - **Errungenschaften:** Badge-Galerie (KI-/SVG-Bilder)
 
