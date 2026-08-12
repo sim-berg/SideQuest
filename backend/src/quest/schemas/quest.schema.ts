@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Category } from '../enums/category.enum.js';
 import { Difficulty } from '../enums/difficulty.enum.js';
+import { GoalType } from '../enums/goal-type.enum.js';
 
 export type QuestDocument = HydratedDocument<Quest>;
 
@@ -41,6 +42,12 @@ export class Quest {
 
   @Prop({ default: Difficulty.MEDIUM, enum: Difficulty })
   difficulty: Difficulty;
+
+  @Prop({ default: GoalType.PROXIMITY, enum: GoalType })
+  goalType: GoalType;
+
+  @Prop({ type: Number, default: null })
+  goalCount: number | null;
 
   @Prop({ type: String, default: null })
   acceptedBy: string | null;

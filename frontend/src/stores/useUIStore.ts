@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type ActiveTab = 'map' | 'chat' | 'create' | 'profile';
 
 /** Steps for the quest creation wizard (0 = picking location on map) */
-export type CreateWizardStep = 0 | 1 | 2 | 3 | 4;
+export type CreateWizardStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 interface UIState {
   createQuestOpen: boolean;

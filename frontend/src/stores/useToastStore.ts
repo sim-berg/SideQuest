@@ -1,25 +1,39 @@
 import { create } from 'zustand';
 
+export type ToastType = 'success' | 'info' | 'quest' | 'error';
+
 export interface Toast {
-  id: number;
-  message: string;
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
 }
 
 interface ToastState {
   toasts: Toast[];
-  /** Show a short-lived toast message. */
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  removeToast: (id: string) => void;
+  /** Convenience one-liner used across quest/pet flows. */
   showToast: (message: string) => void;
-  dismissToast: (id: number) => void;
 }
 
-let nextId = 1;
-
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
-  showToast: (message) => {
-    const id = nextId++;
-    set((s) => ({ toasts: [...s.toasts, { id, message }] }));
-  },
-  dismissToast: (id) =>
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  addToast: (toast) =>
+    set((state) => ({
+      toasts: [
+        ...state.toasts,
+        {
+          ...toast,
+          id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        },
+      ],
+    })),
+  removeToast: (id) =>
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    })),
+  showToast: (message) =>
+    get().addToast({ type: 'success', title: message, duration: 3500 }),
 }));

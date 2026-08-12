@@ -28,5 +28,6 @@ import { TreasureModule } from '../treasure/treasure.module.js';
   ],
   controllers: [QuestController, SideQuestController],
   providers: [QuestService],
+  exports: [QuestService],
 })
 export class QuestModule {}

@@ -28,6 +28,9 @@ import {
   DailySideQuest,
   DailySideQuestDocument,
 } from './schemas/daily-sidequest.schema.js';
+import { GoalType } from './enums/goal-type.enum.js';
+import type { CompleteQuestDto } from './dto/complete-quest.dto.js';
+import { DAILY_QUESTS_POOL } from './data/daily-quests.data.js';
 
 function toPlain(doc: QuestDocument) {
   const obj = doc.toObject();
@@ -43,6 +46,8 @@ function toPlain(doc: QuestDocument) {
     reward: obj.reward,
     timeLimit: obj.timeLimit,
     difficulty: obj.difficulty ?? Difficulty.MEDIUM,
+    goalType: obj.goalType ?? GoalType.PROXIMITY,
+    goalCount: obj.goalCount ?? null,
     acceptedBy: obj.acceptedBy ?? null,
     acceptedAt: obj.acceptedAt?.toISOString?.() ?? null,
     completedBy: obj.completedBy ?? null,
@@ -242,7 +247,11 @@ export class QuestService {
     return toPlain(doc);
   }
 
-  async completeQuest(questId: string, userId: string, lat: number, lng: number) {
+  async completeQuest(
+    questId: string,
+    userId: string,
+    dto: CompleteQuestDto,
+  ) {
     const doc = await this.questModel.findById(questId).exec();
     if (!doc) throw new NotFoundException(`Quest ${questId} not found`);
 
@@ -253,13 +262,26 @@ export class QuestService {
       throw new ConflictException('Quest already completed');
     }
 
-    // GPS proximity check (100m)
-    const distance = this.geoService.haversine(lat, lng, doc.lat, doc.lng);
-    if (distance > 0.1) {
-      throw new BadRequestException(
-        'Too far from quest location. Must be within 100m.',
+    const goalType = doc.goalType ?? GoalType.PROXIMITY;
+
+    // GPS proximity check only for proximity quests
+    if (goalType === GoalType.PROXIMITY) {
+      if (dto.lat == null || dto.lng == null) {
+        throw new BadRequestException('Coordinates required for proximity quest');
+      }
+      const distance = this.geoService.haversine(
+        dto.lat,
+        dto.lng,
+        doc.lat,
+        doc.lng,
       );
+      if (distance > 0.1) {
+        throw new BadRequestException(
+          'Too far from quest location. Must be within 100m.',
+        );
+      }
     }
+    // COUNT and MANUAL: no location check needed
 
     doc.completedBy = userId;
     doc.completedAt = new Date();
@@ -609,5 +631,42 @@ export class QuestService {
       hatch,
       board: await this.buildBoard(userId, doc.date, docs),
     };
+  }
+
+  // --- Global daily quests (same three for everyone, from develop) ---------
+
+  getDailyQuests(): any[] {
+    // Date-based deterministic selection: same 3 quests for everyone on a given day
+    const today = new Date().toDateString();
+    const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const startIdx = hash % (DAILY_QUESTS_POOL.length - 2);
+
+    const BERLIN_LAT = 52.52;
+    const BERLIN_LNG = 13.405;
+
+    // Pick 3 quests starting from startIdx
+    return [startIdx, startIdx + 1, startIdx + 2].map((i) => {
+      const template = DAILY_QUESTS_POOL[i % DAILY_QUESTS_POOL.length];
+      return {
+        id: `daily-${i}`,
+        title: template.title,
+        description: template.description,
+        lat: BERLIN_LAT,
+        lng: BERLIN_LNG,
+        address: 'Berlin, Deutschland',
+        category: template.category,
+        questGiver: { name: 'SideQuest' },
+        difficulty: Difficulty.EASY,
+        goalType: GoalType.MANUAL,
+        goalCount: null,
+        reward: null,
+        timeLimit: null,
+        acceptedBy: null,
+        acceptedAt: null,
+        completedBy: null,
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+      };
+    });
   }
 }

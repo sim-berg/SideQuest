@@ -22,11 +22,18 @@ export default function UserProfileSheet({
     user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-t-2xl bg-white px-5 pb-10 pt-6 dark:bg-slate-900">
-        {/* Handle */}
-        <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="relative w-full max-w-[1200px] rounded-2xl bg-white px-5 pb-10 pt-6 dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-slate-200/80 text-slate-600 backdrop-blur-sm dark:bg-slate-700/80 dark:text-slate-300"
+          aria-label="Schliessen"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
 
         {/* Avatar + Name */}
         <div className="mb-4 flex items-center gap-4">

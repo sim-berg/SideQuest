@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service.js';
+import { QuestService } from '../quest/quest.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
@@ -32,7 +33,74 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly questService: QuestService,
   ) {}
+
+  private async createOnboardingQuests(
+    userId: string,
+    username: string,
+  ): Promise<void> {
+    const BERLIN_LAT = 52.52;
+    const BERLIN_LNG = 13.405;
+    const questGiver = { name: username };
+
+    const onboardingQuests = [
+      {
+        title: 'Erstelle deine erste SideQuest',
+        description:
+          'Werde selbst zum Quest-Geber! Erstelle eine eigene Quest und teile sie mit der Community.',
+        category: 'skill',
+        difficulty: 'easy',
+        goalType: 'manual',
+        lat: BERLIN_LAT,
+        lng: BERLIN_LNG,
+        address: 'Berlin, Deutschland',
+        questGiver,
+      },
+      {
+        title: 'Mach 10 Kniebeugen!',
+        description:
+          'Steh auf und mach 10 saubere Kniebeugen. Du schaffst das!',
+        category: 'sport',
+        difficulty: 'easy',
+        goalType: 'count',
+        goalCount: 10,
+        lat: BERLIN_LAT,
+        lng: BERLIN_LNG,
+        address: 'Berlin, Deutschland',
+        questGiver,
+      },
+      {
+        title: 'Erkunde die Karte',
+        description:
+          'Geh raus und entdecke deine Umgebung. Lauf eine neue Strecke oder erkunde einen Ort, den du noch nicht kennst.',
+        category: 'adventure',
+        difficulty: 'easy',
+        goalType: 'manual',
+        lat: BERLIN_LAT,
+        lng: BERLIN_LNG,
+        address: 'Berlin, Deutschland',
+        questGiver,
+      },
+      {
+        title: 'Sende jemandem eine Nachricht',
+        description:
+          'Knüpfe neue Verbindungen! Schreibe einer anderen SideQuest-Person eine freundliche Nachricht.',
+        category: 'social',
+        difficulty: 'easy',
+        goalType: 'manual',
+        lat: BERLIN_LAT,
+        lng: BERLIN_LNG,
+        address: 'Berlin, Deutschland',
+        questGiver,
+      },
+    ];
+
+    // Fire-and-forget: never throw, never block the register response
+    await Promise.allSettled(
+      onboardingQuests.map((q) => this.questService.create(q as any)),
+    );
+  }
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const existingByEmail = await this.userService.findByEmail(dto.email);
@@ -54,6 +122,9 @@ export class AuthService {
       username: dto.username,
       passwordHash,
     });
+
+    // Create onboarding quests (non-blocking, best-effort)
+    void this.createOnboardingQuests(user._id.toString(), user.username);
 
     return this.generateTokens(user);
   }

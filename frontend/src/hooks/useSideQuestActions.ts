@@ -64,11 +64,10 @@ export function useSideQuestActions(quest: Quest | null) {
         }),
       );
       const prevStage = selectActivePet(usePetStore.getState())?.stage;
-      const result = await completeQuest(
-        quest.id,
-        pos.coords.latitude,
-        pos.coords.longitude,
-      );
+      const result = await completeQuest(quest.id, {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
       celebrate({
         type: 'complete',
         title: result.quest.title,

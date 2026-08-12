@@ -32,6 +32,11 @@ export class UserController {
     return this.userService.dailyCheckin(req.user.userId);
   }
 
+  @Get('me/activity')
+  getActivity(@Request() req) {
+    return this.userService.getActivity(req.user.userId);
+  }
+
   @Get(':id')
   getPublicProfile(@Param('id') id: string) {
     return this.userService.getPublicProfile(id);

@@ -15,3 +15,12 @@ export async function dailyCheckin(): Promise<CheckinResult> {
 export async function fetchMyComments(): Promise<Comment[]> {
   return api.get<Comment[]>('/users/me/comments');
 }
+
+export interface ActivityData {
+  date: string;
+  count: number;
+}
+
+export async function fetchActivity(): Promise<ActivityData[]> {
+  return api.get<ActivityData[]>('/users/me/activity');
+}

@@ -29,10 +29,9 @@ export async function acceptQuest(id: string): Promise<Quest> {
 
 export async function completeQuest(
   id: string,
-  lat: number,
-  lng: number,
+  payload: { lat?: number; lng?: number; countCompleted?: number } = {},
 ): Promise<CompleteQuestResult> {
-  return api.post<CompleteQuestResult>(`/quests/${id}/complete`, { lat, lng });
+  return api.post<CompleteQuestResult>(`/quests/${id}/complete`, payload);
 }
 
 export async function abandonQuest(id: string): Promise<Quest> {
@@ -53,4 +52,8 @@ export async function fetchQuestImage(id: string): Promise<string | null> {
 
 export async function fetchMyCompletedQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/my/completed');
+}
+
+export async function fetchDailyQuests(): Promise<Quest[]> {
+  return api.get<Quest[]>('/quests/daily');
 }
