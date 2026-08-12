@@ -16,7 +16,7 @@ import { useQuestStore } from '../../stores/useQuestStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { useUIStore } from '../../stores/useUIStore';
-import { useDragonStore } from '../../stores/useDragonStore';
+import { usePetStore, selectActivePet } from '../../stores/usePetStore';
 import { useCelebrationStore } from '../../stores/useCelebrationStore';
 import { useDistanceStore } from '../../stores/useDistanceStore';
 import { useToastStore } from '../../stores/useToastStore';
@@ -153,6 +153,8 @@ function BoardProgress({ board }: { board: DailyBoard }) {
 
 function DailyBoardHeader({ board }: { board: DailyBoard }) {
   const open = board.total - board.completed;
+  // Personalized boards carry synthetic pet_<date>_<n> template ids.
+  const petMade = board.quests.some((q) => q.templateId.startsWith('pet_'));
 
   return (
     <div
@@ -174,6 +176,11 @@ function DailyBoardHeader({ board }: { board: DailyBoard }) {
             ? `Tag gesichert — Streak: ${board.streak} ${board.streak === 1 ? 'Tag' : 'Tage'}`
             : `Noch ${open} ${open === 1 ? 'Aufgabe' : 'Aufgaben'} bis der Tag gesichert ist`}
         </p>
+        {petMade && (
+          <p className="text-[11px] text-indigo-400">
+            ✨ Von deinem Gefährten für dich zusammengestellt
+          </p>
+        )}
       </div>
       <BoardProgress board={board} />
       <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
@@ -336,8 +343,8 @@ export default function LogbookPage() {
 
   const questsCompleted = useAuthStore((s) => s.user?.questsCompleted ?? 0);
   const avatarUrl = useAuthStore((s) => s.user?.avatarUrl);
-  const dragonXp = useDragonStore((s) => s.dragon?.xp ?? 0);
-  const setDragon = useDragonStore((s) => s.setDragon);
+  const petXp = usePetStore((s) => selectActivePet(s)?.xp ?? 0);
+  const upsertPet = usePetStore((s) => s.upsertPet);
   const celebrate = useCelebrationStore((s) => s.celebrate);
 
   const totalUnread = useChatStore((s) => s.totalUnread);
@@ -389,7 +396,7 @@ export default function LogbookPage() {
     async (d: DailySideQuest) => {
       setBusyId(d.id);
       try {
-        const prevStage = useDragonStore.getState().dragon?.evolutionStage;
+        const prevStage = selectActivePet(usePetStore.getState())?.stage;
         const result = await completeDailySideQuest(d.id);
         updateDaily(result.daily);
         setBoard(result.board);
@@ -400,11 +407,17 @@ export default function LogbookPage() {
           );
         }
         if (result.xpResult) {
-          setDragon(result.xpResult.dragon);
-          const newStage = result.xpResult.dragon.evolutionStage;
-          if (prevStage && newStage !== prevStage) {
+          upsertPet(result.xpResult.pet);
+          const newStage = result.xpResult.pet.stage;
+          // A hatch gets its own ceremony; the plain evolution card would
+          // just be noise on top of it.
+          if (!result.hatch && prevStage && newStage !== prevStage) {
             celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
           }
+        }
+        if (result.hatch) {
+          upsertPet(result.hatch);
+          celebrate({ type: 'hatch', pet: result.hatch });
         }
         if (result.achievements?.length) {
           addAchievements(result.achievements);
@@ -418,7 +431,7 @@ export default function LogbookPage() {
         setBusyId(null);
       }
     },
-    [updateDaily, setBoard, celebrate, setDragon, addAchievements, showToast],
+    [updateDaily, setBoard, celebrate, upsertPet, addAchievements, showToast],
   );
 
   if (!open) return null;
@@ -469,7 +482,7 @@ export default function LogbookPage() {
         <StreakStatsBlock
           streak={board.streak}
           longestStreak={board.longestStreak}
-          xp={dragonXp}
+          xp={petXp}
           achievements={achievements.length}
           questsCompleted={questsCompleted}
           kmToday={kmToday}

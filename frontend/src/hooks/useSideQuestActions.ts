@@ -3,7 +3,7 @@ import type { Quest } from '../types/quest';
 import { useSideQuestStore } from '../stores/useSideQuestStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
-import { useDragonStore } from '../stores/useDragonStore';
+import { usePetStore, selectActivePet } from '../stores/usePetStore';
 import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
 import { useToastStore } from '../stores/useToastStore';
@@ -23,7 +23,7 @@ export function useSideQuestActions(quest: Quest | null) {
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
   const showToast = useToastStore((s) => s.showToast);
-  const setDragon = useDragonStore((s) => s.setDragon);
+  const upsertPet = usePetStore((s) => s.upsertPet);
   const celebrate = useCelebrationStore((s) => s.celebrate);
   const addAchievements = useAchievementStore((s) => s.addAchievements);
 
@@ -63,7 +63,7 @@ export function useSideQuestActions(quest: Quest | null) {
           timeout: 10000,
         }),
       );
-      const prevStage = useDragonStore.getState().dragon?.evolutionStage;
+      const prevStage = selectActivePet(usePetStore.getState())?.stage;
       const result = await completeQuest(
         quest.id,
         pos.coords.latitude,
@@ -75,8 +75,8 @@ export function useSideQuestActions(quest: Quest | null) {
         xpResult: result.xpResult ?? undefined,
       });
       if (result.xpResult) {
-        setDragon(result.xpResult.dragon);
-        const newStage = result.xpResult.dragon.evolutionStage;
+        upsertPet(result.xpResult.pet);
+        const newStage = result.xpResult.pet.stage;
         if (prevStage && newStage !== prevStage) {
           celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
         }
@@ -100,7 +100,7 @@ export function useSideQuestActions(quest: Quest | null) {
     } finally {
       setLoading(false);
     }
-  }, [quest, setDragon, celebrate, addAchievements, removeSideQuest]);
+  }, [quest, upsertPet, celebrate, addAchievements, removeSideQuest]);
 
   const abandon = useCallback(async () => {
     if (!quest) return;

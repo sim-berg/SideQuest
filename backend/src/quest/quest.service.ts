@@ -11,7 +11,9 @@ import { Difficulty } from './enums/difficulty.enum.js';
 import type { CreateQuestDto } from './dto/create-quest.dto.js';
 import type { QuestFilterDto } from './dto/quest-filter.dto.js';
 import { GeoService } from '../geo/geo.service.js';
-import { DragonService } from '../dragon/dragon.service.js';
+import { PetService } from '../pet/pet.service.js';
+import { SoulService } from '../pet/soul.service.js';
+import { PetQuestmasterService } from '../pet/pet-questmaster.service.js';
 import { UserService } from '../user/user.service.js';
 import { AchievementService } from '../achievement/achievement.service.js';
 import { ReplicateService } from '../achievement/replicate.service.js';
@@ -135,7 +137,9 @@ export class QuestService {
     @InjectModel(DailySideQuest.name)
     private dailyModel: Model<DailySideQuestDocument>,
     private readonly geoService: GeoService,
-    private readonly dragonService: DragonService,
+    private readonly petService: PetService,
+    private readonly soulService: SoulService,
+    private readonly petQuestmaster: PetQuestmasterService,
     private readonly userService: UserService,
     private readonly achievementService: AchievementService,
     private readonly replicate: ReplicateService,
@@ -264,7 +268,7 @@ export class QuestService {
     // Award XP — carried treasure items can boost the multiplier
     const baseXp = XP_BY_DIFFICULTY[doc.difficulty ?? Difficulty.MEDIUM] ?? 50;
     const treasureMultiplier = await this.treasureService.getXpMultiplier(userId);
-    const xpResult = await this.dragonService.recordQuestCompletion(
+    const xpResult = await this.petService.recordQuestCompletion(
       userId,
       baseXp,
       treasureMultiplier,
@@ -456,7 +460,9 @@ export class QuestService {
   }
 
   /**
-   * Draw a day's board: distinct templates the user hasn't seen recently,
+   * Draw a day's board. When the user's companion has hatched and an LLM is
+   * configured, the pet writes a personalized set from both soul.md files;
+   * otherwise (or on any failure) fall back to the static template pool,
    * shaped by DAILY_DIFFICULTY_PLAN so a day is always clearable.
    */
   private async generateDailySideQuests(userId: string, date: string) {
@@ -465,9 +471,34 @@ export class QuestService {
         userId,
         date: { $gte: daysBefore(date, DAILY_REPEAT_COOLDOWN_DAYS) },
       })
-      .select('templateId')
+      .select('templateId title')
       .exec();
     const onCooldown = new Set(recent.map((d) => d.templateId));
+
+    const generated = await this.petQuestmaster.generateDailyQuests(
+      userId,
+      recent.map((d) => d.title),
+    );
+    if (generated) {
+      const created = await Promise.all(
+        generated.map((g, i) =>
+          this.dailyModel.create({
+            userId,
+            date,
+            templateId: `pet_${date}_${i}`,
+            title: g.title,
+            description: g.description,
+            category: g.category,
+            difficulty: g.difficulty,
+            emoji: g.emoji,
+            xpReward: XP_BY_DIFFICULTY[g.difficulty] ?? 50,
+          }),
+        ),
+      );
+      return created.sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      );
+    }
 
     let pool = DAILY_QUEST_TEMPLATES.filter((t) => !onCooldown.has(t.id));
     // Tiny pool left (long streak, short cooldown window) — fall back to all.
@@ -535,7 +566,7 @@ export class QuestService {
     const alreadySecured = streakBefore.securedToday;
     const bonusXp = boardCleared && !alreadySecured ? DAILY_BOARD_BONUS_XP : 0;
 
-    const xpResult = await this.dragonService.recordQuestCompletion(
+    const xpResult = await this.petService.recordQuestCompletion(
       userId,
       doc.xpReward + bonusXp,
       await this.treasureService.getXpMultiplier(userId),
@@ -549,6 +580,9 @@ export class QuestService {
       { daily: true },
     );
 
+    // Clearing a full board is what hatches the mystery egg — the pet's
+    // "birth" is earned by securing a day, not by grinding XP.
+    let hatch: Awaited<ReturnType<PetService['hatchReadyEgg']>> = null;
     if (boardCleared) {
       const streakInfo = await this.userService.recordDailyBoardCleared(
         userId,
@@ -560,6 +594,11 @@ export class QuestService {
           streakInfo.streak,
         )),
       );
+      hatch = await this.petService.hatchReadyEgg(userId);
+      // Background soul work: an LLM-written personality for the newborn and
+      // a refreshed play-style profile of the user. Both are best-effort.
+      if (hatch) void this.soulService.upgradePetSoul(hatch.id);
+      void this.soulService.refreshUserSoul(userId);
     }
 
     return {
@@ -567,6 +606,7 @@ export class QuestService {
       xpResult,
       achievements,
       bonusXp,
+      hatch,
       board: await this.buildBoard(userId, doc.date, docs),
     };
   }

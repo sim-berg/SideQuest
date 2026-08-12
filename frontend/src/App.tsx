@@ -6,7 +6,7 @@ import QuestMap from './components/map/QuestMap';
 import CreateQuestPage from './components/quest/CreateQuestPage';
 import QuestRoute from './components/quest/QuestRoute';
 import AuthPrompt from './components/auth/AuthPrompt';
-import DragonSelection from './components/dragon/DragonSelection';
+import EggIntro, { hasSeenEggIntro } from './components/pet/EggIntro';
 import TopNavBar from './components/navigation/TopNavBar';
 import NewQuestFAB from './components/navigation/NewQuestFAB';
 import ChatInbox from './components/chat/ChatInbox';
@@ -23,6 +23,10 @@ import LogbookPage from './components/logbook/LogbookPage';
 import LogbookFAB from './components/logbook/LogbookFAB';
 import TreasuryPage from './components/treasure/TreasuryPage';
 import TreasureFAB from './components/treasure/TreasureFAB';
+import ChainOfferCard from './components/chain/ChainOfferCard';
+import ChainChip from './components/chain/ChainChip';
+import ChainSheet from './components/chain/ChainSheet';
+import { useChainStore } from './stores/useChainStore';
 import { useUserLocation } from './hooks/useUserLocation';
 import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useSideQuestSpawner } from './hooks/useSideQuestSpawner';
@@ -32,7 +36,7 @@ import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
-import { useDragonStore } from './stores/useDragonStore';
+import { usePetStore, selectActivePet } from './stores/usePetStore';
 import { useAchievementStore } from './stores/useAchievementStore';
 import { useDailySideQuestStore } from './stores/useDailySideQuestStore';
 import { fetchQuests } from './services/quest.service';
@@ -62,7 +66,8 @@ function AppContent() {
   const locationError = useMapStore((s) => s.locationError);
   const activeTab = useUIStore((s) => s.activeTab);
   const setTotalUnread = useChatStore((s) => s.setTotalUnread);
-  const fetchDragon = useDragonStore((s) => s.fetchDragon);
+  const fetchPets = usePetStore((s) => s.fetchPets);
+  const activePet = usePetStore((s) => selectActivePet(s));
   const fetchAchievements = useAchievementStore((s) => s.fetchAchievements);
   const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
   const fetchTreasureInventory = useTreasureStore((s) => s.fetchInventory);
@@ -90,12 +95,23 @@ function AppContent() {
       .catch(() => {});
   }, [isAuthenticated, setTotalUnread]);
 
-  // Fetch dragon when authenticated and user has a dragon
+  // Fetch the menagerie when authenticated — the backend hands out the
+  // mystery starter egg on first fetch.
   useEffect(() => {
-    if (isAuthenticated && user?.hasDragon) {
-      fetchDragon();
+    if (isAuthenticated) {
+      void fetchPets();
     }
-  }, [isAuthenticated, user?.hasDragon, fetchDragon]);
+  }, [isAuthenticated, fetchPets]);
+
+  // The hatched companion scouts the neighborhood for a detective journey
+  // once location is known (the backend enforces the one-per-day cooldown).
+  const userLocation = useMapStore((s) => s.userLocation);
+  const loadChain = useChainStore((s) => s.loadChain);
+  useEffect(() => {
+    if (isAuthenticated && userLocation && activePet?.species) {
+      void loadChain(userLocation.lat, userLocation.lng);
+    }
+  }, [isAuthenticated, userLocation, activePet?.species, loadChain]);
 
   // Load achievements + daily side quests + treasure inventory when authenticated
   useEffect(() => {
@@ -121,8 +137,13 @@ function AppContent() {
       .catch(() => {});
   }, [isAuthenticated, showStreakModal]);
 
-  // Show dragon selection overlay for authenticated users without a dragon
-  const showDragonSelection = isAuthenticated && user && user.hasDragon === false;
+  // One-time egg intro for users whose active companion is an unhatched egg
+  const showEggIntro =
+    isAuthenticated &&
+    !!user &&
+    !!activePet &&
+    !activePet.species &&
+    !hasSeenEggIntro();
 
   return (
     <AppShell>
@@ -138,6 +159,10 @@ function AppContent() {
             Standort nicht verfuegbar - Entfernungsfilter deaktiviert
           </div>
         )}
+
+        {/* Detective journey: pending offer + running-journey chip */}
+        <ChainOfferCard />
+        <ChainChip />
       </div>
 
       {/* Chat tab */}
@@ -154,8 +179,11 @@ function AppContent() {
       {/* Auth prompt overlay */}
       <AuthPrompt />
 
-      {/* Dragon selection overlay */}
-      {showDragonSelection && <DragonSelection />}
+      {/* Mystery egg intro overlay */}
+      {showEggIntro && <EggIntro />}
+
+      {/* Detective journey story sheet */}
+      <ChainSheet />
 
       {/* SideQuest detail screen (full page + logbook comments) */}
       <SideQuestDetailScreen />

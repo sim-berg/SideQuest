@@ -9,7 +9,7 @@ import {
   DailySideQuestSchema,
 } from './schemas/daily-sidequest.schema.js';
 import { GeoModule } from '../geo/geo.module.js';
-import { DragonModule } from '../dragon/dragon.module.js';
+import { PetModule } from '../pet/pet.module.js';
 import { UserModule } from '../user/user.module.js';
 import { AchievementModule } from '../achievement/achievement.module.js';
 import { TreasureModule } from '../treasure/treasure.module.js';
@@ -21,7 +21,7 @@ import { TreasureModule } from '../treasure/treasure.module.js';
       { name: DailySideQuest.name, schema: DailySideQuestSchema },
     ]),
     GeoModule,
-    DragonModule,
+    PetModule,
     UserModule,
     AchievementModule,
     TreasureModule,

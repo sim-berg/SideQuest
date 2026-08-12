@@ -9,6 +9,7 @@ import QuestMarkerLayer from './QuestMarkerLayer';
 import SideQuestMarkerLayer from './SideQuestMarkerLayer';
 import RouteLayer from './RouteLayer';
 import TreasureMarkerLayer from './TreasureMarkerLayer';
+import ChainMarkerLayer from './ChainMarkerLayer';
 import SideQuestPeekCard from '../sidequest/SideQuestPeekCard';
 import QuestPeekCard from '../quest/QuestPeekCard';
 import TreasurePeekCard from '../treasure/TreasurePeekCard';
@@ -73,6 +74,7 @@ export default function QuestMap() {
         <QuestMarkerLayer />
         <SideQuestMarkerLayer />
         <TreasureMarkerLayer />
+        <ChainMarkerLayer />
         <NearbyUsersLayer />
 
         {/* Floating cards above the selected marker (Google-Maps style) */}

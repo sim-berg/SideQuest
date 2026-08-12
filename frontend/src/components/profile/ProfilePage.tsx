@@ -3,7 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
-import DragonDisplay from '../dragon/DragonDisplay';
+import PetDisplay from '../pet/PetDisplay';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -88,9 +88,9 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* Dragon */}
+        {/* Companion + menagerie */}
         <div className="mb-6">
-          <DragonDisplay />
+          <PetDisplay />
         </div>
 
         {/* Display Name */}

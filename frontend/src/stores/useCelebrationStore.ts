@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { XpResult, EvolutionStage } from '../types/dragon';
+import type { XpResult, PetStage, Pet } from '../types/pet';
 
 export type CelebrationType =
   | 'accept'
   | 'complete'
   | 'evolution'
-  | 'achievement';
+  | 'achievement'
+  | 'hatch';
 
 export interface Celebration {
   id: number;
@@ -15,11 +16,13 @@ export interface Celebration {
   /** XP payload for complete celebrations. */
   xpResult?: XpResult;
   /** Evolution payload. */
-  fromStage?: EvolutionStage;
-  toStage?: EvolutionStage;
+  fromStage?: PetStage;
+  toStage?: PetStage;
   /** Achievement payload. */
   description?: string;
   imageUrl?: string | null;
+  /** Freshly hatched pet. */
+  pet?: Pet;
 }
 
 interface CelebrationState {

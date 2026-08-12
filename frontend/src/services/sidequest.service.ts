@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { Quest } from '../types/quest';
 import type { DailyBoard, DailySideQuest } from '../types/sidequest';
-import type { XpResult } from '../types/dragon';
+import type { Pet, XpResult } from '../types/pet';
 import type { Achievement } from '../types/achievement';
 
 /**
@@ -27,6 +27,8 @@ export interface DailyCompleteResult {
   achievements: Achievement[];
   /** Extra XP granted for clearing the whole board (0 when not cleared). */
   bonusXp: number;
+  /** The freshly hatched pet when clearing this board cracked the egg. */
+  hatch: Pet | null;
   board: DailyBoard;
 }
 

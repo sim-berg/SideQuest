@@ -13,6 +13,7 @@ import {
   DailySideQuest,
   DailySideQuestSchema,
 } from '../quest/schemas/daily-sidequest.schema.js';
+import { Pet, PetSchema } from '../pet/schemas/pet.schema.js';
 import { GeoModule } from '../geo/geo.module.js';
 
 @Module({
@@ -24,6 +25,8 @@ import { GeoModule } from '../geo/geo.module.js';
       // (completed side quests) — no dependency on QuestModule itself.
       { name: Quest.name, schema: QuestSchema },
       { name: DailySideQuest.name, schema: DailySideQuestSchema },
+      // Pet model read-only: chain-earned perks extend the collect radius.
+      { name: Pet.name, schema: PetSchema },
     ]),
     GeoModule,
   ],

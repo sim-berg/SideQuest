@@ -1,6 +1,6 @@
 import { api } from './api';
 import type { Quest } from '../types/quest';
-import type { XpResult } from '../types/dragon';
+import type { XpResult } from '../types/pet';
 import type { Achievement } from '../types/achievement';
 
 export interface CompleteQuestResult {

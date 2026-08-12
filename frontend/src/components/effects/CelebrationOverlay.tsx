@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCelebrationStore, type Celebration } from '../../stores/useCelebrationStore';
-import { DRAGON_META, EVOLUTION_LABELS } from '../../constants/dragons';
-import { useDragonStore } from '../../stores/useDragonStore';
+import {
+  ELEMENT_META,
+  SPECIES_EMOJI,
+  STAGE_LABELS,
+  RARITY_META,
+} from '../../constants/pets';
+import { usePetStore, selectActivePet } from '../../stores/usePetStore';
 
 const CONFETTI_COLORS = [
   '#f59e0b',
@@ -168,10 +173,11 @@ function CompleteCard({ c }: { c: Celebration }) {
 }
 
 function EvolutionCard({ c }: { c: Celebration }) {
-  const dragon = useDragonStore((s) => s.dragon);
-  const meta = dragon ? DRAGON_META[dragon.type] : null;
-  const fromEmoji = meta && c.fromStage ? meta.emoji[c.fromStage] : '🥚';
-  const toEmoji = meta && c.toStage ? meta.emoji[c.toStage] : '🐲';
+  const pet = usePetStore((s) => selectActivePet(s));
+  const speciesEmoji =
+    (pet?.species && SPECIES_EMOJI[pet.species]) || '🐾';
+  const fromEmoji = c.fromStage === 'egg' ? '🥚' : speciesEmoji;
+  const toEmoji = speciesEmoji;
 
   return (
     <div className="relative flex flex-col items-center text-center">
@@ -182,7 +188,7 @@ function EvolutionCard({ c }: { c: Celebration }) {
         animate={{ y: 0, opacity: 1 }}
         className="relative z-10 text-xl font-bold uppercase tracking-widest text-amber-200"
       >
-        Dein Drache entwickelt sich!
+        Dein Gefährte entwickelt sich!
       </motion.h2>
 
       <div className="relative z-10 mt-6 flex items-center gap-4">
@@ -218,8 +224,91 @@ function EvolutionCard({ c }: { c: Celebration }) {
           transition={{ delay: 1.4 }}
           className="relative z-10 mt-6 text-2xl font-black text-white"
         >
-          {EVOLUTION_LABELS[c.toStage]}
+          {STAGE_LABELS[c.toStage]}
         </motion.p>
+      )}
+    </div>
+  );
+}
+
+function HatchCard({ c }: { c: Celebration }) {
+  const pet = c.pet;
+  const element = pet?.element ? ELEMENT_META[pet.element] : null;
+  const speciesEmoji =
+    (pet?.species && SPECIES_EMOJI[pet.species]) || '🐾';
+  const rarity = pet?.rarity ? RARITY_META[pet.rarity] : null;
+
+  return (
+    <div className="relative flex flex-col items-center text-center">
+      <Rays />
+      <Confetti count={90} />
+      <motion.p
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative z-10 text-sm font-bold uppercase tracking-[0.3em] text-amber-200"
+      >
+        Dein Ei schlüpft!
+      </motion.p>
+
+      <div className="relative z-10 mt-6 flex h-32 items-center justify-center">
+        <motion.span
+          initial={{ scale: 1, rotate: 0, opacity: 1 }}
+          animate={{
+            rotate: [0, -8, 8, -12, 12, 0],
+            scale: [1, 1.05, 1.1, 0.4],
+            opacity: [1, 1, 1, 0],
+          }}
+          transition={{ duration: 1.4, times: [0, 0.3, 0.6, 1] }}
+          className="absolute text-8xl"
+        >
+          🥚
+        </motion.span>
+        <motion.span
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: [0, 1.5, 1.15], opacity: 1 }}
+          transition={{ delay: 1.3, duration: 0.8, type: 'spring', stiffness: 220 }}
+          className="text-8xl"
+          style={{
+            filter: element
+              ? `drop-shadow(0 0 28px ${element.color})`
+              : undefined,
+          }}
+        >
+          {speciesEmoji}
+        </motion.span>
+      </div>
+
+      {pet && (
+        <>
+          <motion.h2
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.7 }}
+            className="relative z-10 mt-5 text-3xl font-black text-white"
+          >
+            {element?.name}-{pet.speciesName}
+          </motion.h2>
+          {rarity && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2.0 }}
+              className="relative z-10 mt-1 text-sm font-bold uppercase tracking-widest"
+              style={{ color: rarity.color }}
+            >
+              {rarity.label}
+            </motion.p>
+          )}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.2 }}
+            className="relative z-10 mt-3 max-w-xs text-sm text-white/80"
+          >
+            {element?.emoji} Dein Gefährte wird dich von nun an auf allen
+            Quests begleiten.
+          </motion.p>
+        </>
       )}
     </div>
   );
@@ -286,6 +375,7 @@ const DURATIONS: Record<Celebration['type'], number> = {
   complete: 3200,
   evolution: 3800,
   achievement: 4000,
+  hatch: 5200,
 };
 
 function CelebrationView({ c }: { c: Celebration }) {
@@ -309,6 +399,7 @@ function CelebrationView({ c }: { c: Celebration }) {
       {c.type === 'complete' && <CompleteCard c={c} />}
       {c.type === 'evolution' && <EvolutionCard c={c} />}
       {c.type === 'achievement' && <AchievementCard c={c} />}
+      {c.type === 'hatch' && <HatchCard c={c} />}
     </motion.div>
   );
 }
