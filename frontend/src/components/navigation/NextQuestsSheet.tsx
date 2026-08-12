@@ -17,6 +17,10 @@ const ALL_CATEGORIES = Object.values(Category);
 /** Keep the list glanceable — the sheet is a shortcut, not the logbook. */
 const MAX_CARDS = 8;
 
+/** Older quests come back without a category/difficulty — don't crash on them. */
+const FALLBACK_CATEGORY = { label: 'Quest', color: '#64748b', icon: '📜' };
+const FALLBACK_DIFFICULTY = { label: 'Mittel', color: '#eab308', xp: 50 };
+
 // ─── Trigger: the wordmark doubles as the sheet handle ────────────────────────
 
 /**
@@ -43,22 +47,33 @@ export function NextQuestsTrigger() {
       dragMomentum={false}
       onDragEnd={handleDragEnd}
       whileTap={{ scale: 0.97 }}
-      className="group flex cursor-grab flex-col items-center gap-1 rounded-2xl px-3 py-1 active:cursor-grabbing"
+      className={cn(
+        // Hangs off the top edge like an iPhone notch: square at the top,
+        // deeply rounded where it drops into the screen.
+        'group relative -mt-2 flex cursor-grab flex-col items-center gap-1 self-start rounded-b-[1.75rem]',
+        'bg-slate-900/92 px-5 pt-3 pb-2 shadow-lg shadow-slate-950/30 ring-1 ring-white/10 backdrop-blur-xl',
+        'transition-[padding,background-color] duration-300 active:cursor-grabbing',
+        'dark:bg-slate-950/92 dark:ring-white/[0.08]',
+        open && 'pb-2.5',
+      )}
       aria-expanded={open}
       aria-label="Quests in der Nähe"
     >
+      {/* glass highlight along the notch shoulders */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+
       <span className="flex items-center gap-1.5">
-        <span className="bg-gradient-to-br from-slate-900 to-slate-600 bg-clip-text text-lg font-black tracking-tight text-transparent drop-shadow-sm dark:from-white dark:to-slate-300">
+        <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-lg font-black tracking-tight text-transparent">
           SideQuest
         </span>
         {count > 0 && (
-          <span className="rounded-full bg-indigo-500/90 px-1.5 py-px text-[10px] font-bold text-white shadow-sm">
+          <span className="rounded-full bg-indigo-500 px-1.5 py-px text-[10px] font-bold text-white shadow-sm shadow-indigo-500/40">
             {count}
           </span>
         )}
         <ChevronDown
           className={cn(
-            'h-3.5 w-3.5 text-slate-500 transition-transform duration-300 dark:text-slate-400',
+            'h-3.5 w-3.5 text-slate-400 transition-transform duration-300',
             open && 'rotate-180',
           )}
         />
@@ -66,8 +81,8 @@ export function NextQuestsTrigger() {
       {/* grabber */}
       <span
         className={cn(
-          'h-1 w-8 rounded-full bg-slate-400/50 transition-all duration-300 group-hover:w-10 group-hover:bg-slate-500/60 dark:bg-slate-500/50',
-          open && 'w-10',
+          'h-1 w-8 rounded-full bg-white/25 transition-all duration-300 group-hover:w-11 group-hover:bg-white/45',
+          open && 'w-11 bg-white/45',
         )}
       />
     </motion.button>
@@ -132,8 +147,8 @@ function QuestCard({
   onSelect: (quest: Quest) => void;
 }) {
   const { quest, distance } = entry;
-  const meta = CATEGORY_META[quest.category];
-  const diff = DIFFICULTY_META[quest.difficulty ?? 'medium'];
+  const meta = CATEGORY_META[quest.category] ?? FALLBACK_CATEGORY;
+  const diff = DIFFICULTY_META[quest.difficulty] ?? FALLBACK_DIFFICULTY;
 
   return (
     <button
@@ -208,13 +223,11 @@ export default function NextQuestsSheet() {
   const [category, setCategory] = useState<Category | null>(null);
   const nearby = useNearbySideQuests();
 
-  const visible = useMemo(
-    () =>
-      nearby
-        .filter((n) => (category ? n.quest.category === category : true))
-        .slice(0, MAX_CARDS),
+  const filtered = useMemo(
+    () => nearby.filter((n) => (category ? n.quest.category === category : true)),
     [nearby, category],
   );
+  const visible = filtered.slice(0, MAX_CARDS);
 
   const handleSelect = (quest: Quest) => {
     if (quest.isSideQuest) {
@@ -269,7 +282,9 @@ export default function NextQuestsSheet() {
                     In deiner Nähe
                   </span>
                   <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                    {visible.length} Quest{visible.length === 1 ? '' : 's'}
+                    {filtered.length > visible.length
+                      ? `${visible.length} von ${filtered.length}`
+                      : `${visible.length} Quest${visible.length === 1 ? '' : 's'}`}
                   </span>
                 </div>
                 <CategoryPills value={category} onChange={setCategory} />

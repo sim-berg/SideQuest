@@ -4,7 +4,11 @@ import { useQuestStore } from '../stores/useQuestStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useMapStore } from '../stores/useMapStore';
 import { haversineDistance } from '../services/distance.service';
+import { Category } from '../types/quest';
 import type { Quest } from '../types/quest';
+
+/** Legacy rows can carry a null category — the map filter drops those too. */
+const KNOWN_CATEGORIES = new Set<string>(Object.values(Category));
 
 export interface NearbyQuest {
   quest: Quest;
@@ -32,6 +36,7 @@ export function useNearbySideQuests(): NearbyQuest[] {
 
     return [...byId.values()]
       .filter((q) => {
+        if (!KNOWN_CATEGORIES.has(q.category)) return false;
         if (q.completedBy) return false;
         // Somebody else grabbed it → not mine to walk to.
         if (q.acceptedBy && q.acceptedBy !== myId) return false;
