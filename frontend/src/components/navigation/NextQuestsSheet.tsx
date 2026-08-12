@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react';
-import { motion, AnimatePresence, type PanInfo } from 'motion/react';
-import { ChevronDown, MapPin, Clock, Compass, Check } from 'lucide-react';
+import {
+  motion,
+  animate,
+  useMotionValue,
+  useTransform,
+  AnimatePresence,
+  type PanInfo,
+} from 'motion/react';
+import { MapPin, Clock, Compass, Check } from 'lucide-react';
 import { Category } from '../../types/quest';
 import type { Quest } from '../../types/quest';
 import { CATEGORY_META } from '../../constants/categories';
@@ -35,20 +42,31 @@ export function NextQuestsTrigger() {
   const toggleTopSheet = useUIStore((s) => s.toggleTopSheet);
   const setTopSheetOpen = useUIStore((s) => s.setTopSheetOpen);
 
-  const handleDragEnd = (_: unknown, info: PanInfo) => {
+  // Pan instead of drag: the notch is welded to the top edge, so pulling it
+  // stretches it downward rather than sliding it away and baring the screen
+  // behind it.
+  const pull = useMotionValue(0);
+  // Grow the padding, not a scale — stretching the box would smear the text.
+  const paddingBottom = useTransform(
+    pull,
+    (v) => `${8 + Math.min(Math.max(v, 0), 90) * 0.22}px`,
+  );
+
+  const handlePan = (_: unknown, info: PanInfo) => {
+    pull.set(Math.max(0, info.offset.y));
+  };
+
+  const handlePanEnd = (_: unknown, info: PanInfo) => {
+    animate(pull, 0, { type: 'spring', stiffness: 500, damping: 32 });
     if (info.offset.y > 24 || info.velocity.y > 400) setTopSheetOpen(true);
   };
 
   return (
     <motion.button
       onClick={toggleTopSheet}
-      drag="y"
-      dragSnapToOrigin
-      dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={{ top: 0, bottom: 0.4 }}
-      dragMomentum={false}
-      onDragEnd={handleDragEnd}
-      whileTap={{ scale: 0.97 }}
+      onPan={handlePan}
+      onPanEnd={handlePanEnd}
+      style={{ paddingBottom }}
       className={cn(
         // Hangs off the top edge like an iPhone notch: square at the top,
         // deeply rounded where it drops into the screen.
@@ -63,16 +81,8 @@ export function NextQuestsTrigger() {
       {/* glass highlight along the notch shoulders */}
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
 
-      <span className="flex items-center gap-1.5">
-        <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-lg font-black tracking-tight text-transparent">
-          SideQuest
-        </span>
-        <ChevronDown
-          className={cn(
-            'h-3.5 w-3.5 text-slate-400 transition-transform duration-300',
-            open && 'rotate-180',
-          )}
-        />
+      <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-lg font-black tracking-tight text-transparent">
+        SideQuest
       </span>
       {/* grabber */}
       <span
@@ -320,14 +330,17 @@ export default function NextQuestsSheet() {
           />
 
           <motion.div
-            initial={{ y: -24, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -24, opacity: 0 }}
+            // Unrolls downward out of the notch: origin at the top, so no gap
+            // ever opens above the panel.
+            initial={{ scaleY: 0.86, opacity: 0 }}
+            animate={{ scaleY: 1, opacity: 1 }}
+            exit={{ scaleY: 0.86, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+            style={{ transformOrigin: 'top center' }}
             drag="y"
             dragSnapToOrigin
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.4, bottom: 0.05 }}
+            dragElastic={{ top: 0.35, bottom: 0 }}
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             className="mx-auto mt-1 w-full max-w-3xl px-2"
