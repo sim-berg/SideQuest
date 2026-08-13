@@ -16,6 +16,8 @@ interface UIState {
   petsOpen: boolean;
   /** Gilden placeholder overlay */
   guildsOpen: boolean;
+  /** Top sheet under the wordmark listing the nearest side quests. */
+  topSheetOpen: boolean;
   showAuthPrompt: boolean;
   pendingAuthTab: ActiveTab | null;
   /** Whether the user is currently picking a location on the map */
@@ -40,6 +42,8 @@ interface UIState {
   closePets: () => void;
   openGuilds: () => void;
   closeGuilds: () => void;
+  toggleTopSheet: () => void;
+  setTopSheetOpen: (open: boolean) => void;
   setShowAuthPrompt: (show: boolean, pendingTab?: ActiveTab) => void;
 }
 
@@ -51,6 +55,7 @@ export const useUIStore = create<UIState>((set) => ({
   hubMenuOpen: false,
   petsOpen: false,
   guildsOpen: false,
+  topSheetOpen: false,
   showAuthPrompt: false,
   pendingAuthTab: null,
   pickingLocation: false,
@@ -107,15 +112,32 @@ export const useUIStore = create<UIState>((set) => ({
     return set({ activeTab, createQuestOpen: false, pickingLocation: false, createWizardStep: 0, pickedLocation: null, hubMenuOpen: false });
   },
   toggleFilterPanel: () =>
-    set((s) => ({ filterPanelOpen: !s.filterPanelOpen, hubMenuOpen: false })),
+    set((s) => ({
+      filterPanelOpen: !s.filterPanelOpen,
+      hubMenuOpen: false,
+      topSheetOpen: false,
+    })),
   closeFilterPanel: () => set({ filterPanelOpen: false }),
   toggleHubMenu: () =>
-    set((s) => ({ hubMenuOpen: !s.hubMenuOpen, filterPanelOpen: false })),
+    set((s) => ({
+      hubMenuOpen: !s.hubMenuOpen,
+      filterPanelOpen: false,
+      topSheetOpen: false,
+    })),
   closeHubMenu: () => set({ hubMenuOpen: false }),
   openPets: () => set({ petsOpen: true, hubMenuOpen: false }),
   closePets: () => set({ petsOpen: false }),
   openGuilds: () => set({ guildsOpen: true, hubMenuOpen: false }),
   closeGuilds: () => set({ guildsOpen: false }),
+  // The top sheet owns the screen while open — the dropdowns step aside.
+  toggleTopSheet: () =>
+    set((s) => ({
+      topSheetOpen: !s.topSheetOpen,
+      hubMenuOpen: false,
+      filterPanelOpen: false,
+    })),
+  setTopSheetOpen: (topSheetOpen) =>
+    set({ topSheetOpen, hubMenuOpen: false, filterPanelOpen: false }),
   setShowAuthPrompt: (show, pendingTab) =>
     set({ showAuthPrompt: show, pendingAuthTab: pendingTab ?? null }),
 }));
