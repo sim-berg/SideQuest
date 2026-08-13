@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { User } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
@@ -7,7 +8,7 @@ import { fetchMySoul } from '../../services/user.service';
 import type { UserSoul } from '../../types/user';
 import { ELEMENT_META } from '../../constants/pets';
 import { scopeCss, isCssSafe } from '../../utils/profileCss';
-import PetDisplay from '../pet/PetDisplay';
+import OverlayPage from '../common/OverlayPage';
 import { ContributionCalendar } from './ContributionCalendar';
 
 export default function ProfilePage() {
@@ -16,6 +17,8 @@ export default function ProfilePage() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const darkMode = useUIStore((s) => s.darkMode);
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -26,9 +29,19 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const userId = user?.id;
   useEffect(() => {
+    if (!userId) return;
     fetchMySoul().then(setSoul).catch(() => {});
-  }, []);
+  }, [userId]);
+
+  // The profile needs a session — send visitors to the login screen
+  // instead of rendering an empty page.
+  useEffect(() => {
+    if (user) return;
+    setActiveTab('map');
+    setShowAuthPrompt(true, 'profile');
+  }, [user, setActiveTab, setShowAuthPrompt]);
 
   // Live preview: user CSS scoped to the profile card.
   const scopedCss = useMemo(
@@ -58,32 +71,20 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    // Leave the profile first so signing out lands on the map, not on the
+    // login screen the auth guard would otherwise open.
+    setActiveTab('map');
     await logout().catch(() => {});
     clearAuth();
   };
 
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-[1200px] h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-white/80 backdrop-blur-md dark:bg-slate-900/80 border border-white/20 dark:border-slate-800/20">
-      {/* Header */}
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100/20 px-5 pb-3 pt-5 dark:border-slate-800/20">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setActiveTab('map')}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-            </svg>
-          </button>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-            Profil
-          </h1>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-28 pt-6">
+    <OverlayPage
+      title="Profil"
+      icon={<User className="h-6 w-6 text-indigo-500" strokeWidth={2.2} />}
+      onClose={() => setActiveTab('map')}
+    >
+      <div>
         {/* Profile card — the user's CSS playground */}
         {scopedCss && <style>{scopedCss}</style>}
         <div className="profile-canvas mb-6 flex flex-col items-center rounded-2xl p-4">
@@ -172,11 +173,6 @@ export default function ProfilePage() {
             )}
           </div>
         )}
-
-        {/* Companion + menagerie */}
-        <div className="mb-6">
-          <PetDisplay />
-        </div>
 
         {/* Contributions Calendar */}
         <div className="mb-6">
@@ -298,7 +294,6 @@ export default function ProfilePage() {
           Abmelden
         </button>
       </div>
-      </div>
-    </div>
+    </OverlayPage>
   );
 }

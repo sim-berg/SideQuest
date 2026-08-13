@@ -20,9 +20,10 @@ import QuestDetailScreen from './components/quest/QuestDetailScreen';
 import RouteBanner from './components/route/RouteBanner';
 import CompassView from './components/compass/CompassView';
 import LogbookPage from './components/logbook/LogbookPage';
-import LogbookFAB from './components/logbook/LogbookFAB';
 import TreasuryPage from './components/treasure/TreasuryPage';
-import TreasureFAB from './components/treasure/TreasureFAB';
+import HubMenuFAB from './components/navigation/HubMenuFAB';
+import PetsPage from './components/pet/PetsPage';
+import GuildsPage from './components/guild/GuildsPage';
 import ChainOfferCard from './components/chain/ChainOfferCard';
 import ChainChip from './components/chain/ChainChip';
 import ChainSheet from './components/chain/ChainSheet';
@@ -310,6 +311,12 @@ function AppContent() {
       {/* Schatzkammer overlay (inventory + crafting) */}
       <TreasuryPage />
 
+      {/* Menagerie overlay */}
+      <PetsPage />
+
+      {/* Gilden placeholder overlay */}
+      <GuildsPage />
+
       {/* Celebration animations (accept / complete / evolution / achievement / hatch) */}
       <CelebrationOverlay />
 
@@ -322,11 +329,8 @@ function AppContent() {
       {/* New Quest FAB */}
       <NewQuestFAB />
 
-      {/* Logbook FAB */}
-      <LogbookFAB />
-
-      {/* Schatzkammer FAB */}
-      <TreasureFAB />
+      {/* Hub menu FAB (Logbuch, Schatzkammer, Pets, Profil, Clans) */}
+      <HubMenuFAB />
 
       {/* Toast notifications */}
       <ToastContainer />

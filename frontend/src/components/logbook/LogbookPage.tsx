@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  BookOpen,
   CircleCheck,
   Sparkles,
   MapPin,
@@ -7,6 +8,7 @@ import {
   MessageSquare,
   User,
 } from 'lucide-react';
+import OverlayPage from '../common/OverlayPage';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLogbookStore } from '../../stores/useLogbookStore';
 import { useAchievementStore } from '../../stores/useAchievementStore';
@@ -445,34 +447,27 @@ export default function LogbookPage() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-white dark:bg-slate-900">
-      {/* Top bar — back, title, chat + profile shortcuts */}
-      <div className="flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2">
-        <button
-          onClick={close}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          aria-label="Zurück"
-        >
-          ←
-        </button>
-        <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Logbuch</span>
-
-        <div className="ml-auto flex items-center gap-2">
+    <OverlayPage
+      title="Logbuch"
+      icon={<BookOpen className="h-6 w-6 text-amber-500" strokeWidth={2.2} />}
+      onClose={close}
+      actions={
+        <>
           <button
             onClick={() => goToTab('chat')}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Chat öffnen"
           >
             <MessageSquare className="h-5 w-5" />
             {totalUnread > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                 {totalUnread > 99 ? '99+' : totalUnread}
               </span>
             )}
           </button>
           <button
             onClick={() => goToTab('profile')}
-            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             aria-label="Profil öffnen"
           >
             {avatarUrl ? (
@@ -481,10 +476,10 @@ export default function LogbookPage() {
               <User className="h-5 w-5" />
             )}
           </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 pb-10">
+        </>
+      }
+    >
+      <div>
 
         {/* Streak banner + 4 stat cards */}
         <StreakStatsBlock
@@ -597,6 +592,6 @@ export default function LogbookPage() {
           </div>
         )}
       </div>
-    </div>
+    </OverlayPage>
   );
 }
