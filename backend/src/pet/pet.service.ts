@@ -19,6 +19,7 @@ import {
   UserItemDocument,
 } from '../treasure/schemas/user-item.schema.js';
 import { getTreasureItem } from '../treasure/treasure-catalog.js';
+import { PetImageService } from './pet-image.service.js';
 import {
   SPECIES,
   ELEMENTS,
@@ -90,6 +91,7 @@ export class PetService {
     @InjectModel(Quest.name) private questModel: Model<QuestDocument>,
     @InjectModel(UserItem.name) private userItemModel: Model<UserItemDocument>,
     private readonly userService: UserService,
+    private readonly petImageService: PetImageService,
   ) {}
 
   /** All pets of a user, starter egg created lazily on first call. */
@@ -145,6 +147,8 @@ export class PetService {
     doc.hatchedAt = new Date();
     doc.soul = this.buildFallbackSoul(doc);
     await doc.save();
+    // Warm the (shared) hatchling portrait so the first look is instant.
+    void this.petImageService.pregenerate(doc);
     return toPlainPet(doc);
   }
 
@@ -271,6 +275,7 @@ export class PetService {
         (treasureMultiplier + perkBoost),
     );
 
+    const prevStage = doc.stage;
     doc.xp += totalXp;
     doc.stage = doc.species ? this.calculateStage(doc.xp) : PetStage.EGG;
     if (opts.category) {
@@ -286,6 +291,12 @@ export class PetService {
     doc.questsCompletedToday = isFirstOfDay ? 1 : doc.questsCompletedToday + 1;
     doc.lastQuestDate = today;
     await doc.save();
+
+    // Evolution! Kick off the unique soul-infused portrait in the
+    // background — the frontend's ceremony masks the generation time.
+    if (doc.species && doc.stage !== prevStage) {
+      void this.petImageService.pregenerate(doc);
+    }
 
     return {
       xpAwarded: totalXp,

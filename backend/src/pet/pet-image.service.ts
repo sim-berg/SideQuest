@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Pet, PetDocument } from './schemas/pet.schema.js';
@@ -6,6 +6,7 @@ import { PetStage } from './enums/pet-stage.enum.js';
 import { Element } from './enums/element.enum.js';
 import { ELEMENTS, getSpeciesDef } from './pet-catalog.js';
 import { ReplicateService } from '../achievement/replicate.service.js';
+import { getTreasureItem } from '../treasure/treasure-catalog.js';
 
 /** English stage wording for the image prompt. */
 const STAGE_PROMPT: Record<string, string> = {
@@ -46,13 +47,42 @@ const ELEMENT_PROMPT: Record<Element, string> = {
 };
 
 /**
- * Lazily generates the visual identity of a pet: one portrait per
- * (species, element, stage) combination, generated via Replicate and shared
- * across all pets of that combination — consistent looks, one-time cost.
- * The resulting URL is also stored on the pet (`images[stage]`).
+ * How a pet's lived quest history shows up in its unique portrait: the
+ * dominant soulXp categories translate to visible traits.
+ */
+const CATEGORY_TRAIT: Record<string, string> = {
+  sport:
+    'athletic and battle-ready, toned body, dynamic energetic pose, sweatband-style markings',
+  social:
+    'warm radiant expression, festive charms and friendship tokens woven into its fur',
+  adventure:
+    'weathered explorer look, tiny satchel and rolled map, wind-swept fur, distant-horizon gaze',
+  skill:
+    'clever focused eyes, softly glowing sigils of mastery orbiting its head',
+  mystery:
+    'enigmatic aura, wisps of arcane mist curling around it, faint mysterious runes',
+};
+
+/**
+ * The visual identity of a pet.
+ *
+ *  - HATCHLING: one shared portrait per (species, element) combination —
+ *    cheap, instantly recognizable, and this stage arrives minutes after
+ *    the first cleared daily board.
+ *  - JUVENILE and beyond: a one-of-a-kind, soul-infused portrait per pet.
+ *    The prompt encodes how this individual actually lived: dominant
+ *    soulXp categories, equipped treasures and its soul.md quirks. The
+ *    image is stored on the pet document, so it travels along in trades.
+ *
+ * Evolution triggers background pre-generation (see PetService), so the
+ * portrait is usually ready by the time the evolution ceremony ends.
  */
 @Injectable()
 export class PetImageService {
+  private readonly logger = new Logger(PetImageService.name);
+  // De-dupes concurrent generations (pregenerate + a UI fetch racing).
+  private readonly inflight = new Map<string, Promise<string>>();
+
   constructor(
     @InjectModel(Pet.name) private petModel: Model<PetDocument>,
     private readonly replicate: ReplicateService,
@@ -71,25 +101,63 @@ export class PetImageService {
     const existing = (doc.images ?? {})[doc.stage];
     if (existing) return { imageUrl: existing };
 
-    const imageUrl = await this.generate(doc);
-    doc.images = { ...(doc.images ?? {}), [doc.stage]: imageUrl };
-    doc.markModified('images');
-    await doc.save();
-    return { imageUrl };
+    return { imageUrl: await this.generateAndStore(doc) };
   }
 
-  private async generate(doc: PetDocument): Promise<string> {
+  /**
+   * Fire-and-forget warm-up, called when a pet hatches or evolves so the
+   * portrait is (usually) ready before anyone asks for it. Never throws.
+   */
+  async pregenerate(doc: PetDocument): Promise<void> {
+    try {
+      if (!doc.species || !doc.element || doc.stage === PetStage.EGG) return;
+      if ((doc.images ?? {})[doc.stage]) return;
+      await this.generateAndStore(doc);
+    } catch (err) {
+      this.logger.error(`pregenerate failed for pet ${doc._id}`, err as Error);
+    }
+  }
+
+  private async generateAndStore(doc: PetDocument): Promise<string> {
+    const unique = doc.stage !== PetStage.HATCHLING;
+    const key = unique
+      ? `pet_${doc._id.toString()}_${doc.stage}`
+      : `pet_${doc.species}_${doc.element}_${doc.stage}`;
+
+    let task = this.inflight.get(key);
+    if (!task) {
+      task = this.generate(doc, key, unique);
+      this.inflight.set(key, task);
+      task.finally(() => this.inflight.delete(key)).catch(() => {});
+    }
+    const imageUrl = await task;
+
+    // Atomic $set — pregenerate and UI fetches may race on the same pet.
+    await this.petModel
+      .updateOne(
+        { _id: doc._id },
+        { $set: { [`images.${doc.stage}`]: imageUrl } },
+      )
+      .exec();
+    return imageUrl;
+  }
+
+  private generate(
+    doc: PetDocument,
+    key: string,
+    unique: boolean,
+  ): Promise<string> {
     const species = getSpeciesDef(doc.species!);
     const element = ELEMENTS[doc.element!];
-    const key = `pet_${doc.species}_${doc.element}_${doc.stage}`;
 
     const prompt =
       `Fantasy creature portrait for a mobile adventure game: a ${
         STAGE_PROMPT[doc.stage] ?? STAGE_PROMPT[PetStage.ADULT]
       } ${speciesEnglishHint(doc.species!)} as a ${
         ELEMENT_PROMPT[doc.element!]
-      }. Centered character portrait, painterly digital art, vibrant colors, ` +
-      `soft magical background, cute yet epic, no text, no words, no letters.`;
+      }.${unique ? this.soulFlavor(doc) : ''} Centered character portrait, ` +
+      `painterly digital art, vibrant colors, soft magical background, ` +
+      `cute yet epic, no text, no words, no letters.`;
 
     return this.replicate.generatePortrait({
       key,
@@ -98,6 +166,56 @@ export class PetImageService {
       colors: [element.color, '#1e293b'],
     });
   }
+
+  /**
+   * What makes THIS pet one of a kind: its lived quest history (soulXp),
+   * the treasures it carries and the quirks of its soul.md.
+   */
+  private soulFlavor(doc: PetDocument): string {
+    const parts: string[] = [];
+
+    const dominant = Object.entries(doc.soulXp ?? {})
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2);
+    for (const [category] of dominant) {
+      const trait = CATEGORY_TRAIT[category];
+      if (trait) parts.push(trait);
+    }
+
+    const treasures = (doc.equipment ?? [])
+      .map((id) => getTreasureItem(id)?.name)
+      .filter((name): name is string => !!name);
+    if (treasures.length > 0) {
+      parts.push(`adorned with its magical treasures: ${treasures.join(', ')}`);
+    }
+
+    const quirks = extractQuirks(doc.soul ?? '');
+    if (quirks) {
+      parts.push(`its personality (German notes): "${quirks}"`);
+    }
+
+    if (parts.length === 0) return '';
+    return ` This is a unique, one-of-a-kind individual shaped by its life with its human: ${parts.join(
+      '; ',
+    )}.`;
+  }
+}
+
+/**
+ * Pull the "## Eigenheiten" bullet points out of a pet's soul.md — the
+ * lovable quirks the LLM gave it at hatch — trimmed for a prompt.
+ */
+export function extractQuirks(soul: string): string {
+  const match = soul.match(/##\s*Eigenheiten([\s\S]*?)(?=\n#|$)/);
+  if (!match) return '';
+  const quirks = match[1]
+    .split('\n')
+    .map((line) => line.replace(/^[-*\s]+/, '').replace(/[*_`]/g, '').trim())
+    .filter((line) => line.length > 0)
+    .slice(0, 3)
+    .join(', ');
+  return quirks.slice(0, 220);
 }
 
 /**

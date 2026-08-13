@@ -413,7 +413,12 @@ export default function LogbookPage() {
           // A hatch gets its own ceremony; the plain evolution card would
           // just be noise on top of it.
           if (!result.hatch && prevStage && newStage !== prevStage) {
-            celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
+            celebrate({
+              type: 'evolution',
+              fromStage: prevStage,
+              toStage: newStage,
+              petId: result.xpResult.pet.id,
+            });
           }
         }
         if (result.hatch) {
