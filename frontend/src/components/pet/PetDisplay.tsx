@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { usePetStore, selectActivePet } from '../../stores/usePetStore';
 import { activatePet, renamePet, fetchPetImage } from '../../services/pet.service';
-import { ELEMENT_META, STAGE_LABELS, MOOD_META, RARITY_META } from '../../constants/pets';
+import {
+  ELEMENT_META,
+  STAGE_LABELS,
+  MOOD_META,
+  RARITY_META,
+  SPECIES_EMOJI,
+} from '../../constants/pets';
 import { CATEGORY_META } from '../../constants/categories';
 import { getPetMood, getNextStageThreshold } from '../../utils/pet';
 import PetAvatar from './PetAvatar';
@@ -13,6 +20,10 @@ import { cn } from '../../utils/cn';
 /**
  * Profile card for the active companion plus the menagerie strip: every pet
  * the user has collected, tap to make one the active guide.
+ *
+ * The portrait is a flip card: front shows the big generated picture with the
+ * XP bar pinned to its bottom edge, tapping it turns the card around to the
+ * soul status (alignment, Seelenwachstum, soul document).
  */
 export default function PetDisplay() {
   const pets = usePetStore((s) => s.pets);
@@ -20,7 +31,7 @@ export default function PetDisplay() {
   const active = selectActivePet({ pets });
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
-  const [soulOpen, setSoulOpen] = useState(false);
+  const [flipped, setFlipped] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [tradeOpen, setTradeOpen] = useState(false);
 
@@ -50,6 +61,9 @@ export default function PetDisplay() {
     };
   }, [activeId, needsImage, upsertPet]);
 
+  // Always show the front again when the active companion changes.
+  useEffect(() => setFlipped(false), [activeId]);
+
   if (!active) return null;
 
   const isEgg = !active.species;
@@ -64,6 +78,18 @@ export default function PetDisplay() {
           (threshold.nextXp - threshold.currentXp),
       )
     : 1;
+  const nextStageLabel =
+    STAGE_LABELS[
+      isEgg ? 'hatchling' : (getStageAfter(active.stage) ?? active.stage)
+    ];
+
+  const soulEntries = Object.entries(active.soulXp ?? {}).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const soulMax = Math.max(1, ...soulEntries.map(([, v]) => v));
+  const alignmentMeta = active.soulAlignment
+    ? CATEGORY_META[active.soulAlignment as keyof typeof CATEGORY_META]
+    : null;
 
   const handleActivate = async (id: string) => {
     if (id === active.id) return;
@@ -90,125 +116,208 @@ export default function PetDisplay() {
       className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
       style={{ background: `linear-gradient(135deg, ${color}14, transparent 60%)` }}
     >
-      <div className="flex items-center gap-4">
-        <PetAvatar pet={active} size={64} />
-        <div className="min-w-0 flex-1">
-          {isEgg ? (
-            <>
-              <p className="font-bold text-slate-900 dark:text-white">
-                Mysteriöses Ei
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Schließe alle Daily-Quests eines Tages ab, um es auszubrüten.
-              </p>
-            </>
-          ) : (
-            <>
-              {editingName ? (
-                <input
-                  autoFocus
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onBlur={handleRename}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                  maxLength={24}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                />
-              ) : (
-                <button
-                  onClick={() => {
-                    setNameDraft(active.name ?? '');
-                    setEditingName(true);
-                  }}
-                  className="truncate text-left font-bold text-slate-900 dark:text-white"
+      {/* Portrait flip card */}
+      <div className="[perspective:1200px]">
+        <motion.div
+          className={cn('relative aspect-square w-full', !isEgg && 'cursor-pointer')}
+          style={{ transformStyle: 'preserve-3d' }}
+          animate={{ rotateY: flipped ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+          onClick={() => !isEgg && setFlipped((f) => !f)}
+        >
+          {/* Front: the big portrait with the XP bar at its bottom edge */}
+          <div
+            className="absolute inset-0 overflow-hidden rounded-2xl [backface-visibility:hidden]"
+            style={{
+              background: isEgg
+                ? 'radial-gradient(circle at 35% 30%, #e2e8f088, #94a3b833)'
+                : `radial-gradient(circle at 35% 30%, ${color}44, ${color}11)`,
+            }}
+          >
+            {isEgg ? (
+              <div className="flex h-full w-full items-center justify-center">
+                <span className="text-[96px]">🥚</span>
+              </div>
+            ) : active.imageUrl ? (
+              <img
+                src={active.imageUrl}
+                alt={active.name ?? active.speciesName ?? 'Gefährte'}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <span
+                  className="text-[96px]"
+                  style={{ filter: `drop-shadow(0 0 24px ${color})` }}
                 >
-                  {active.name || `${element?.name}-${active.speciesName}`}
-                  <span className="ml-1 text-xs font-normal text-slate-400">✏️</span>
-                </button>
+                  {SPECIES_EMOJI[active.species!] ?? '🐾'}
+                </span>
+              </div>
+            )}
+
+            <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+              {isEgg ? 'Ei' : STAGE_LABELS[active.stage]}
+            </div>
+            {element && (
+              <div
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-base backdrop-blur-sm"
+                title={element.name}
+              >
+                {element.emoji}
+              </div>
+            )}
+
+            {/* XP bar pinned to the bottom of the picture */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-3 pb-3 pt-8">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-white/85">
+                <span>{active.xp} XP</span>
+                <span>
+                  {threshold
+                    ? `${threshold.nextXp} XP bis ${nextStageLabel}`
+                    : 'Maximale Stufe'}
+                </span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/25">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${progress * 100}%`, backgroundColor: color }}
+                />
+              </div>
+              {!isEgg && (
+                <p className="mt-1 text-center text-[10px] text-white/60">
+                  Antippen für den Seelenstatus
+                </p>
               )}
-              <p className="text-xs font-semibold" style={{ color }}>
-                {element?.name} · {active.speciesName}
-                {active.rarity && (
-                  <span
-                    className="ml-1.5"
-                    style={{ color: RARITY_META[active.rarity].color }}
-                  >
-                    {RARITY_META[active.rarity].label}
-                  </span>
-                )}
+            </div>
+          </div>
+
+          {/* Back: the soul status */}
+          <div
+            className="absolute inset-0 flex flex-col overflow-hidden rounded-2xl p-4 text-left [backface-visibility:hidden] [transform:rotateY(180deg)]"
+            style={{ background: `linear-gradient(160deg, ${color}40, #0f172a 70%)` }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-white/60">
+              Seelenstatus
+            </p>
+            {alignmentMeta && (
+              <p className="mt-1.5 text-sm font-bold text-white">
+                {alignmentMeta.icon} Gesinnung: {alignmentMeta.label}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                {STAGE_LABELS[active.stage]} · {mood.emoji} {mood.label}
+            )}
+
+            {soulEntries.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-1.5">
+                {soulEntries.map(([cat, count]) => {
+                  const catMeta =
+                    CATEGORY_META[cat as keyof typeof CATEGORY_META];
+                  return (
+                    <div key={cat} className="flex items-center gap-2">
+                      <span className="w-5 text-center text-xs">
+                        {catMeta?.icon ?? '✨'}
+                      </span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${(count / soulMax) * 100}%`,
+                            backgroundColor: catMeta?.color ?? color,
+                          }}
+                        />
+                      </div>
+                      <span className="w-6 text-right text-[10px] text-white/60">
+                        {count}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-white/70">
+                Die Seele deines Gefährten ist noch jung — schließe Quests ab,
+                um sie zu formen.
               </p>
-            </>
-          )}
-        </div>
+            )}
+
+            <p className="mt-3 text-xs text-white/80">
+              {mood.emoji} {mood.label}
+              {active.currentStreak > 0 && (
+                <> · 🔥 {active.currentStreak} Tage Streak</>
+              )}
+            </p>
+
+            {active.soul && (
+              <pre
+                onClick={(e) => e.stopPropagation()}
+                className="mt-3 min-h-0 flex-1 cursor-auto overflow-y-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 font-sans text-[11px] leading-relaxed text-white/85"
+              >
+                {active.soul}
+              </pre>
+            )}
+
+            <p className="mt-2 text-center text-[10px] text-white/50">
+              Antippen zum Umdrehen
+            </p>
+          </div>
+        </motion.div>
       </div>
 
-      {/* XP progress */}
-      <div className="mt-3">
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-          <span>{active.xp} XP</span>
-          <span>
-            {threshold
-              ? `${threshold.nextXp} XP bis ${
-                  STAGE_LABELS[
-                    isEgg
-                      ? 'hatchling'
-                      : (getStageAfter(active.stage) ?? active.stage)
-                  ]
-                }`
-              : 'Maximale Stufe'}
-          </span>
-        </div>
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${progress * 100}%`, backgroundColor: color }}
-          />
-        </div>
-        {active.currentStreak > 0 && (
-          <p className="mt-1.5 text-xs text-orange-500">
-            🔥 {active.currentStreak} Tage Streak
-          </p>
+      {/* Name + meta */}
+      <div className="mt-3 min-w-0">
+        {isEgg ? (
+          <>
+            <p className="font-bold text-slate-900 dark:text-white">
+              Mysteriöses Ei
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              Schließe alle Daily-Quests eines Tages ab, um es auszubrüten.
+            </p>
+          </>
+        ) : (
+          <>
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+                maxLength={24}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-bold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              />
+            ) : (
+              <button
+                onClick={() => {
+                  setNameDraft(active.name ?? '');
+                  setEditingName(true);
+                }}
+                className="truncate text-left font-bold text-slate-900 dark:text-white"
+              >
+                {active.name || `${element?.name}-${active.speciesName}`}
+                <span className="ml-1 text-xs font-normal text-slate-400">✏️</span>
+              </button>
+            )}
+            <p className="text-xs font-semibold" style={{ color }}>
+              {element?.name} · {active.speciesName}
+              {active.rarity && (
+                <span
+                  className="ml-1.5"
+                  style={{ color: RARITY_META[active.rarity].color }}
+                >
+                  {RARITY_META[active.rarity].label}
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              {STAGE_LABELS[active.stage]} · {mood.emoji} {mood.label}
+              {active.currentStreak > 0 && (
+                <span className="ml-1.5 text-orange-500">
+                  🔥 {active.currentStreak} Tage
+                </span>
+              )}
+            </p>
+          </>
         )}
       </div>
-
-      {/* Soul growth: which quest categories this pet lived through. */}
-      {!isEgg && Object.keys(active.soulXp ?? {}).length > 0 && (
-        <div className="mt-3">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Seelenwachstum
-          </p>
-          <div className="flex flex-col gap-1">
-            {Object.entries(active.soulXp)
-              .sort((a, b) => b[1] - a[1])
-              .map(([cat, count]) => {
-                const catMeta = CATEGORY_META[cat as keyof typeof CATEGORY_META];
-                const max = Math.max(...Object.values(active.soulXp));
-                return (
-                  <div key={cat} className="flex items-center gap-2">
-                    <span className="w-5 text-center text-xs">
-                      {catMeta?.icon ?? '✨'}
-                    </span>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${(count / max) * 100}%`,
-                          backgroundColor: catMeta?.color ?? color,
-                        }}
-                      />
-                    </div>
-                    <span className="w-6 text-right text-[10px] text-slate-400">
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
 
       {/* Equipment */}
       {!isEgg && <PetEquipment pet={active} />}
@@ -231,23 +340,6 @@ export default function PetDisplay() {
       </div>
       {chatOpen && <PetChat pet={active} onClose={() => setChatOpen(false)} />}
       {tradeOpen && <PetTradeSheet onClose={() => setTradeOpen(false)} />}
-
-      {/* Soul */}
-      {!isEgg && active.soul && (
-        <div className="mt-3">
-          <button
-            onClick={() => setSoulOpen(!soulOpen)}
-            className="text-xs font-semibold text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
-          >
-            {soulOpen ? 'Seele verbergen' : '📜 Seele ansehen'}
-          </button>
-          {soulOpen && (
-            <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-100 p-3 font-sans text-xs leading-relaxed text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {active.soul}
-            </pre>
-          )}
-        </div>
-      )}
 
       {/* Menagerie */}
       {pets.length > 1 && (
