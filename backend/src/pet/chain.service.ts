@@ -215,7 +215,9 @@ export class ChainService {
   async accept(userId: string, chainId: string): Promise<ChainView> {
     const doc = await this.getOwned(userId, chainId);
     if (doc.status !== 'offered') {
-      throw new BadRequestException('Diese Reise läuft bereits oder ist vorbei');
+      throw new BadRequestException(
+        'Diese Reise läuft bereits oder ist vorbei',
+      );
     }
     doc.status = 'active';
     doc.acceptedAt = new Date();
@@ -253,7 +255,9 @@ export class ChainService {
 
     const current = doc.steps.findIndex((s) => !s.completed);
     if (current === -1 || current !== stepIndex) {
-      throw new BadRequestException('Die Stationen müssen der Reihe nach gelöst werden');
+      throw new BadRequestException(
+        'Die Stationen müssen der Reihe nach gelöst werden',
+      );
     }
 
     const step = doc.steps[current];

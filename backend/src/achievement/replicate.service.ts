@@ -7,6 +7,7 @@ import type { AchievementDef } from './achievement-catalog.js';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'achievements');
 const SCENE_DIR = path.join(process.cwd(), 'uploads', 'sidequests');
+const PET_DIR = path.join(process.cwd(), 'uploads', 'pets');
 
 const EXT_BY_TYPE: Record<string, string> = {
   'image/png': 'png',
@@ -158,6 +159,55 @@ export class ReplicateService {
 
   private sceneUrl(file: string): string {
     return `${this.appUrl}/uploads/sidequests/${file}`;
+  }
+
+  /**
+   * Square character portrait (pets). Same contract as generateScene: cached
+   * on disk by key, Replicate when a token is configured, and a gradient
+   * SVG data-URI fallback so there is always something to show.
+   */
+  async generatePortrait(scene: SceneInput): Promise<string> {
+    await fs.mkdir(PET_DIR, { recursive: true });
+
+    const cached = await this.findCached(PET_DIR, scene.key);
+    if (cached) return this.petUrl(cached);
+
+    if (this.token) {
+      try {
+        const replicate = new Replicate({
+          auth: this.token,
+          useFileOutput: false,
+        });
+        const output = (await replicate.run(
+          this.sceneModel as `${string}/${string}`,
+          {
+            input: {
+              prompt: scene.prompt,
+              aspect_ratio: '1:1',
+              output_format: 'webp',
+            },
+          },
+        )) as unknown;
+
+        const url = this.firstUrl(output);
+        if (url) {
+          const file = await this.download(PET_DIR, scene.key, url);
+          this.logger.log(`Generated AI portrait for ${scene.key}`);
+          return this.petUrl(file);
+        }
+        this.logger.warn(`Replicate returned no URL for portrait ${scene.key}`);
+      } catch (err) {
+        this.logger.error(
+          `AI portrait generation failed for ${scene.key}: ${String(err)}`,
+        );
+      }
+    }
+
+    return this.sceneFallback(scene);
+  }
+
+  private petUrl(file: string): string {
+    return `${this.appUrl}/uploads/pets/${file}`;
   }
 
   /** Returns the cached image filename for a key, or null if none exists. */

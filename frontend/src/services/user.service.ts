@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Comment } from '../types/comment';
+import type { UserSoul } from '../types/user';
 
 export interface CheckinResult {
   streak: number;
@@ -23,4 +24,9 @@ export interface ActivityData {
 
 export async function fetchActivity(): Promise<ActivityData[]> {
   return api.get<ActivityData[]>('/users/me/activity');
+}
+
+/** My soul: soul.md + category/element affinity from completed quests. */
+export async function fetchMySoul(): Promise<UserSoul> {
+  return api.get<UserSoul>('/users/me/soul');
 }

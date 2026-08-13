@@ -20,6 +20,9 @@ import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance, formatTimeRemaining } from '../../utils/format';
 import RoundActionButton from '../sidequest/RoundActionButton';
 import CommentSection from '../sidequest/CommentSection';
+import EventQuestPanel from './EventQuestPanel';
+import WorldQuestPanel from './WorldQuestPanel';
+import { QuestType } from '../../types/quest';
 import type { LucideIcon } from 'lucide-react';
 
 function InfoChip({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
@@ -55,6 +58,9 @@ export default function QuestDetailScreen() {
 
   const meta = CATEGORY_META[quest.category];
   const diff = DIFFICULTY_META[quest.difficulty ?? 'medium'];
+  const questType = quest.type ?? QuestType.PERSONAL;
+  const hasOwnFlow =
+    questType === QuestType.EVENT || questType === QuestType.WORLD;
 
   return (
     <div className="fixed inset-0 z-[95] flex flex-col bg-white dark:bg-slate-900">
@@ -93,6 +99,16 @@ export default function QuestDetailScreen() {
             >
               {meta.label}
             </span>
+            {questType === QuestType.EVENT && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-bold text-white">
+                🤝 Event
+              </span>
+            )}
+            {questType === QuestType.WORLD && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500 px-2.5 py-1 text-xs font-bold text-white">
+                🌍 Welt
+              </span>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             {quest.title}
@@ -142,7 +158,12 @@ export default function QuestDetailScreen() {
             </button>
           </div>
 
+          {/* type-specific flows: presence (event) / QR redeem (world) */}
+          {questType === QuestType.EVENT && <EventQuestPanel quest={quest} />}
+          {questType === QuestType.WORLD && <WorldQuestPanel quest={quest} />}
+
           {/* actions */}
+          {!hasOwnFlow && (
           <div className="mb-6 flex items-start justify-around gap-2 rounded-2xl bg-slate-50 py-4 dark:bg-slate-800/50">
             {isAcceptedByMe ? (
               <>
@@ -172,6 +193,7 @@ export default function QuestDetailScreen() {
             )}
             <RoundActionButton icon={Share2} label="Teilen" onClick={share} />
           </div>
+          )}
 
           {/* logbook / comments */}
           <CommentSection questId={quest.id} />

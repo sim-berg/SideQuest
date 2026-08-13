@@ -29,6 +29,32 @@ export const GoalType = {
 
 export type GoalType = (typeof GoalType)[keyof typeof GoalType];
 
+export const QuestType = {
+  /** Solo quests: map quests, worker-spawned side quests, Logbuch dailies. */
+  PERSONAL: 'personal',
+  /** User-organized gatherings with a coin-staked reward pool. */
+  EVENT: 'event',
+  /** Firm-organized events, redeemed by scanning a QR code on site. */
+  WORLD: 'world',
+  /** Guild quests (guild system pending). */
+  COMMUNITY: 'community',
+} as const;
+
+export type QuestType = (typeof QuestType)[keyof typeof QuestType];
+
+/** My presence state at an event quest. */
+export interface EventParticipation {
+  joined: boolean;
+  presenceMinutes: number;
+  requiredMinutes: number;
+  qualified: boolean;
+  rewardPaid: boolean;
+  participantCount: number;
+  maxParticipants: number;
+  eventEndsAt: string | null;
+  ended: boolean;
+}
+
 export interface Quest {
   id: string;
   title: string;
@@ -50,6 +76,17 @@ export interface Quest {
   isSideQuest?: boolean;
   expiresAt?: string | null;
   templateId?: string | null;
+  type: QuestType;
+  createdBy: string | null;
+  // Event quest fields (type=event)
+  eventEndsAt: string | null;
+  requiredMinutes: number | null;
+  presenceRadiusM: number | null;
+  rewardPerParticipant: number | null;
+  maxParticipants: number | null;
+  eventFinalized: boolean;
+  // World quest fields (type=world)
+  hasQr: boolean;
   createdAt: string;
 }
 

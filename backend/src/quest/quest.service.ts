@@ -29,8 +29,11 @@ import {
   DailySideQuestDocument,
 } from './schemas/daily-sidequest.schema.js';
 import { GoalType } from './enums/goal-type.enum.js';
+import { QuestType } from './enums/quest-type.enum.js';
 import type { CompleteQuestDto } from './dto/complete-quest.dto.js';
 import { DAILY_QUESTS_POOL } from './data/daily-quests.data.js';
+import { CoinService } from '../coin/coin.service.js';
+import { DAILY_COIN_REWARD } from '../coin/coin.constants.js';
 
 function toPlain(doc: QuestDocument) {
   const obj = doc.toObject();
@@ -55,6 +58,16 @@ function toPlain(doc: QuestDocument) {
     isSideQuest: obj.isSideQuest ?? false,
     expiresAt: obj.expiresAt?.toISOString?.() ?? null,
     templateId: obj.templateId ?? null,
+    type: obj.type ?? QuestType.PERSONAL,
+    createdBy: obj.createdBy ?? null,
+    eventEndsAt: obj.eventEndsAt?.toISOString?.() ?? null,
+    requiredMinutes: obj.requiredMinutes ?? null,
+    presenceRadiusM: obj.presenceRadiusM ?? null,
+    rewardPerParticipant: obj.rewardPerParticipant ?? null,
+    maxParticipants: obj.maxParticipants ?? null,
+    eventFinalized: obj.eventFinalized ?? false,
+    // The QR secret stays server-side; clients only learn one exists.
+    hasQr: !!obj.qrToken,
     createdAt: obj.createdAt?.toISOString?.() ?? obj.createdAt,
   };
 }
@@ -85,14 +98,16 @@ const DAILY_BOARD_BONUS_XP = 40;
 
 // Per-category styling for the generated side quest scene (emoji + gradient
 // colors drive the fallback image when no Replicate token is configured).
-const SCENE_STYLE: Record<Category, { emoji: string; colors: [string, string] }> =
-  {
-    [Category.SPORT]: { emoji: '🏃', colors: ['#22c55e', '#0ea5e9'] },
-    [Category.SOCIAL]: { emoji: '🤝', colors: ['#3b82f6', '#8b5cf6'] },
-    [Category.ADVENTURE]: { emoji: '🧭', colors: ['#f59e0b', '#ef4444'] },
-    [Category.SKILL]: { emoji: '🧠', colors: ['#a855f7', '#ec4899'] },
-    [Category.MYSTERY]: { emoji: '🔮', colors: ['#6366f1', '#ef4444'] },
-  };
+const SCENE_STYLE: Record<
+  Category,
+  { emoji: string; colors: [string, string] }
+> = {
+  [Category.SPORT]: { emoji: '🏃', colors: ['#22c55e', '#0ea5e9'] },
+  [Category.SOCIAL]: { emoji: '🤝', colors: ['#3b82f6', '#8b5cf6'] },
+  [Category.ADVENTURE]: { emoji: '🧭', colors: ['#f59e0b', '#ef4444'] },
+  [Category.SKILL]: { emoji: '🧠', colors: ['#a855f7', '#ec4899'] },
+  [Category.MYSTERY]: { emoji: '🔮', colors: ['#6366f1', '#ef4444'] },
+};
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
@@ -149,6 +164,7 @@ export class QuestService {
     private readonly achievementService: AchievementService,
     private readonly replicate: ReplicateService,
     private readonly treasureService: TreasureService,
+    private readonly coinService: CoinService,
   ) {}
 
   // De-dupes concurrent image requests for the same key so we never kick off
@@ -197,6 +213,12 @@ export class QuestService {
 
     if (filter.categories?.length) {
       query.category = { $in: filter.categories };
+    }
+    if (filter.types?.length) {
+      // Legacy quests predate the type field and count as personal.
+      query.$or = filter.types.includes(QuestType.PERSONAL)
+        ? [{ type: { $in: filter.types } }, { type: { $exists: false } }]
+        : [{ type: { $in: filter.types } }];
     }
     if (filter.paidOnly) {
       query.reward = { $gt: 0 };
@@ -247,14 +269,16 @@ export class QuestService {
     return toPlain(doc);
   }
 
-  async completeQuest(
-    questId: string,
-    userId: string,
-    dto: CompleteQuestDto,
-  ) {
+  async completeQuest(questId: string, userId: string, dto: CompleteQuestDto) {
     const doc = await this.questModel.findById(questId).exec();
     if (!doc) throw new NotFoundException(`Quest ${questId} not found`);
 
+    // Event and world quests have their own flows (presence / QR redeem).
+    if (doc.type === QuestType.EVENT || doc.type === QuestType.WORLD) {
+      throw new BadRequestException(
+        'Dieses Quest wird über Teilnahme bzw. QR-Code abgeschlossen',
+      );
+    }
     if (doc.acceptedBy !== userId) {
       throw new BadRequestException('Quest not accepted by this user');
     }
@@ -267,7 +291,9 @@ export class QuestService {
     // GPS proximity check only for proximity quests
     if (goalType === GoalType.PROXIMITY) {
       if (dto.lat == null || dto.lng == null) {
-        throw new BadRequestException('Coordinates required for proximity quest');
+        throw new BadRequestException(
+          'Coordinates required for proximity quest',
+        );
       }
       const distance = this.geoService.haversine(
         dto.lat,
@@ -289,12 +315,22 @@ export class QuestService {
 
     // Award XP — carried treasure items can boost the multiplier
     const baseXp = XP_BY_DIFFICULTY[doc.difficulty ?? Difficulty.MEDIUM] ?? 50;
-    const treasureMultiplier = await this.treasureService.getXpMultiplier(userId);
+    const treasureMultiplier =
+      await this.treasureService.getXpMultiplier(userId);
     const xpResult = await this.petService.recordQuestCompletion(
       userId,
       baseXp,
-      treasureMultiplier,
+      { category: doc.category, treasureMultiplier },
     );
+
+    // Quests with a posted reward pay out in coins.
+    const coinsAwarded = doc.reward && doc.reward > 0 ? doc.reward : 0;
+    if (coinsAwarded > 0) {
+      await this.coinService.mint(userId, coinsAwarded, 'quest_reward', {
+        refType: 'quest',
+        refId: doc._id.toString(),
+      });
+    }
 
     // Increment user questsCompleted
     await this.userService.incrementQuestsCompleted(userId);
@@ -309,7 +345,7 @@ export class QuestService {
           )
         : [];
 
-    return { quest: toPlain(doc), xpResult, achievements };
+    return { quest: toPlain(doc), xpResult, achievements, coinsAwarded };
   }
 
   async abandonQuest(questId: string, userId: string) {
@@ -433,9 +469,7 @@ export class QuestService {
     const latRad = (lat * Math.PI) / 180;
     const dLat = (distanceKm / EARTH_RADIUS_KM) * Math.cos(bearing);
     const dLng =
-      (distanceKm / EARTH_RADIUS_KM) *
-      Math.sin(bearing) /
-      Math.cos(latRad);
+      ((distanceKm / EARTH_RADIUS_KM) * Math.sin(bearing)) / Math.cos(latRad);
 
     return {
       lat: lat + (dLat * 180) / Math.PI,
@@ -591,9 +625,19 @@ export class QuestService {
     const xpResult = await this.petService.recordQuestCompletion(
       userId,
       doc.xpReward + bonusXp,
-      await this.treasureService.getXpMultiplier(userId),
+      {
+        category: doc.category,
+        treasureMultiplier: await this.treasureService.getXpMultiplier(userId),
+      },
     );
     await this.userService.incrementQuestsCompleted(userId);
+
+    // Small coin drop per daily — the everyday faucet of the economy.
+    const coinsAwarded = DAILY_COIN_REWARD[doc.difficulty] ?? 5;
+    await this.coinService.mint(userId, coinsAwarded, 'daily_reward', {
+      refType: 'daily',
+      refId: doc._id.toString(),
+    });
 
     const achievements = await this.achievementService.awardForTemplate(
       userId,
@@ -628,6 +672,7 @@ export class QuestService {
       xpResult,
       achievements,
       bonusXp,
+      coinsAwarded,
       hatch,
       board: await this.buildBoard(userId, doc.date, docs),
     };
@@ -638,7 +683,9 @@ export class QuestService {
   getDailyQuests(): any[] {
     // Date-based deterministic selection: same 3 quests for everyone on a given day
     const today = new Date().toDateString();
-    const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = today
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const startIdx = hash % (DAILY_QUESTS_POOL.length - 2);
 
     const BERLIN_LAT = 52.52;

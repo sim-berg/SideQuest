@@ -8,8 +8,14 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(200)
+  @MaxLength(500)
   bio?: string;
+
+  /** User-authored CSS for the profile card; sanitized in the service. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  profileCss?: string;
 
   @IsOptional()
   @IsString()

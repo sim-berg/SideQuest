@@ -1,3 +1,5 @@
+import { scopeCss } from '../../utils/profileCss';
+
 interface UserProfileSheetProps {
   user: {
     id: string;
@@ -5,6 +7,8 @@ interface UserProfileSheetProps {
     displayName: string;
     avatarUrl: string;
     bio: string;
+    /** User-authored CSS (sanitized server-side, scoped here). */
+    profileCss?: string;
     level: number;
     questsCompleted: number;
     isOnline: boolean;
@@ -20,6 +24,9 @@ export default function UserProfileSheet({
 }: UserProfileSheetProps) {
   const avatar =
     user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase();
+  const scopedCss = user.profileCss
+    ? scopeCss(user.profileCss, '.profile-canvas')
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -35,38 +42,40 @@ export default function UserProfileSheet({
           </svg>
         </button>
 
-        {/* Avatar + Name */}
-        <div className="mb-4 flex items-center gap-4">
-          {user.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.displayName}
-              className="h-16 w-16 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500 text-xl font-bold text-white">
-              {avatar}
+        {/* Avatar + Name + Bio — styled by the user's own CSS */}
+        {scopedCss && <style>{scopedCss}</style>}
+        <div className="profile-canvas mb-4 rounded-2xl p-3">
+          <div className="flex items-center gap-4">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.displayName}
+                className="avatar h-16 w-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="avatar flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500 text-xl font-bold text-white">
+                {avatar}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="name truncate text-lg font-bold text-slate-900 dark:text-white">
+                  {user.displayName || user.username}
+                </h2>
+                {user.isOnline && (
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                )}
+              </div>
+              <p className="username text-sm text-slate-400">@{user.username}</p>
             </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-lg font-bold text-slate-900 dark:text-white">
-                {user.displayName || user.username}
-              </h2>
-              {user.isOnline && (
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-              )}
-            </div>
-            <p className="text-sm text-slate-400">@{user.username}</p>
           </div>
-        </div>
 
-        {/* Bio */}
-        {user.bio && (
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
-            {user.bio}
-          </p>
-        )}
+          {user.bio && (
+            <p className="bio mt-3 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+              {user.bio}
+            </p>
+          )}
+        </div>
 
         {/* Stats */}
         <div className="mb-6 flex gap-4">

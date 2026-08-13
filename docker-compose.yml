@@ -2,6 +2,9 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    # Published so `npm run dev` (backend outside docker) reaches it too.
+    ports:
+      - '27017:27017'
     volumes:
       - mongo-data:/data/db
 

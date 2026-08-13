@@ -8,6 +8,7 @@ import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useRouteStore } from '../stores/useRouteStore';
+import { useCoinStore } from '../stores/useCoinStore';
 import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.service';
 import { shareQuest } from '../utils/share';
 
@@ -81,6 +82,10 @@ export function useQuestActions(quest: Quest | null) {
           celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
         }
       }
+      if (result.coinsAwarded) {
+        useToastStore.getState().showToast(`+${result.coinsAwarded} 🪙`);
+      }
+      void useCoinStore.getState().fetchWallet();
       if (result.achievements?.length) {
         addAchievements(result.achievements);
         for (const a of result.achievements) {

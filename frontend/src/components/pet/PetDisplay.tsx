@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePetStore, selectActivePet } from '../../stores/usePetStore';
-import { activatePet, renamePet } from '../../services/pet.service';
+import { activatePet, renamePet, fetchPetImage } from '../../services/pet.service';
 import { ELEMENT_META, STAGE_LABELS, MOOD_META, RARITY_META } from '../../constants/pets';
+import { CATEGORY_META } from '../../constants/categories';
 import { getPetMood, getNextStageThreshold } from '../../utils/pet';
 import PetAvatar from './PetAvatar';
 import PetChat from './PetChat';
+import PetEquipment from './PetEquipment';
+import PetTradeSheet from './PetTradeSheet';
 import { cn } from '../../utils/cn';
 
 /**
@@ -19,6 +22,33 @@ export default function PetDisplay() {
   const [nameDraft, setNameDraft] = useState('');
   const [soulOpen, setSoulOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [tradeOpen, setTradeOpen] = useState(false);
+
+  // Lazily generate/fetch the portrait for the active pet's current stage.
+  const activeId = active?.id;
+  const needsImage = !!active?.species && !active.imageUrl;
+  useEffect(() => {
+    if (!activeId || !needsImage) return;
+    let stale = false;
+    fetchPetImage(activeId)
+      .then((imageUrl) => {
+        if (stale || !imageUrl) return;
+        const current = usePetStore
+          .getState()
+          .pets.find((p) => p.id === activeId);
+        if (current) {
+          upsertPet({
+            ...current,
+            imageUrl,
+            images: { ...current.images, [current.stage]: imageUrl },
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [activeId, needsImage, upsertPet]);
 
   if (!active) return null;
 
@@ -144,15 +174,63 @@ export default function PetDisplay() {
         )}
       </div>
 
-      {/* Chat */}
-      <button
-        onClick={() => setChatOpen(true)}
-        className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-white shadow transition-all active:scale-[0.98]"
-        style={{ backgroundColor: color }}
-      >
-        💬 {isEgg ? 'Dem Ei lauschen' : 'Sprechen'}
-      </button>
+      {/* Soul growth: which quest categories this pet lived through. */}
+      {!isEgg && Object.keys(active.soulXp ?? {}).length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Seelenwachstum
+          </p>
+          <div className="flex flex-col gap-1">
+            {Object.entries(active.soulXp)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cat, count]) => {
+                const catMeta = CATEGORY_META[cat as keyof typeof CATEGORY_META];
+                const max = Math.max(...Object.values(active.soulXp));
+                return (
+                  <div key={cat} className="flex items-center gap-2">
+                    <span className="w-5 text-center text-xs">
+                      {catMeta?.icon ?? '✨'}
+                    </span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(count / max) * 100}%`,
+                          backgroundColor: catMeta?.color ?? color,
+                        }}
+                      />
+                    </div>
+                    <span className="w-6 text-right text-[10px] text-slate-400">
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Equipment */}
+      {!isEgg && <PetEquipment pet={active} />}
+
+      {/* Chat + trade */}
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => setChatOpen(true)}
+          className="flex-[2] rounded-xl py-2.5 text-sm font-bold text-white shadow transition-all active:scale-[0.98]"
+          style={{ backgroundColor: color }}
+        >
+          💬 {isEgg ? 'Dem Ei lauschen' : 'Sprechen'}
+        </button>
+        <button
+          onClick={() => setTradeOpen(true)}
+          className="flex-1 rounded-xl border-2 border-slate-200 py-2.5 text-sm font-bold text-slate-600 transition-all active:scale-[0.98] dark:border-slate-600 dark:text-slate-300"
+        >
+          🔄 Tauschen
+        </button>
+      </div>
       {chatOpen && <PetChat pet={active} onClose={() => setChatOpen(false)} />}
+      {tradeOpen && <PetTradeSheet onClose={() => setTradeOpen(false)} />}
 
       {/* Soul */}
       {!isEgg && active.soul && (

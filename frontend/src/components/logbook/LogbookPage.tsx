@@ -20,6 +20,7 @@ import { usePetStore, selectActivePet } from '../../stores/usePetStore';
 import { useCelebrationStore } from '../../stores/useCelebrationStore';
 import { useDistanceStore } from '../../stores/useDistanceStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { useCoinStore } from '../../stores/useCoinStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
@@ -425,6 +426,8 @@ export default function LogbookPage() {
             celebrate({ type: 'achievement', title: a.title, description: a.description, imageUrl: a.imageUrl });
           }
         }
+        // Dailies drop a few coins — keep the wallet chip fresh.
+        void useCoinStore.getState().fetchWallet();
       } catch {
         // ignore
       } finally {

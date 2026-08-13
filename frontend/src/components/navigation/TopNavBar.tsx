@@ -5,6 +5,7 @@ import { CATEGORY_META } from '../../constants/categories';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
 import { useChatStore } from '../../stores/useChatStore';
+import CoinBalance from '../common/CoinBalance';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
@@ -174,10 +175,13 @@ export default function TopNavBar() {
           )}
         </div>
 
-        {/* Center: Logo / Title */}
-        <h1 className="text-lg font-bold text-slate-800 drop-shadow-sm dark:text-white">
-          SideQuest
-        </h1>
+        {/* Center: Logo / Title + wallet */}
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold text-slate-800 drop-shadow-sm dark:text-white">
+            SideQuest
+          </h1>
+          <CoinBalance />
+        </div>
 
         {/* Right: Menu dropdown */}
         <div ref={menuRef} className="relative">

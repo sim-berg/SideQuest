@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { Element } from '../enums/element.enum.js';
 import { PetStage } from '../enums/pet-stage.enum.js';
 
@@ -47,6 +47,33 @@ export class Pet {
   /** Perk ids earned through quest chains. */
   @Prop({ type: [String], default: [] })
   perks: string[];
+
+  /**
+   * Generated portrait per evolution stage (stage → image URL). Filled
+   * lazily by PetImageService; the current stage's entry is what the UI
+   * shows, older stages stay as the pet's "photo album".
+   */
+  @Prop({ type: Object, default: {} })
+  images: Record<string, string>;
+
+  /**
+   * The pet's soul growth: how many quests of each category it lived
+   * through with its human. Grows on every completion and shapes the
+   * pet's character (dominant category ⇒ soul alignment).
+   */
+  @Prop({ type: Object, default: {} })
+  soulXp: Record<string, number>;
+
+  /** Equipped treasure item ids (max slots enforced in the service). */
+  @Prop({ type: [String], default: [] })
+  equipment: string[];
+
+  /**
+   * Free-form expansion bag for future pet features (accessoires, moods,
+   * battle stats, ...) — new features can land here without a migration.
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed, default: {} })
+  attributes: Record<string, unknown>;
 
   @Prop({ type: Date, default: null })
   hatchedAt: Date | null;

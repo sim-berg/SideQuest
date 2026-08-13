@@ -67,7 +67,7 @@ export class PetQuestmasterService {
       if (!pet || !pet.species || !pet.element) return null;
 
       const species = getSpeciesDef(pet.species);
-      const element = ELEMENTS[pet.element as Element];
+      const element = ELEMENTS[pet.element];
       const userSoul = await this.soulService.getUserSoulContent(userId);
       const stats = await this.soulService.collectUserStats(userId);
 
@@ -78,7 +78,9 @@ export class PetQuestmasterService {
           `Du bist ${pet.name || `das ${element.name}-${species?.name}`}, der Quest-Gefährte deines Menschen in der deutschen Abenteuer-App SideQuest. ` +
           'Du stellst ihm jeden Morgen genau 3 Daily-Quests zusammen.\n\n' +
           (pet.soul ? `Deine Seele:\n${pet.soul}\n\n` : '') +
-          (userSoul ? `Was du über deinen Menschen weißt:\n${userSoul}\n\n` : '') +
+          (userSoul
+            ? `Was du über deinen Menschen weißt:\n${userSoul}\n\n`
+            : '') +
           'Regeln für gute Daily-Quests:\n' +
           '- Klein und an einem gewöhnlichen Tag in wenigen Minuten machbar.\n' +
           '- Selbst abhakbar: kein GPS, kein bestimmter Ort, nichts Gefährliches, keine Ausgaben.\n' +
@@ -117,7 +119,8 @@ export class PetQuestmasterService {
       q.description.trim().length > 0 &&
       q.description.length <= 220 &&
       Object.values(Category).includes(q.category) &&
-      (q.difficulty === Difficulty.EASY || q.difficulty === Difficulty.MEDIUM) &&
+      (q.difficulty === Difficulty.EASY ||
+        q.difficulty === Difficulty.MEDIUM) &&
       typeof q.emoji === 'string' &&
       q.emoji.length <= 8
     );

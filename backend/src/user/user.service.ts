@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema.js';
 import { Quest, QuestDocument } from '../quest/schemas/quest.schema.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { sanitizeProfileCss } from './profile-css.js';
 
 export interface DailyQuestStreak {
   streak: number;
@@ -30,7 +31,10 @@ export class UserService {
   ) {}
 
   async findById(id: string): Promise<UserDocument> {
-    const user = await this.userModel.findById(id).select('-passwordHash').exec();
+    const user = await this.userModel
+      .findById(id)
+      .select('-passwordHash')
+      .exec();
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
     }
@@ -61,6 +65,9 @@ export class UserService {
     id: string,
     dto: UpdateProfileDto,
   ): Promise<UserDocument> {
+    if (dto.profileCss !== undefined) {
+      dto.profileCss = sanitizeProfileCss(dto.profileCss);
+    }
     const user = await this.userModel
       .findByIdAndUpdate(id, { $set: dto }, { new: true })
       .select('-passwordHash')
@@ -234,9 +241,7 @@ export class UserService {
     // Count quests completed per day
     quests.forEach((quest) => {
       if (quest.completedAt) {
-        const dateStr = quest.completedAt
-          .toISOString()
-          .split('T')[0];
+        const dateStr = quest.completedAt.toISOString().split('T')[0];
         if (activityMap[dateStr] !== undefined) {
           activityMap[dateStr]++;
         }

@@ -6,7 +6,13 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true, unique: true, trim: true, minlength: 3, maxlength: 24 })
+  @Prop({
+    required: true,
+    unique: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 24,
+  })
   username: string;
 
   @Prop({ required: true })
@@ -20,6 +26,13 @@ export class User {
 
   @Prop({ default: '' })
   bio: string;
+
+  /**
+   * User-authored CSS for their profile card (MySpace spirit). Sanitized on
+   * write and scoped to the profile container on render.
+   */
+  @Prop({ default: '' })
+  profileCss: string;
 
   @Prop({ default: 1 })
   level: number;

@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { api } from '../../services/api';
 import { logout } from '../../services/auth.service';
+import { fetchMySoul } from '../../services/user.service';
+import type { UserSoul } from '../../types/user';
+import { ELEMENT_META } from '../../constants/pets';
+import { scopeCss, isCssSafe } from '../../utils/profileCss';
 import PetDisplay from '../pet/PetDisplay';
 import { ContributionCalendar } from './ContributionCalendar';
 
@@ -15,8 +19,23 @@ export default function ProfilePage() {
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [profileCss, setProfileCss] = useState(user?.profileCss || '');
+  const [soul, setSoul] = useState<UserSoul | null>(null);
+  const [soulOpen, setSoulOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMySoul().then(setSoul).catch(() => {});
+  }, []);
+
+  // Live preview: user CSS scoped to the profile card.
+  const scopedCss = useMemo(
+    () => scopeCss(profileCss, '.profile-canvas'),
+    [profileCss],
+  );
+  const cssSafe = isCssSafe(profileCss);
 
   if (!user) return null;
 
@@ -25,13 +44,14 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      await api.patch('/users/me', { displayName, bio });
-      updateUser({ displayName, bio });
+      await api.patch('/users/me', { displayName, bio, profileCss });
+      updateUser({ displayName, bio, profileCss });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      /* ignore */
+    } catch (e: any) {
+      setSaveError(e?.message || 'Speichern fehlgeschlagen');
     } finally {
       setSaving(false);
     }
@@ -64,8 +84,9 @@ export default function ProfilePage() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-5 pb-28 pt-6">
-        {/* Avatar */}
-        <div className="mb-6 flex flex-col items-center">
+        {/* Profile card — the user's CSS playground */}
+        {scopedCss && <style>{scopedCss}</style>}
+        <div className="profile-canvas mb-6 flex flex-col items-center rounded-2xl p-4">
           {user.avatarUrl ? (
             <img
               src={user.avatarUrl}
@@ -73,14 +94,84 @@ export default function ProfilePage() {
               className="h-24 w-24 rounded-full object-cover ring-4 ring-indigo-500/20"
             />
           ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-indigo-500 text-3xl font-bold text-white ring-4 ring-indigo-500/20">
+            <div className="avatar flex h-24 w-24 items-center justify-center rounded-full bg-indigo-500 text-3xl font-bold text-white ring-4 ring-indigo-500/20">
               {avatar}
             </div>
           )}
-          <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">
+          <h2 className="name mt-3 text-lg font-bold text-slate-900 dark:text-white">
+            {displayName || user.username}
+          </h2>
+          <p className="username text-sm text-slate-400 dark:text-slate-500">
             @{user.username}
           </p>
+          {bio && (
+            <p className="bio mt-2 whitespace-pre-wrap text-center text-sm text-slate-600 dark:text-slate-300">
+              {bio}
+            </p>
+          )}
         </div>
+
+        {/* Seele — element affinity grown from completed quests */}
+        {soul && Object.keys(soul.elementScores).length > 0 && (
+          <div className="mb-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                ✨ Deine Seele
+              </p>
+              {soul.dominantElement && (
+                <span
+                  className="rounded-full px-2.5 py-1 text-xs font-bold text-white"
+                  style={{ backgroundColor: soul.dominantElement.color }}
+                >
+                  {soul.dominantElement.emoji} {soul.dominantElement.name}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {Object.entries(soul.elementScores)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .map(([el, score]) => {
+                  const meta = ELEMENT_META[el as keyof typeof ELEMENT_META];
+                  const max = Math.max(...Object.values(soul.elementScores));
+                  return (
+                    <div key={el} className="flex items-center gap-2">
+                      <span className="w-5 text-center text-xs">
+                        {meta?.emoji ?? '✨'}
+                      </span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${(score / max) * 100}%`,
+                            backgroundColor: meta?.color ?? '#94a3b8',
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-[10px] text-slate-400">
+                        {meta?.name ?? el}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+            {soul.content && (
+              <div className="mt-3">
+                <button
+                  onClick={() => setSoulOpen(!soulOpen)}
+                  className="text-xs font-semibold text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
+                >
+                  {soulOpen ? 'soul.md verbergen' : '📜 soul.md ansehen'}
+                </button>
+                {soulOpen && (
+                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-100 p-3 font-sans text-xs leading-relaxed text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {soul.content}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Companion + menagerie */}
         <div className="mb-6">
@@ -119,9 +210,45 @@ export default function ProfilePage() {
             className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           />
           <p className="mt-1 text-right text-xs text-slate-400">
-            {bio.length}/200
+            {bio.length}/500
           </p>
         </div>
+
+        {/* Profil-CSS */}
+        <div className="mb-6">
+          <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            Profil-CSS{' '}
+            <span className="font-normal text-slate-400">
+              — gestalte deine Karte frei (MySpace lebt!)
+            </span>
+          </label>
+          <textarea
+            value={profileCss}
+            onChange={(e) => setProfileCss(e.target.value)}
+            maxLength={2000}
+            rows={5}
+            spellCheck={false}
+            placeholder={
+              'background: linear-gradient(135deg, #f0abfc, #818cf8);\n.bio { font-style: italic; }\n.name { color: #fff; text-shadow: 0 2px 8px #0008; }'
+            }
+            className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-xs text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          />
+          <div className="mt-1 flex items-center justify-between text-xs">
+            <span className="text-slate-400">
+              Klassen: <code>.avatar</code> <code>.name</code>{' '}
+              <code>.username</code> <code>.bio</code> · kein url()/@import
+            </span>
+            <span className={cssSafe ? 'text-slate-400' : 'font-bold text-red-500'}>
+              {cssSafe ? `${profileCss.length}/2000` : 'Nicht erlaubtes CSS'}
+            </span>
+          </div>
+        </div>
+
+        {saveError && (
+          <div className="mb-4 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+            {saveError}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="mb-6 flex gap-4">

@@ -38,6 +38,13 @@ export default function PetAvatar({
     >
       {isEgg ? (
         <span style={{ fontSize: size * 0.55 }}>🥚</span>
+      ) : pet.imageUrl ? (
+        <img
+          src={pet.imageUrl}
+          alt={pet.name ?? pet.speciesName ?? 'Pet'}
+          className="h-full w-full rounded-full object-cover"
+          style={{ boxShadow: `inset 0 0 ${size / 8}px ${color}88` }}
+        />
       ) : pet.species === 'drache' ? (
         <AnimatedDragon color={color} size={size * 0.82} />
       ) : (
