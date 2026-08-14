@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { useQuestStore } from '../../stores/useQuestStore';
 import PublicProfileSheet from '../profile/PublicProfileSheet';
+import CategoryIcon from '../common/CategoryIcon';
 import { useQuestActions } from '../../hooks/useQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
@@ -94,7 +95,7 @@ export default function QuestDetailScreen() {
               className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl"
               style={{ backgroundColor: `${meta.color}33` }}
             >
-              {meta.icon}
+              <CategoryIcon category={quest.category} size={44} />
             </span>
             <span
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white"

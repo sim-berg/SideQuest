@@ -3,6 +3,7 @@ import { Moon, Sun } from 'lucide-react';
 import { Category } from '../../types/quest';
 import { DISTANCE_OPTIONS } from '../../constants/map';
 import { CATEGORY_META } from '../../constants/categories';
+import CategoryIcon from '../common/CategoryIcon';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
 import CoinBalance from '../common/CoinBalance';
@@ -128,7 +129,7 @@ export default function TopNavBar() {
                       )}
                       style={active ? { backgroundColor: meta.color } : undefined}
                     >
-                      <span>{meta.icon}</span>
+                      <CategoryIcon category={cat} size={18} />
                       <span>{meta.label}</span>
                     </button>
                   );
