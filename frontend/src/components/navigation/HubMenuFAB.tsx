@@ -159,9 +159,10 @@ export default function HubMenuFAB() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
               transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-              className="relative w-full max-w-sm rounded-3xl border border-white/60 bg-white/90 p-4 shadow-2xl backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/90"
+              className="relative w-full max-w-xs rounded-3xl border border-white/60 bg-white/90 p-4 shadow-2xl backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/90"
             >
-              <div className="grid grid-cols-3 gap-2.5">
+              {/* 2 wide, 3 high — every tile the same size */}
+              <div className="grid grid-cols-2 gap-3">
                 {items.map((item, i) => (
                   <motion.button
                     key={item.id}
@@ -180,15 +181,15 @@ export default function HubMenuFAB() {
                     )}
                   >
                     <span
-                      className="flex h-11 w-11 items-center justify-center rounded-xl text-white"
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl text-white"
                       style={{
                         backgroundColor: item.color,
                         boxShadow: `0 4px 14px ${item.color}55`,
                       }}
                     >
-                      <item.icon className="h-6 w-6" strokeWidth={2.2} />
+                      <item.icon className="h-7 w-7" strokeWidth={2.2} />
                     </span>
-                    <span className="w-full truncate px-0.5 text-center text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                    <span className="w-full truncate px-0.5 text-center text-xs font-bold text-slate-700 dark:text-slate-200">
                       {item.label}
                     </span>
 
