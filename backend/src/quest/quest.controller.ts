@@ -18,6 +18,7 @@ import { CreateEventQuestDto } from './dto/create-event-quest.dto.js';
 import { EventCheckinDto } from './dto/event-checkin.dto.js';
 import { RedeemQrDto } from './dto/redeem-qr.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard.js';
 
 @Controller('quests')
 export class QuestController {
@@ -127,8 +128,9 @@ export class QuestController {
   }
 
   @Post()
-  create(@Body() dto: CreateQuestDto) {
-    return this.questService.create(dto);
+  @UseGuards(OptionalJwtAuthGuard)
+  create(@Request() req: any, @Body() dto: CreateQuestDto) {
+    return this.questService.create(dto, req.user?.userId ?? null);
   }
 
   @Post(':id/accept')

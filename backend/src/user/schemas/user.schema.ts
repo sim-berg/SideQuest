@@ -34,6 +34,13 @@ export class User {
   @Prop({ default: '' })
   profileCss: string;
 
+  /**
+   * Alias for quests the user publishes without revealing their identity.
+   * Never included in public profile responses.
+   */
+  @Prop({ default: '', trim: true, maxlength: 24 })
+  pseudonym: string;
+
   @Prop({ default: 1 })
   level: number;
 

@@ -59,7 +59,10 @@ function toPlain(doc: QuestDocument) {
     expiresAt: obj.expiresAt?.toISOString?.() ?? null,
     templateId: obj.templateId ?? null,
     type: obj.type ?? QuestType.PERSONAL,
-    createdBy: obj.createdBy ?? null,
+    // Pseudonymous quests never expose their author's id.
+    createdBy: obj.pseudonymous ? null : (obj.createdBy ?? null),
+    creatorName: obj.creatorName ?? null,
+    pseudonymous: obj.pseudonymous ?? false,
     eventEndsAt: obj.eventEndsAt?.toISOString?.() ?? null,
     requiredMinutes: obj.requiredMinutes ?? null,
     presenceRadiusM: obj.presenceRadiusM ?? null,
@@ -247,8 +250,27 @@ export class QuestService {
     return toPlain(doc);
   }
 
-  async create(dto: CreateQuestDto) {
-    const doc = await this.questModel.create(dto);
+  async create(dto: CreateQuestDto, userId: string | null = null) {
+    const { usePseudonym, ...quest } = dto;
+
+    // Snapshot the creator's display name at publish time; pseudonymous
+    // quests carry the pseudonym and never reveal createdBy to clients.
+    let creatorName: string | null = null;
+    let pseudonymous = false;
+    if (userId) {
+      const user = await this.userService.findById(userId);
+      pseudonymous = !!usePseudonym;
+      creatorName = pseudonymous
+        ? user.pseudonym || 'Anonym'
+        : user.displayName || user.username;
+    }
+
+    const doc = await this.questModel.create({
+      ...quest,
+      createdBy: userId,
+      creatorName,
+      pseudonymous,
+    });
     return toPlain(doc);
   }
 

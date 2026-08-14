@@ -12,7 +12,9 @@ import {
   Clock,
   User,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useQuestStore } from '../../stores/useQuestStore';
+import PublicProfileSheet from '../profile/PublicProfileSheet';
 import { useQuestActions } from '../../hooks/useQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
@@ -53,6 +55,7 @@ export default function QuestDetailScreen() {
     share,
   } = useQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
+  const [creatorProfileId, setCreatorProfileId] = useState<string | null>(null);
 
   if (!quest || !detailOpen) return null;
 
@@ -116,6 +119,21 @@ export default function QuestDetailScreen() {
           <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
             <User className="h-4 w-4" /> {quest.questGiver.name}
           </p>
+          {/* Creator attribution — tappable for real accounts, plain text
+              for pseudonyms (no profile to link to, by design). */}
+          {quest.creatorName &&
+            (quest.createdBy ? (
+              <button
+                onClick={() => setCreatorProfileId(quest.createdBy)}
+                className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-indigo-500 underline-offset-2 hover:underline"
+              >
+                von {quest.creatorName} →
+              </button>
+            ) : (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                🎭 von {quest.creatorName}
+              </p>
+            ))}
         </div>
 
         <div className="px-5">
@@ -199,6 +217,13 @@ export default function QuestDetailScreen() {
           <CommentSection questId={quest.id} />
         </div>
       </div>
+
+      {creatorProfileId && (
+        <PublicProfileSheet
+          userId={creatorProfileId}
+          onClose={() => setCreatorProfileId(null)}
+        />
+      )}
     </div>
   );
 }

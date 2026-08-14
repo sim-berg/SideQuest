@@ -30,3 +30,20 @@ export async function fetchActivity(): Promise<ActivityData[]> {
 export async function fetchMySoul(): Promise<UserSoul> {
   return api.get<UserSoul>('/users/me/soul');
 }
+
+/** What other users may see of a profile. */
+export interface PublicProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  bio: string;
+  profileCss: string;
+  level: number;
+  questsCompleted: number;
+  isOnline: boolean;
+}
+
+export async function fetchPublicProfile(id: string): Promise<PublicProfile> {
+  return api.get<PublicProfile>(`/users/${id}`);
+}

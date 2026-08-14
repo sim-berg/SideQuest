@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [profileCss, setProfileCss] = useState(user?.profileCss || '');
+  const [pseudonym, setPseudonym] = useState(user?.pseudonym || '');
   const [soul, setSoul] = useState<UserSoul | null>(null);
   const [soulOpen, setSoulOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,8 +60,8 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      await api.patch('/users/me', { displayName, bio, profileCss });
-      updateUser({ displayName, bio, profileCss });
+      await api.patch('/users/me', { displayName, bio, profileCss, pseudonym });
+      updateUser({ displayName, bio, profileCss, pseudonym });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e: any) {
@@ -189,6 +190,24 @@ export default function ProfilePage() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={48}
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          />
+        </div>
+
+        {/* Pseudonym */}
+        <div className="mb-4">
+          <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            Pseudonym{' '}
+            <span className="font-normal text-slate-400">
+              — für Quests, die du anonym veröffentlichen willst
+            </span>
+          </label>
+          <input
+            type="text"
+            value={pseudonym}
+            onChange={(e) => setPseudonym(e.target.value)}
+            maxLength={24}
+            placeholder="z.B. Schattenwanderer"
             className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
           />
         </div>

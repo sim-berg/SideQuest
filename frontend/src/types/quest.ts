@@ -77,7 +77,11 @@ export interface Quest {
   expiresAt?: string | null;
   templateId?: string | null;
   type: QuestType;
+  /** Author's user id — null for pseudonymous quests (no profile link). */
   createdBy: string | null;
+  /** Display name of the author (their pseudonym when pseudonymous). */
+  creatorName?: string | null;
+  pseudonymous?: boolean;
   // Event quest fields (type=event)
   eventEndsAt: string | null;
   requiredMinutes: number | null;

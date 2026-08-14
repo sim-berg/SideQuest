@@ -21,6 +21,12 @@ export class UpdateProfileDto {
   @IsString()
   avatarUrl?: string;
 
+  /** Alias for pseudonymous quests; empty string clears it. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(24)
+  pseudonym?: string;
+
   @IsOptional()
   @IsBoolean()
   shareLocation?: boolean;

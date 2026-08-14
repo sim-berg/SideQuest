@@ -6,6 +6,8 @@ export interface User {
   bio: string;
   /** User-authored CSS for the profile card (sanitized server-side). */
   profileCss?: string;
+  /** Alias for pseudonymous quests — only present on the own profile. */
+  pseudonym?: string;
   level: number;
   questsCompleted: number;
   isOnline: boolean;

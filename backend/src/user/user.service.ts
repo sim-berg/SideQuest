@@ -208,15 +208,26 @@ export class UserService {
     return { streak, longestStreak, securedToday: true };
   }
 
-  async getPublicProfile(id: string): Promise<Partial<User>> {
-    const user = await this.userModel
-      .findById(id)
-      .select('-passwordHash -email')
-      .exec();
+  /**
+   * Profile view for other users. An explicit allowlist — everything not
+   * listed here (email, pseudonym, shareLocation, ...) stays private.
+   */
+  async getPublicProfile(id: string) {
+    const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
     }
-    return user;
+    return {
+      id: user._id.toString(),
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      profileCss: user.profileCss,
+      level: user.level,
+      questsCompleted: user.questsCompleted,
+      isOnline: user.isOnline,
+    };
   }
 
   async getActivity(

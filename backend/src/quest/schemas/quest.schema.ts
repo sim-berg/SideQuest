@@ -70,6 +70,17 @@ export class Quest {
   @Prop({ type: String, default: null })
   createdBy: string | null;
 
+  /**
+   * Display-name snapshot of the creator, taken at publish time (the
+   * pseudonym when published pseudonymously).
+   */
+  @Prop({ type: String, default: null })
+  creatorName: string | null;
+
+  /** Published under a pseudonym — createdBy is hidden from clients. */
+  @Prop({ default: false })
+  pseudonymous: boolean;
+
   // --- Event quest fields (type=event) ---
   /** When the gathering ends; presence and joins stop counting here. */
   @Prop({ type: Date, default: null })

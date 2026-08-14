@@ -32,6 +32,8 @@ export interface CreateQuestPayload {
   difficulty?: Quest['difficulty'];
   goalType?: Quest['goalType'];
   goalCount?: number | null;
+  /** Publish under the profile pseudonym instead of the username. */
+  usePseudonym?: boolean;
 }
 
 export async function createQuest(quest: CreateQuestPayload): Promise<Quest> {

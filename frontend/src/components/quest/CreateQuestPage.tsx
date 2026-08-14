@@ -8,6 +8,7 @@ import { Category, Difficulty, GoalType } from '../../types/quest';
 import type { Category as CategoryType, Difficulty as DifficultyType, GoalType as GoalTypeType } from '../../types/quest';
 import { createQuest, createEventQuest } from '../../services/quest.service';
 import { useCoinStore } from '../../stores/useCoinStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
@@ -31,6 +32,7 @@ export default function CreateQuestPage() {
   const [address, setAddress] = useState('');
   const [timeLimit, setTimeLimit] = useState('');
   const [questGiverName, setQuestGiverName] = useState('Anonym');
+  const [usePseudonym, setUsePseudonym] = useState(false);
   const [difficulty, setDifficulty] = useState<DifficultyType>(Difficulty.MEDIUM);
   const [goalType, setGoalType] = useState<GoalTypeType>(GoalType.PROXIMITY);
   const [goalCount, setGoalCount] = useState('');
@@ -41,6 +43,7 @@ export default function CreateQuestPage() {
   const [requiredMinutes, setRequiredMinutes] = useState('30');
   const [durationHours, setDurationHours] = useState('4');
   const [submitting, setSubmitting] = useState(false);
+  const authUser = useAuthStore((s) => s.user);
   const [error, setError] = useState<string | null>(null);
 
   const wallet = useCoinStore((s) => s.wallet);
@@ -166,6 +169,7 @@ export default function CreateQuestPage() {
         goalCount: goalType === 'count' && goalCount ? parseInt(goalCount, 10) : null,
         questGiver: { name: questGiverName.trim() || 'Anonym' },
         ...(timeLimit !== '' && { timeLimit: new Date(timeLimit).toISOString() }),
+        ...(usePseudonym && { usePseudonym: true }),
       });
 
       setQuests([...quests, newQuest]);
@@ -506,6 +510,49 @@ export default function CreateQuestPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
+                {authUser && (
+                  <button
+                    type="button"
+                    onClick={() => setUsePseudonym((v) => !v)}
+                    className={cn(
+                      'flex items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-all',
+                      usePseudonym
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                        : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800',
+                    )}
+                  >
+                    <div>
+                      <p
+                        className={cn(
+                          'font-semibold',
+                          usePseudonym
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : 'text-slate-800 dark:text-slate-200',
+                        )}
+                      >
+                        🎭 Unter Pseudonym veröffentlichen
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {authUser.pseudonym
+                          ? `Erscheint als „${authUser.pseudonym}" — ohne Link zu deinem Profil`
+                          : 'Erscheint als „Anonym" — lege im Profil ein Pseudonym fest'}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+                        usePseudonym ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                          usePseudonym && 'translate-x-5',
+                        )}
+                      />
+                    </span>
+                  </button>
+                )}
           </div>
         )}
 
