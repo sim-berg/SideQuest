@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Pet, PetDocument } from './schemas/pet.schema.js';
@@ -7,6 +12,8 @@ import { Element } from './enums/element.enum.js';
 import { ELEMENTS, getSpeciesDef } from './pet-catalog.js';
 import { ReplicateService } from '../achievement/replicate.service.js';
 import { getTreasureItem } from '../treasure/treasure-catalog.js';
+import { CoinService } from '../coin/coin.service.js';
+import { PORTRAIT_REGEN_COST } from '../coin/coin.constants.js';
 
 /** English stage wording for the image prompt. */
 const STAGE_PROMPT: Record<string, string> = {
@@ -86,6 +93,7 @@ export class PetImageService {
   constructor(
     @InjectModel(Pet.name) private petModel: Model<PetDocument>,
     private readonly replicate: ReplicateService,
+    private readonly coinService: CoinService,
   ) {}
 
   /** Portrait for the pet's current stage, generating it on first request. */
@@ -105,6 +113,54 @@ export class PetImageService {
   }
 
   /**
+   * Throw away the cached portrait for the pet's current stage and paint a
+   * fresh one. Owner-only. If the new generation fails, the old portrait
+   * stays. The returned URL carries a cache-buster so clients re-render.
+   */
+  async regenerate(
+    userId: string,
+    petId: string,
+  ): Promise<{ imageUrl: string | null }> {
+    const doc = await this.petModel.findById(petId).exec();
+    if (!doc) throw new NotFoundException('Pet nicht gefunden');
+    if (doc.userId !== userId)
+      throw new ForbiddenException('Nicht dein Gefährte');
+    // Eggs have no portrait; hatchling portraits are shared per
+    // species+element combo, so repainting one would change them all.
+    if (
+      !doc.species ||
+      !doc.element ||
+      doc.stage === PetStage.EGG ||
+      doc.stage === PetStage.HATCHLING
+    ) {
+      return { imageUrl: null };
+    }
+
+    // Repainting costs coins. Burn first (the overdraft guard decides),
+    // refund if no new portrait came out of it.
+    const ref = { refType: 'pet', refId: petId };
+    await this.coinService.burn(
+      userId,
+      PORTRAIT_REGEN_COST,
+      'portrait_regen',
+      ref,
+    );
+
+    const before = (doc.images ?? {})[doc.stage] ?? null;
+    const imageUrl = await this.generateAndStore(doc, true);
+    const gotNewImage = imageUrl !== before && !imageUrl.startsWith('data:');
+    if (!gotNewImage) {
+      await this.coinService.mint(
+        userId,
+        PORTRAIT_REGEN_COST,
+        'portrait_regen_refund',
+        ref,
+      );
+    }
+    return { imageUrl };
+  }
+
+  /**
    * Fire-and-forget warm-up, called when a pet hatches or evolves so the
    * portrait is (usually) ready before anyone asks for it. Never throws.
    */
@@ -118,19 +174,33 @@ export class PetImageService {
     }
   }
 
-  private async generateAndStore(doc: PetDocument): Promise<string> {
+  private async generateAndStore(
+    doc: PetDocument,
+    force = false,
+  ): Promise<string> {
     const unique = doc.stage !== PetStage.HATCHLING;
     const key = unique
       ? `pet_${doc._id.toString()}_${doc.stage}`
       : `pet_${doc.species}_${doc.element}_${doc.stage}`;
 
-    let task = this.inflight.get(key);
+    let task = force ? undefined : this.inflight.get(key);
     if (!task) {
-      task = this.generate(doc, key, unique);
+      task = this.generate(doc, key, unique, force);
       this.inflight.set(key, task);
       task.finally(() => this.inflight.delete(key)).catch(() => {});
     }
-    const imageUrl = await task;
+    let imageUrl = await task;
+
+    if (force) {
+      const existing = (doc.images ?? {})[doc.stage];
+      // Generation failed (gradient fallback) — keep the real portrait.
+      if (imageUrl.startsWith('data:') && existing) return existing;
+      // Same key → same file name → same URL; a cache-buster makes the
+      // browser (and React) actually swap the picture.
+      if (!imageUrl.startsWith('data:')) {
+        imageUrl = `${imageUrl}?v=${Date.now()}`;
+      }
+    }
 
     // Atomic $set — pregenerate and UI fetches may race on the same pet.
     await this.petModel
@@ -146,6 +216,7 @@ export class PetImageService {
     doc: PetDocument,
     key: string,
     unique: boolean,
+    force = false,
   ): Promise<string> {
     const species = getSpeciesDef(doc.species!);
     const element = ELEMENTS[doc.element!];
@@ -159,12 +230,15 @@ export class PetImageService {
       `painterly digital art, vibrant colors, soft magical background, ` +
       `cute yet epic, no text, no words, no letters.`;
 
-    return this.replicate.generatePortrait({
-      key,
-      prompt,
-      emoji: species?.emoji ?? '🐾',
-      colors: [element.color, '#1e293b'],
-    });
+    return this.replicate.generatePortrait(
+      {
+        key,
+        prompt,
+        emoji: species?.emoji ?? '🐾',
+        colors: [element.color, '#1e293b'],
+      },
+      { force },
+    );
   }
 
   /**

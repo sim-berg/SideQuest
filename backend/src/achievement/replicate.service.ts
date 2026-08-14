@@ -39,18 +39,27 @@ export class ReplicateService {
   private readonly token?: string;
   private readonly model: string;
   private readonly sceneModel: string;
+  private readonly petModel: string;
   private readonly appUrl: string;
 
   constructor(private readonly config: ConfigService) {
     this.token = this.config.get<string>('REPLICATE_API_TOKEN');
+    // Community models need a pinned version — the version-less model
+    // endpoint only exists for official models (404 otherwise).
     this.model = this.config.get<string>(
       'REPLICATE_MODEL',
-      'fofr/sticker-maker',
+      'fofr/sticker-maker:4acb778eb059772225ec213948f0660867b2e03f277448f18cf1800b96a65a1a',
     );
     // A general text-to-image model for illustrative side quest scenes.
     this.sceneModel = this.config.get<string>(
       'REPLICATE_SCENE_MODEL',
       'black-forest-labs/flux-schnell',
+    );
+    // Speed-optimized FLUX for pet portraits. Community model, so the
+    // version must stay pinned (same 404 rule as REPLICATE_MODEL above).
+    this.petModel = this.config.get<string>(
+      'REPLICATE_PET_MODEL',
+      'prunaai/flux-fast:4f22c6cd75e0f95f12f55d1616a4d163e9166087ed4979f5cecc40418a522703',
     );
     this.appUrl = this.config
       .get<string>('APP_URL', 'http://localhost:3000')
@@ -166,11 +175,16 @@ export class ReplicateService {
    * on disk by key, Replicate when a token is configured, and a gradient
    * SVG data-URI fallback so there is always something to show.
    */
-  async generatePortrait(scene: SceneInput): Promise<string> {
+  async generatePortrait(
+    scene: SceneInput,
+    opts: { force?: boolean } = {},
+  ): Promise<string> {
     await fs.mkdir(PET_DIR, { recursive: true });
 
-    const cached = await this.findCached(PET_DIR, scene.key);
-    if (cached) return this.petUrl(cached);
+    if (!opts.force) {
+      const cached = await this.findCached(PET_DIR, scene.key);
+      if (cached) return this.petUrl(cached);
+    }
 
     if (this.token) {
       try {
@@ -179,7 +193,7 @@ export class ReplicateService {
           useFileOutput: false,
         });
         const output = (await replicate.run(
-          this.sceneModel as `${string}/${string}`,
+          this.petModel as `${string}/${string}`,
           {
             input: {
               prompt: scene.prompt,
@@ -192,6 +206,9 @@ export class ReplicateService {
         const url = this.firstUrl(output);
         if (url) {
           const file = await this.download(PET_DIR, scene.key, url);
+          // Drop stale variants with another extension so a later cache
+          // lookup can't resurrect the old picture.
+          if (opts.force) await this.clearCachedExcept(PET_DIR, scene.key, file);
           this.logger.log(`Generated AI portrait for ${scene.key}`);
           return this.petUrl(file);
         }
@@ -208,6 +225,19 @@ export class ReplicateService {
 
   private petUrl(file: string): string {
     return `${this.appUrl}/uploads/pets/${file}`;
+  }
+
+  /** Delete every cached variant of a key except the file just written. */
+  private async clearCachedExcept(
+    dir: string,
+    key: string,
+    keep: string,
+  ): Promise<void> {
+    for (const ext of CACHE_EXTS) {
+      const file = `${key}.${ext}`;
+      if (file === keep) continue;
+      await fs.rm(path.join(dir, file), { force: true });
+    }
   }
 
   /** Returns the cached image filename for a key, or null if none exists. */

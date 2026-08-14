@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { usePetStore, selectActivePet } from '../../stores/usePetStore';
-import { activatePet, renamePet, fetchPetImage } from '../../services/pet.service';
+import {
+  activatePet,
+  renamePet,
+  fetchPetImage,
+  regeneratePetImage,
+} from '../../services/pet.service';
 import {
   ELEMENT_META,
   STAGE_LABELS,
   MOOD_META,
   RARITY_META,
   SPECIES_EMOJI,
+  PORTRAIT_REGEN_COST,
 } from '../../constants/pets';
+import { useCoinStore } from '../../stores/useCoinStore';
+import { useToastStore } from '../../stores/useToastStore';
 import { CATEGORY_META } from '../../constants/categories';
 import { getPetMood, getNextStageThreshold } from '../../utils/pet';
 import PetAvatar from './PetAvatar';
@@ -34,6 +42,7 @@ export default function PetDisplay() {
   const [flipped, setFlipped] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [tradeOpen, setTradeOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Lazily generate/fetch the portrait for the active pet's current stage.
   const activeId = active?.id;
@@ -98,6 +107,36 @@ export default function PetDisplay() {
     } catch {
       /* ignore */
     }
+  };
+
+  const handleRegenerate = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // the card underneath flips on click
+    if (regenerating) return;
+    setRegenerating(true);
+    try {
+      const imageUrl = await regeneratePetImage(active.id);
+      if (imageUrl) {
+        useCoinStore.getState().addCoins(-PORTRAIT_REGEN_COST);
+        const current = usePetStore
+          .getState()
+          .pets.find((p) => p.id === active.id);
+        if (current) {
+          upsertPet({
+            ...current,
+            imageUrl,
+            images: { ...current.images, [current.stage]: imageUrl },
+          });
+        }
+      }
+    } catch (err) {
+      useToastStore.getState().addToast({
+        type: 'error',
+        title:
+          err instanceof Error ? err.message : 'Neues Bild fehlgeschlagen',
+        duration: 3500,
+      });
+    }
+    setRegenerating(false);
   };
 
   const handleRename = async () => {
@@ -165,6 +204,22 @@ export default function PetDisplay() {
               >
                 {element.emoji}
               </div>
+            )}
+            {/* Hatchling portraits are shared per species+element — only
+                unique portraits (Juvenile+) can be repainted. */}
+            {!isEgg && active.stage !== 'hatchling' && active.imageUrl && (
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating}
+                title={`Bild neu erstellen (${PORTRAIT_REGEN_COST} Taler)`}
+                aria-label={`Bild neu erstellen (${PORTRAIT_REGEN_COST} Taler)`}
+                className="absolute right-3 top-12 flex h-8 items-center gap-1 rounded-full bg-black/45 px-2.5 text-[11px] font-bold text-white backdrop-blur-sm transition-all hover:bg-black/60 disabled:opacity-70"
+              >
+                <span className={cn('inline-block text-sm', regenerating && 'animate-spin')}>
+                  🔄
+                </span>
+                {PORTRAIT_REGEN_COST} 🪙
+              </button>
             )}
 
             {/* XP bar pinned to the bottom of the picture */}

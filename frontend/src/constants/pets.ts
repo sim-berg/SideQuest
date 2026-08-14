@@ -103,3 +103,9 @@ export const MOOD_META: Record<string, { label: string; emoji: string }> = {
   lonely: { label: 'Einsam', emoji: '😔' },
   sad: { label: 'Traurig', emoji: '😢' },
 };
+
+/**
+ * Price for repainting a pet portrait. Mirrors PORTRAIT_REGEN_COST in
+ * backend/src/coin/coin.constants.ts — keep the two in sync.
+ */
+export const PORTRAIT_REGEN_COST = 20;

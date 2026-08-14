@@ -28,3 +28,9 @@ export const DAILY_COIN_REWARD: Record<string, number> = {
   medium: 10,
   hard: 20,
 };
+
+/**
+ * Price for repainting a pet portrait (a coin sink). Mirrored in
+ * frontend/src/constants/pets.ts — keep the two in sync.
+ */
+export const PORTRAIT_REGEN_COST = 20;

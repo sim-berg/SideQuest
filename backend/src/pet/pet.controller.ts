@@ -86,6 +86,12 @@ export class PetController {
     return this.imageService.getImage(id);
   }
 
+  /** Replace the cached portrait with a freshly generated one (owner-only). */
+  @Post(':id/image/regenerate')
+  regenerateImage(@Request() req: any, @Param('id') id: string) {
+    return this.imageService.regenerate(req.user.userId, id);
+  }
+
   @Post(':id/equip')
   equip(
     @Request() req: any,

@@ -31,6 +31,14 @@ export async function fetchPetImage(id: string): Promise<string | null> {
   return res.imageUrl;
 }
 
+/** Replace the cached portrait with a freshly generated one. */
+export async function regeneratePetImage(id: string): Promise<string | null> {
+  const res = await api.post<{ imageUrl: string | null }>(
+    `/pets/${id}/image/regenerate`,
+  );
+  return res.imageUrl;
+}
+
 // --- Equipment -------------------------------------------------------------
 
 export async function equipItem(petId: string, itemId: string): Promise<Pet> {
