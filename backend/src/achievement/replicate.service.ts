@@ -44,26 +44,25 @@ export class ReplicateService {
 
   constructor(private readonly config: ConfigService) {
     this.token = this.config.get<string>('REPLICATE_API_TOKEN');
+    // `||` (not ConfigService defaults) so the empty strings docker-compose
+    // substitutes for unset ${...} variables still fall back.
     // Community models need a pinned version — the version-less model
     // endpoint only exists for official models (404 otherwise).
-    this.model = this.config.get<string>(
-      'REPLICATE_MODEL',
-      'fofr/sticker-maker:4acb778eb059772225ec213948f0660867b2e03f277448f18cf1800b96a65a1a',
-    );
+    this.model =
+      this.config.get<string>('REPLICATE_MODEL') ||
+      'fofr/sticker-maker:4acb778eb059772225ec213948f0660867b2e03f277448f18cf1800b96a65a1a';
     // A general text-to-image model for illustrative side quest scenes.
-    this.sceneModel = this.config.get<string>(
-      'REPLICATE_SCENE_MODEL',
-      'black-forest-labs/flux-schnell',
-    );
+    this.sceneModel =
+      this.config.get<string>('REPLICATE_SCENE_MODEL') ||
+      'black-forest-labs/flux-schnell';
     // Speed-optimized FLUX for pet portraits. Community model, so the
     // version must stay pinned (same 404 rule as REPLICATE_MODEL above).
-    this.petModel = this.config.get<string>(
-      'REPLICATE_PET_MODEL',
-      'prunaai/flux-fast:4f22c6cd75e0f95f12f55d1616a4d163e9166087ed4979f5cecc40418a522703',
-    );
-    this.appUrl = this.config
-      .get<string>('APP_URL', 'http://localhost:3000')
-      .replace(/\/$/, '');
+    this.petModel =
+      this.config.get<string>('REPLICATE_PET_MODEL') ||
+      'prunaai/flux-fast:4f22c6cd75e0f95f12f55d1616a4d163e9166087ed4979f5cecc40418a522703';
+    this.appUrl = (
+      this.config.get<string>('APP_URL') || 'http://localhost:3000'
+    ).replace(/\/$/, '');
   }
 
   get hasToken(): boolean {
