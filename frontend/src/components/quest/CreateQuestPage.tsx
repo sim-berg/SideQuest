@@ -6,7 +6,9 @@ import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { Category, Difficulty, GoalType } from '../../types/quest';
 import type { Category as CategoryType, Difficulty as DifficultyType, GoalType as GoalTypeType } from '../../types/quest';
-import { createQuest } from '../../services/quest.service';
+import { createQuest, createEventQuest } from '../../services/quest.service';
+import { useCoinStore } from '../../stores/useCoinStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
@@ -30,11 +32,26 @@ export default function CreateQuestPage() {
   const [address, setAddress] = useState('');
   const [timeLimit, setTimeLimit] = useState('');
   const [questGiverName, setQuestGiverName] = useState('Anonym');
+  const [usePseudonym, setUsePseudonym] = useState(false);
   const [difficulty, setDifficulty] = useState<DifficultyType>(Difficulty.MEDIUM);
   const [goalType, setGoalType] = useState<GoalTypeType>(GoalType.PROXIMITY);
   const [goalCount, setGoalCount] = useState('');
+  // Event mode: user-organized gathering with a coin-staked reward pool.
+  const [isEvent, setIsEvent] = useState(false);
+  const [rewardPerParticipant, setRewardPerParticipant] = useState('10');
+  const [maxParticipants, setMaxParticipants] = useState('10');
+  const [requiredMinutes, setRequiredMinutes] = useState('30');
+  const [durationHours, setDurationHours] = useState('4');
   const [submitting, setSubmitting] = useState(false);
+  const authUser = useAuthStore((s) => s.user);
   const [error, setError] = useState<string | null>(null);
+
+  const wallet = useCoinStore((s) => s.wallet);
+  const fetchWallet = useCoinStore((s) => s.fetchWallet);
+
+  const eventPool =
+    (parseInt(rewardPerParticipant, 10) || 0) *
+    (parseInt(maxParticipants, 10) || 0);
 
   const resetForm = useCallback(() => {
     setTitle('');
@@ -46,6 +63,11 @@ export default function CreateQuestPage() {
     setDifficulty(Difficulty.MEDIUM);
     setGoalType(GoalType.PROXIMITY);
     setGoalCount('');
+    setIsEvent(false);
+    setRewardPerParticipant('10');
+    setMaxParticipants('10');
+    setRequiredMinutes('30');
+    setDurationHours('4');
     setError(null);
   }, []);
 
@@ -63,6 +85,15 @@ export default function CreateQuestPage() {
       case 3:
         return true; // difficulty has default
       case 4:
+        if (isEvent) {
+          return (
+            (parseInt(rewardPerParticipant, 10) || 0) > 0 &&
+            (parseInt(maxParticipants, 10) || 0) > 0 &&
+            (parseInt(requiredMinutes, 10) || 0) >= 5 &&
+            (parseInt(durationHours, 10) || 0) > 0 &&
+            (!wallet || eventPool <= wallet.balance)
+          );
+        }
         return goalType !== 'count' || (goalCount.trim() !== '' && parseInt(goalCount) > 0);
       case 5:
         return address.trim() !== '';
@@ -91,6 +122,40 @@ export default function CreateQuestPage() {
     setSubmitting(true);
     setError(null);
 
+    if (isEvent) {
+      try {
+        const newQuest = await createEventQuest({
+          title: title.trim(),
+          description: description.trim(),
+          lat: pickedLocation.lat,
+          lng: pickedLocation.lng,
+          address: address.trim(),
+          category: category!,
+          rewardPerParticipant: parseInt(rewardPerParticipant, 10),
+          maxParticipants: parseInt(maxParticipants, 10),
+          requiredMinutes: parseInt(requiredMinutes, 10),
+          durationHours: parseInt(durationHours, 10),
+        });
+        setQuests([...quests, newQuest]);
+        setViewState({
+          latitude: newQuest.lat,
+          longitude: newQuest.lng,
+          zoom: 14,
+        });
+        void fetchWallet();
+        resetForm();
+        closeCreateQuest();
+      } catch (e: any) {
+        setError(
+          e?.message ||
+            'Event konnte nicht erstellt werden. Reichen deine Coins für den Pool?',
+        );
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const newQuest = await createQuest({
         title: title.trim(),
@@ -104,6 +169,7 @@ export default function CreateQuestPage() {
         goalCount: goalType === 'count' && goalCount ? parseInt(goalCount, 10) : null,
         questGiver: { name: questGiverName.trim() || 'Anonym' },
         ...(timeLimit !== '' && { timeLimit: new Date(timeLimit).toISOString() }),
+        ...(usePseudonym && { usePseudonym: true }),
       });
 
       setQuests([...quests, newQuest]);
@@ -174,6 +240,33 @@ export default function CreateQuestPage() {
         {/* Step 1: Title & Description */}
         {wizardStep === 1 && (
           <div className="flex flex-col gap-4">
+                {/* Quest mode: solo quest vs. coin-staked event */}
+                <div className="flex gap-2">
+                  {[
+                    { value: false, icon: '🗺️', label: 'Quest', desc: 'Für eine Person' },
+                    { value: true, icon: '🤝', label: 'Event', desc: 'Gemeinsam, mit Coin-Belohnung' },
+                  ].map(({ value, icon, label, desc }) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() => setIsEvent(value)}
+                      className={cn(
+                        'flex flex-1 items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all',
+                        isEvent === value
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                          : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800',
+                      )}
+                    >
+                      <span className="text-2xl">{icon}</span>
+                      <span>
+                        <p className={cn('text-sm font-semibold', isEvent === value ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200')}>
+                          {label}
+                        </p>
+                        <p className="text-[11px] text-slate-400">{desc}</p>
+                      </span>
+                    </button>
+                  ))}
+                </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
                     Titel *
@@ -258,8 +351,80 @@ export default function CreateQuestPage() {
           </div>
         )}
 
+        {/* Step 4 (event mode): reward pool & presence settings */}
+        {wizardStep === 4 && isEvent && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  🪙 Coins pro Person *
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={rewardPerParticipant}
+                  onChange={(e) => setRewardPerParticipant(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  👥 Max. Teilnehmer *
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={maxParticipants}
+                  onChange={(e) => setMaxParticipants(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  ⏱️ Anwesenheit (min) *
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={480}
+                  value={requiredMinutes}
+                  onChange={(e) => setRequiredMinutes(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  📅 Dauer (Stunden) *
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={72}
+                  value={durationHours}
+                  onChange={(e) => setDurationHours(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+            </div>
+            <div
+              className={cn(
+                'rounded-xl px-4 py-3 text-sm',
+                wallet && eventPool > wallet.balance
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+              )}
+            >
+              Du hinterlegst <strong>{eventPool} 🪙</strong> als Belohnungs-Pool
+              {wallet && ` (Guthaben: ${wallet.balance} 🪙)`}. Nicht verdiente
+              Coins bekommst du nach dem Event zurück.
+            </div>
+          </div>
+        )}
+
         {/* Step 4: Goal Type */}
-        {wizardStep === 4 && (
+        {wizardStep === 4 && !isEvent && (
               <div className="flex flex-col gap-3">
                 {[
                   { type: GoalType.PROXIMITY, icon: '📍', label: 'Standort', desc: 'Muss vor Ort abgeschlossen werden' },
@@ -345,6 +510,49 @@ export default function CreateQuestPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
                   />
                 </div>
+                {authUser && (
+                  <button
+                    type="button"
+                    onClick={() => setUsePseudonym((v) => !v)}
+                    className={cn(
+                      'flex items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-all',
+                      usePseudonym
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                        : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800',
+                    )}
+                  >
+                    <div>
+                      <p
+                        className={cn(
+                          'font-semibold',
+                          usePseudonym
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : 'text-slate-800 dark:text-slate-200',
+                        )}
+                      >
+                        🎭 Unter Pseudonym veröffentlichen
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {authUser.pseudonym
+                          ? `Erscheint als „${authUser.pseudonym}" — ohne Link zu deinem Profil`
+                          : 'Erscheint als „Anonym" — lege im Profil ein Pseudonym fest'}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+                        usePseudonym ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                          usePseudonym && 'translate-x-5',
+                        )}
+                      />
+                    </span>
+                  </button>
+                )}
           </div>
         )}
 

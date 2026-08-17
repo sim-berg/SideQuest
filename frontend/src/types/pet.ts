@@ -50,12 +50,39 @@ export interface Pet {
   /** Markdown personality document, written when the pet hatches. */
   soul: string;
   perks: string[];
+  /** Generated portrait per evolution stage (stage → URL). */
+  images: Record<string, string>;
+  /** Portrait of the current stage, if already generated. */
+  imageUrl: string | null;
+  /** Soul growth: completed quests per category this pet lived through. */
+  soulXp: Record<string, number>;
+  /** Category the soul leans towards (most-lived quest type). */
+  soulAlignment: string | null;
+  /** Equipped treasure item ids (max 3). */
+  equipment: string[];
+  /** Free-form expansion bag for future features. */
+  attributes: Record<string, unknown>;
   hatchedAt: string | null;
   currentStreak: number;
   lastStreakDate: string | null;
   lastQuestCompletedAt: string | null;
   questsCompletedToday: number;
   lastQuestDate: string | null;
+  createdAt: string;
+}
+
+export type PetTradeStatus = 'open' | 'accepted' | 'declined' | 'cancelled';
+
+/** A directed trade offer: this pet for `price` coins (0 = gift). */
+export interface PetTrade {
+  id: string;
+  pet: Pet | null;
+  fromUserId: string;
+  fromUsername: string;
+  toUserId: string;
+  toUsername: string;
+  price: number;
+  status: PetTradeStatus;
   createdAt: string;
 }
 

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { Category } from '../../types/quest';
 import { DISTANCE_OPTIONS } from '../../constants/map';
 import { CATEGORY_META } from '../../constants/categories';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
-import { useChatStore } from '../../stores/useChatStore';
+import CoinBalance from '../common/CoinBalance';
 import { cn } from '../../utils/cn';
 import NextQuestsSheet, { NextQuestsTrigger } from './NextQuestsSheet';
 
@@ -15,13 +16,8 @@ export default function TopNavBar() {
   const filterPanelOpen = useUIStore((s) => s.filterPanelOpen);
   const toggleFilterPanel = useUIStore((s) => s.toggleFilterPanel);
   const closeFilterPanel = useUIStore((s) => s.closeFilterPanel);
-  const menuOpen = useUIStore((s) => s.menuOpen);
-  const toggleMenu = useUIStore((s) => s.toggleMenu);
-  const closeMenu = useUIStore((s) => s.closeMenu);
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
   const darkMode = useUIStore((s) => s.darkMode);
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode);
-  const totalUnread = useChatStore((s) => s.totalUnread);
 
   const categories = useFilterStore((s) => s.categories);
   const toggleCategory = useFilterStore((s) => s.toggleCategory);
@@ -32,22 +28,18 @@ export default function TopNavBar() {
   const togglePaidOnly = useFilterStore((s) => s.togglePaidOnly);
   const toggleTimedOnly = useFilterStore((s) => s.toggleTimedOnly);
 
-  const menuRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on outside click
+  // Close the filter panel on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        closeMenu();
-      }
       if (filterPanelOpen && filterRef.current && !filterRef.current.contains(e.target as Node)) {
         closeFilterPanel();
       }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [menuOpen, filterPanelOpen, closeMenu, closeFilterPanel]);
+  }, [filterPanelOpen, closeFilterPanel]);
 
   const activeFilterCount =
     (ALL_CATEGORIES.length - categories.length) +
@@ -171,6 +163,37 @@ export default function TopNavBar() {
                   Zeitlimit
                 </button>
               </div>
+
+              {/* Appearance — lives here since the top-right menu is gone */}
+              <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                Darstellung
+              </p>
+              <button
+                onClick={toggleDarkMode}
+                className="flex w-full items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+              >
+                <span className="flex items-center gap-2">
+                  {darkMode ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
+                  Dark Mode
+                </span>
+                <span
+                  className={cn(
+                    'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+                    darkMode ? 'bg-indigo-500' : 'bg-slate-300',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                      darkMode && 'translate-x-5',
+                    )}
+                  />
+                </span>
+              </button>
             </div>
           )}
         </div>
@@ -178,113 +201,8 @@ export default function TopNavBar() {
         {/* Center: Logo / Title — doubles as the top sheet handle */}
         <NextQuestsTrigger />
 
-        {/* Right: Menu dropdown */}
-        <div ref={menuRef} className="relative">
-          <button
-            onClick={toggleMenu}
-            className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-full shadow-md backdrop-blur-md transition-colors',
-              menuOpen
-                ? 'bg-indigo-500 text-white'
-                : 'bg-white/90 text-slate-700 dark:bg-slate-800/90 dark:text-slate-200',
-            )}
-            aria-label="Menu"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              className="h-5 w-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
-            {totalUnread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                {totalUnread > 99 ? '99+' : totalUnread}
-              </span>
-            )}
-          </button>
-
-          {/* Menu dropdown */}
-          {menuOpen && (
-            <div className="absolute top-12 right-0 z-40 w-48 overflow-hidden rounded-2xl bg-white/95 shadow-xl backdrop-blur-lg dark:bg-slate-800/95">
-              <button
-                onClick={() => {
-                  setActiveTab('profile');
-                  closeMenu();
-                }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/50"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-                  />
-                </svg>
-                Profil
-              </button>
-              <div className="mx-3 border-t border-slate-100 dark:border-slate-700" />
-              <button
-                onClick={() => {
-                  setActiveTab('chat');
-                  closeMenu();
-                }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/50"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
-                  />
-                </svg>
-                Chat
-                {totalUnread > 0 && (
-                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                    {totalUnread > 99 ? '99+' : totalUnread}
-                  </span>
-                )}
-              </button>
-              <div className="mx-3 border-t border-slate-100 dark:border-slate-700" />
-              <button
-                onClick={toggleDarkMode}
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/50"
-              >
-                {darkMode ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-                  </svg>
-                )}
-                {darkMode ? 'Light Mode' : 'Dark Mode'}
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Right: wallet balances the filter button */}
+        <CoinBalance />
       </div>
 
       {/* Top sheet: nearest quests as cards */}

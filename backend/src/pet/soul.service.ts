@@ -170,7 +170,7 @@ export class SoulService {
       if (!pet || !pet.species || !pet.element) return;
 
       const species = getSpeciesDef(pet.species);
-      const element = ELEMENTS[pet.element as Element];
+      const element = ELEMENTS[pet.element];
       if (!species || !element) return;
 
       const stats = await this.collectUserStats(pet.userId);

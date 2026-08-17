@@ -9,6 +9,7 @@ import { PetModule } from './pet/pet.module.js';
 import { AchievementModule } from './achievement/achievement.module.js';
 import { CommentModule } from './comment/comment.module.js';
 import { TreasureModule } from './treasure/treasure.module.js';
+import { CoinModule } from './coin/coin.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -28,6 +29,7 @@ import { HealthController } from './health/health.controller.js';
     AchievementModule,
     CommentModule,
     TreasureModule,
+    CoinModule,
   ],
   controllers: [HealthController],
 })

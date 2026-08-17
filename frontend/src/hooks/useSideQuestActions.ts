@@ -77,7 +77,12 @@ export function useSideQuestActions(quest: Quest | null) {
         upsertPet(result.xpResult.pet);
         const newStage = result.xpResult.pet.stage;
         if (prevStage && newStage !== prevStage) {
-          celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
+          celebrate({
+            type: 'evolution',
+            fromStage: prevStage,
+            toStage: newStage,
+            petId: result.xpResult.pet.id,
+          });
         }
       }
       if (result.achievements?.length) {

@@ -2,27 +2,34 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PetController } from './pet.controller.js';
 import { ChainController } from './chain.controller.js';
+import { SoulController } from './soul.controller.js';
 import { PetService } from './pet.service.js';
 import { PetMigrationService } from './pet-migration.service.js';
 import { AnthropicService } from './anthropic.service.js';
 import { SoulService } from './soul.service.js';
 import { PetChatService } from './pet-chat.service.js';
 import { PetQuestmasterService } from './pet-questmaster.service.js';
+import { PetImageService } from './pet-image.service.js';
+import { PetTradeService } from './pet-trade.service.js';
 import { ChainService } from './chain.service.js';
 import { Pet, PetSchema } from './schemas/pet.schema.js';
 import { UserSoul, UserSoulSchema } from './schemas/user-soul.schema.js';
 import { PetMessage, PetMessageSchema } from './schemas/pet-message.schema.js';
-import {
-  QuestChain,
-  QuestChainSchema,
-} from './schemas/quest-chain.schema.js';
+import { QuestChain, QuestChainSchema } from './schemas/quest-chain.schema.js';
+import { PetTrade, PetTradeSchema } from './schemas/pet-trade.schema.js';
 import { GeoModule } from '../geo/geo.module.js';
 import { Quest, QuestSchema } from '../quest/schemas/quest.schema.js';
 import {
   DailySideQuest,
   DailySideQuestSchema,
 } from '../quest/schemas/daily-sidequest.schema.js';
+import {
+  UserItem,
+  UserItemSchema,
+} from '../treasure/schemas/user-item.schema.js';
 import { UserModule } from '../user/user.module.js';
+import { AchievementModule } from '../achievement/achievement.module.js';
+import { CoinModule } from '../coin/coin.module.js';
 
 @Module({
   imports: [
@@ -31,15 +38,21 @@ import { UserModule } from '../user/user.module.js';
       { name: UserSoul.name, schema: UserSoulSchema },
       { name: PetMessage.name, schema: PetMessageSchema },
       { name: QuestChain.name, schema: QuestChainSchema },
+      { name: PetTrade.name, schema: PetTradeSchema },
       // Quest models are read-only here: quest history personalizes the
       // element roll and the souls — no dependency on QuestModule itself.
       { name: Quest.name, schema: QuestSchema },
       { name: DailySideQuest.name, schema: DailySideQuestSchema },
+      // UserItem read-only: equipment must exist in the inventory.
+      { name: UserItem.name, schema: UserItemSchema },
     ]),
     UserModule,
     GeoModule,
+    // ReplicateService (pet portraits) lives in the achievement module.
+    AchievementModule,
+    CoinModule,
   ],
-  controllers: [PetController, ChainController],
+  controllers: [PetController, ChainController, SoulController],
   providers: [
     PetService,
     PetMigrationService,
@@ -47,6 +60,8 @@ import { UserModule } from '../user/user.module.js';
     SoulService,
     PetChatService,
     PetQuestmasterService,
+    PetImageService,
+    PetTradeService,
     ChainService,
   ],
   exports: [PetService, SoulService, PetQuestmasterService],

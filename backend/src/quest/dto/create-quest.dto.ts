@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsString,
   IsNumber,
   IsEnum,
@@ -71,4 +72,9 @@ export class CreateQuestDto {
   @IsNumber()
   @Min(1)
   goalCount?: number;
+
+  /** Publish under the author's pseudonym instead of their username. */
+  @IsOptional()
+  @IsBoolean()
+  usePseudonym?: boolean;
 }

@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Quest } from '../types/quest';
+import type { Quest, EventParticipation, Category } from '../types/quest';
 import type { XpResult } from '../types/pet';
 import type { Achievement } from '../types/achievement';
 
@@ -7,6 +7,7 @@ export interface CompleteQuestResult {
   quest: Quest;
   xpResult: XpResult | null;
   achievements: Achievement[];
+  coinsAwarded?: number;
 }
 
 export async function fetchQuests(): Promise<Quest[]> {
@@ -17,9 +18,25 @@ export async function fetchQuestById(id: string): Promise<Quest> {
   return api.get<Quest>(`/quests/${id}`);
 }
 
-export async function createQuest(
-  quest: Omit<Quest, 'id' | 'createdAt' | 'acceptedBy' | 'acceptedAt' | 'completedBy' | 'completedAt'>,
-): Promise<Quest> {
+/** Fields the create endpoint accepts (mirrors the backend CreateQuestDto). */
+export interface CreateQuestPayload {
+  title: string;
+  description: string;
+  lat: number;
+  lng: number;
+  address: string;
+  category: Category;
+  questGiver: { name: string; avatar?: string };
+  reward?: number;
+  timeLimit?: string;
+  difficulty?: Quest['difficulty'];
+  goalType?: Quest['goalType'];
+  goalCount?: number | null;
+  /** Publish under the profile pseudonym instead of the username. */
+  usePseudonym?: boolean;
+}
+
+export async function createQuest(quest: CreateQuestPayload): Promise<Quest> {
   return api.post<Quest>('/quests', quest);
 }
 
@@ -56,4 +73,79 @@ export async function fetchMyCompletedQuests(): Promise<Quest[]> {
 
 export async function fetchDailyQuests(): Promise<Quest[]> {
   return api.get<Quest[]>('/quests/daily');
+}
+
+// --- Event quests (user-organized gatherings) ------------------------------
+
+export interface CreateEventQuestPayload {
+  title: string;
+  description: string;
+  lat: number;
+  lng: number;
+  address?: string;
+  category: Category;
+  rewardPerParticipant: number;
+  maxParticipants: number;
+  requiredMinutes: number;
+  durationHours: number;
+  presenceRadiusM?: number;
+}
+
+export async function createEventQuest(
+  payload: CreateEventQuestPayload,
+): Promise<Quest> {
+  return api.post<Quest>('/quests/events', payload);
+}
+
+export async function joinEvent(id: string): Promise<EventParticipation> {
+  return api.post<EventParticipation>(`/quests/${id}/event/join`);
+}
+
+/** Presence heartbeat from inside the event radius (~every 60s). */
+export async function eventCheckin(
+  id: string,
+  lat: number,
+  lng: number,
+): Promise<EventParticipation> {
+  return api.post<EventParticipation>(`/quests/${id}/event/checkin`, {
+    lat,
+    lng,
+  });
+}
+
+export async function claimEventReward(id: string): Promise<{
+  coins: number;
+  xpResult: XpResult | null;
+  participation: EventParticipation;
+}> {
+  return api.post(`/quests/${id}/event/claim`);
+}
+
+export async function fetchEventParticipation(
+  id: string,
+): Promise<EventParticipation> {
+  return api.get<EventParticipation>(`/quests/${id}/event/participation`);
+}
+
+export async function finalizeEvent(
+  id: string,
+): Promise<{ refunded: number }> {
+  return api.post(`/quests/${id}/event/finalize`);
+}
+
+// --- World quests (QR-redeemed) --------------------------------------------
+
+export async function redeemWorldQuest(
+  id: string,
+  code: string,
+): Promise<{ coins: number; xpResult: XpResult | null }> {
+  return api.post(`/quests/${id}/redeem`, { code });
+}
+
+export async function fetchRedemptionState(id: string): Promise<{
+  redeemed: boolean;
+  redeemedAt: string | null;
+  coins: number | null;
+}> {
+  return api.get(`/quests/${id}/redemption`);
 }

@@ -31,7 +31,11 @@ interface UserLocationEntry {
   cors: { origin: corsOrigin, credentials: true },
 })
 export class MessageGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleDestroy
+  implements
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnGatewayInit,
+    OnModuleDestroy
 {
   @WebSocketServer()
   server: Server;
@@ -125,13 +129,23 @@ export class MessageGateway
   }
 
   @SubscribeMessage('location:update')
-  async handleLocationUpdate(client: Socket, payload: { lat: number; lng: number }) {
+  async handleLocationUpdate(
+    client: Socket,
+    payload: { lat: number; lng: number },
+  ) {
     const userId = client.data.userId;
     if (!userId) return;
 
     // Validate payload
-    if (typeof payload.lat !== 'number' || typeof payload.lng !== 'number') return;
-    if (payload.lat < -90 || payload.lat > 90 || payload.lng < -180 || payload.lng > 180) return;
+    if (typeof payload.lat !== 'number' || typeof payload.lng !== 'number')
+      return;
+    if (
+      payload.lat < -90 ||
+      payload.lat > 90 ||
+      payload.lng < -180 ||
+      payload.lng > 180
+    )
+      return;
 
     // Round to 3 decimal places (~110m precision) for privacy
     const lat = Math.round(payload.lat * 1000) / 1000;

@@ -3,6 +3,7 @@ import { HydratedDocument } from 'mongoose';
 import { Category } from '../enums/category.enum.js';
 import { Difficulty } from '../enums/difficulty.enum.js';
 import { GoalType } from '../enums/goal-type.enum.js';
+import { QuestType } from '../enums/quest-type.enum.js';
 
 export type QuestDocument = HydratedDocument<Quest>;
 
@@ -60,6 +61,54 @@ export class Quest {
 
   @Prop({ type: Date, default: null })
   completedAt: Date | null;
+
+  // --- Quest type system ---
+  @Prop({ default: QuestType.PERSONAL, enum: QuestType, index: true })
+  type: QuestType;
+
+  /** User who organized this quest (event quests). */
+  @Prop({ type: String, default: null })
+  createdBy: string | null;
+
+  /**
+   * Display-name snapshot of the creator, taken at publish time (the
+   * pseudonym when published pseudonymously).
+   */
+  @Prop({ type: String, default: null })
+  creatorName: string | null;
+
+  /** Published under a pseudonym — createdBy is hidden from clients. */
+  @Prop({ default: false })
+  pseudonymous: boolean;
+
+  // --- Event quest fields (type=event) ---
+  /** When the gathering ends; presence and joins stop counting here. */
+  @Prop({ type: Date, default: null })
+  eventEndsAt: Date | null;
+
+  /** Minutes a participant must be present to qualify for the reward. */
+  @Prop({ type: Number, default: null })
+  requiredMinutes: number | null;
+
+  /** Radius in meters around the quest location that counts as "there". */
+  @Prop({ type: Number, default: null })
+  presenceRadiusM: number | null;
+
+  /** Coins each qualifying participant receives from the escrow pool. */
+  @Prop({ type: Number, default: null })
+  rewardPerParticipant: number | null;
+
+  @Prop({ type: Number, default: null })
+  maxParticipants: number | null;
+
+  /** Escrow leftovers refunded to the creator after the event ended. */
+  @Prop({ default: false })
+  eventFinalized: boolean;
+
+  // --- World quest fields (type=world) ---
+  /** Secret QR payload participants scan on site. Never sent to clients. */
+  @Prop({ type: String, default: null })
+  qrToken: string | null;
 
   // --- SideQuest fields ---
   // Auto-spawned, ephemeral mini-quests around the player.

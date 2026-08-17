@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Comment } from '../types/comment';
+import type { UserSoul } from '../types/user';
 
 export interface CheckinResult {
   streak: number;
@@ -23,4 +24,26 @@ export interface ActivityData {
 
 export async function fetchActivity(): Promise<ActivityData[]> {
   return api.get<ActivityData[]>('/users/me/activity');
+}
+
+/** My soul: soul.md + category/element affinity from completed quests. */
+export async function fetchMySoul(): Promise<UserSoul> {
+  return api.get<UserSoul>('/users/me/soul');
+}
+
+/** What other users may see of a profile. */
+export interface PublicProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  bio: string;
+  profileCss: string;
+  level: number;
+  questsCompleted: number;
+  isOnline: boolean;
+}
+
+export async function fetchPublicProfile(id: string): Promise<PublicProfile> {
+  return api.get<PublicProfile>(`/users/${id}`);
 }

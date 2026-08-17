@@ -25,22 +25,102 @@ export interface ElementDef {
 }
 
 export const ELEMENTS: Record<Element, ElementDef> = {
-  [Element.FEUER]: { id: Element.FEUER, name: 'Feuer', emoji: '🔥', color: '#ef4444' },
-  [Element.WASSER]: { id: Element.WASSER, name: 'Wasser', emoji: '💧', color: '#3b82f6' },
-  [Element.WIND]: { id: Element.WIND, name: 'Wind', emoji: '🌪️', color: '#38bdf8' },
-  [Element.ERDE]: { id: Element.ERDE, name: 'Erde', emoji: '⛰️', color: '#a16207' },
-  [Element.BLITZ]: { id: Element.BLITZ, name: 'Blitz', emoji: '⚡', color: '#eab308' },
-  [Element.METALL]: { id: Element.METALL, name: 'Metall', emoji: '⚙️', color: '#71717a' },
-  [Element.LICHT]: { id: Element.LICHT, name: 'Licht', emoji: '✨', color: '#facc15' },
-  [Element.SCHATTEN]: { id: Element.SCHATTEN, name: 'Schatten', emoji: '🌑', color: '#6d28d9' },
-  [Element.CHAOS]: { id: Element.CHAOS, name: 'Chaos', emoji: '🌀', color: '#db2777' },
-  [Element.KRISTALL]: { id: Element.KRISTALL, name: 'Kristall', emoji: '💎', color: '#22d3ee' },
-  [Element.NATUR]: { id: Element.NATUR, name: 'Natur', emoji: '🌿', color: '#22c55e' },
-  [Element.GEIST]: { id: Element.GEIST, name: 'Geist', emoji: '👻', color: '#94a3b8' },
-  [Element.FEE]: { id: Element.FEE, name: 'Fee', emoji: '🧚', color: '#f472b6' },
-  [Element.EIS]: { id: Element.EIS, name: 'Eis', emoji: '❄️', color: '#7dd3fc' },
-  [Element.GIFT]: { id: Element.GIFT, name: 'Gift', emoji: '☠️', color: '#84cc16' },
-  [Element.KOSMOS]: { id: Element.KOSMOS, name: 'Kosmos', emoji: '🌌', color: '#8b5cf6' },
+  [Element.FEUER]: {
+    id: Element.FEUER,
+    name: 'Feuer',
+    emoji: '🔥',
+    color: '#ef4444',
+  },
+  [Element.WASSER]: {
+    id: Element.WASSER,
+    name: 'Wasser',
+    emoji: '💧',
+    color: '#3b82f6',
+  },
+  [Element.WIND]: {
+    id: Element.WIND,
+    name: 'Wind',
+    emoji: '🌪️',
+    color: '#38bdf8',
+  },
+  [Element.ERDE]: {
+    id: Element.ERDE,
+    name: 'Erde',
+    emoji: '⛰️',
+    color: '#a16207',
+  },
+  [Element.BLITZ]: {
+    id: Element.BLITZ,
+    name: 'Blitz',
+    emoji: '⚡',
+    color: '#eab308',
+  },
+  [Element.METALL]: {
+    id: Element.METALL,
+    name: 'Metall',
+    emoji: '⚙️',
+    color: '#71717a',
+  },
+  [Element.LICHT]: {
+    id: Element.LICHT,
+    name: 'Licht',
+    emoji: '✨',
+    color: '#facc15',
+  },
+  [Element.SCHATTEN]: {
+    id: Element.SCHATTEN,
+    name: 'Schatten',
+    emoji: '🌑',
+    color: '#6d28d9',
+  },
+  [Element.CHAOS]: {
+    id: Element.CHAOS,
+    name: 'Chaos',
+    emoji: '🌀',
+    color: '#db2777',
+  },
+  [Element.KRISTALL]: {
+    id: Element.KRISTALL,
+    name: 'Kristall',
+    emoji: '💎',
+    color: '#22d3ee',
+  },
+  [Element.NATUR]: {
+    id: Element.NATUR,
+    name: 'Natur',
+    emoji: '🌿',
+    color: '#22c55e',
+  },
+  [Element.GEIST]: {
+    id: Element.GEIST,
+    name: 'Geist',
+    emoji: '👻',
+    color: '#94a3b8',
+  },
+  [Element.FEE]: {
+    id: Element.FEE,
+    name: 'Fee',
+    emoji: '🧚',
+    color: '#f472b6',
+  },
+  [Element.EIS]: {
+    id: Element.EIS,
+    name: 'Eis',
+    emoji: '❄️',
+    color: '#7dd3fc',
+  },
+  [Element.GIFT]: {
+    id: Element.GIFT,
+    name: 'Gift',
+    emoji: '☠️',
+    color: '#84cc16',
+  },
+  [Element.KOSMOS]: {
+    id: Element.KOSMOS,
+    name: 'Kosmos',
+    emoji: '🌌',
+    color: '#8b5cf6',
+  },
 };
 
 export const SPECIES: SpeciesDef[] = [
@@ -49,7 +129,12 @@ export const SPECIES: SpeciesDef[] = [
   { id: 'katze', name: 'Katze', emoji: '🐈', rarity: Rarity.COMMON },
   { id: 'maus', name: 'Maus', emoji: '🐭', rarity: Rarity.COMMON },
   { id: 'kaninchen', name: 'Kaninchen', emoji: '🐰', rarity: Rarity.COMMON },
-  { id: 'eichhoernchen', name: 'Eichhörnchen', emoji: '🐿️', rarity: Rarity.COMMON },
+  {
+    id: 'eichhoernchen',
+    name: 'Eichhörnchen',
+    emoji: '🐿️',
+    rarity: Rarity.COMMON,
+  },
   { id: 'igel', name: 'Igel', emoji: '🦔', rarity: Rarity.COMMON },
   { id: 'frosch', name: 'Frosch', emoji: '🐸', rarity: Rarity.COMMON },
   { id: 'ente', name: 'Ente', emoji: '🦆', rarity: Rarity.COMMON },
@@ -65,7 +150,12 @@ export const SPECIES: SpeciesDef[] = [
   { id: 'rabe', name: 'Rabe', emoji: '🐦‍⬛', rarity: Rarity.UNCOMMON },
   { id: 'pinguin', name: 'Pinguin', emoji: '🐧', rarity: Rarity.UNCOMMON },
   { id: 'koala', name: 'Koala', emoji: '🐨', rarity: Rarity.UNCOMMON },
-  { id: 'fledermaus', name: 'Fledermaus', emoji: '🦇', rarity: Rarity.UNCOMMON },
+  {
+    id: 'fledermaus',
+    name: 'Fledermaus',
+    emoji: '🦇',
+    rarity: Rarity.UNCOMMON,
+  },
   // ── Rare ──────────────────────────────────────────────────────────────────
   { id: 'giraffe', name: 'Giraffe', emoji: '🦒', rarity: Rarity.RARE },
   { id: 'elefant', name: 'Elefant', emoji: '🐘', rarity: Rarity.RARE },
@@ -81,7 +171,12 @@ export const SPECIES: SpeciesDef[] = [
   { id: 'flamingo', name: 'Flamingo', emoji: '🦩', rarity: Rarity.RARE },
   // ── Epic ──────────────────────────────────────────────────────────────────
   { id: 'narwal', name: 'Narwal', emoji: '🐋', rarity: Rarity.EPIC },
-  { id: 'schneeleopard', name: 'Schneeleopard', emoji: '🐆', rarity: Rarity.EPIC },
+  {
+    id: 'schneeleopard',
+    name: 'Schneeleopard',
+    emoji: '🐆',
+    rarity: Rarity.EPIC,
+  },
   { id: 'mantarochen', name: 'Mantarochen', emoji: '🐟', rarity: Rarity.EPIC },
   { id: 'axolotl', name: 'Axolotl', emoji: '🦎', rarity: Rarity.EPIC },
   { id: 'komodowaran', name: 'Komodowaran', emoji: '🐉', rarity: Rarity.EPIC },
@@ -112,9 +207,34 @@ export const RARITY_WEIGHTS: Record<Rarity, number> = {
  * roll: users who mostly clear Sport quests skew towards Feuer/Blitz etc.
  */
 export const CATEGORY_ELEMENT_AFFINITY: Record<Category, Element[]> = {
-  [Category.SPORT]: [Element.FEUER, Element.BLITZ, Element.WIND, Element.METALL],
-  [Category.SOCIAL]: [Element.LICHT, Element.FEE, Element.WASSER, Element.NATUR],
-  [Category.ADVENTURE]: [Element.WIND, Element.ERDE, Element.KOSMOS, Element.EIS],
-  [Category.SKILL]: [Element.KRISTALL, Element.METALL, Element.BLITZ, Element.WASSER],
-  [Category.MYSTERY]: [Element.SCHATTEN, Element.GEIST, Element.CHAOS, Element.GIFT],
+  [Category.SPORT]: [
+    Element.FEUER,
+    Element.BLITZ,
+    Element.WIND,
+    Element.METALL,
+  ],
+  [Category.SOCIAL]: [
+    Element.LICHT,
+    Element.FEE,
+    Element.WASSER,
+    Element.NATUR,
+  ],
+  [Category.ADVENTURE]: [
+    Element.WIND,
+    Element.ERDE,
+    Element.KOSMOS,
+    Element.EIS,
+  ],
+  [Category.SKILL]: [
+    Element.KRISTALL,
+    Element.METALL,
+    Element.BLITZ,
+    Element.WASSER,
+  ],
+  [Category.MYSTERY]: [
+    Element.SCHATTEN,
+    Element.GEIST,
+    Element.CHAOS,
+    Element.GIFT,
+  ],
 };

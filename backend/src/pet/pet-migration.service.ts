@@ -64,7 +64,8 @@ export class PetMigrationService implements OnModuleInit {
         .findOne({ userId, isActive: true })
         .exec();
 
-      const stage = DRAGON_STAGE_MAP[dragon.evolutionStage] ?? PetStage.HATCHLING;
+      const stage =
+        DRAGON_STAGE_MAP[dragon.evolutionStage] ?? PetStage.HATCHLING;
       await this.petModel.create({
         userId,
         species: 'drache',
