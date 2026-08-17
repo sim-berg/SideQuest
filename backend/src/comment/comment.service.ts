@@ -29,9 +29,11 @@ export class CommentService {
     private readonly userService: UserService,
     config: ConfigService,
   ) {
-    this.appUrl = config
-      .get<string>('APP_URL', 'http://localhost:3000')
-      .replace(/\/$/, '');
+    // `||` so the empty string docker-compose substitutes for an unset
+    // ${APP_URL} still falls back.
+    this.appUrl = (
+      config.get<string>('APP_URL') || 'http://localhost:3000'
+    ).replace(/\/$/, '');
   }
 
   async list(questId: string) {
