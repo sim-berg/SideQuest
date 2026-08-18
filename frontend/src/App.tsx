@@ -23,7 +23,9 @@ import LogbookPage from './components/logbook/LogbookPage';
 import TreasuryPage from './components/treasure/TreasuryPage';
 import HubMenuFAB from './components/navigation/HubMenuFAB';
 import PetsPage from './components/pet/PetsPage';
+import ChallengesPage from './components/track/ChallengesPage';
 import GuildsPage from './components/guild/GuildsPage';
+import KumpanePage from './components/profile/KumpanePage';
 import ChainOfferCard from './components/chain/ChainOfferCard';
 import ChainChip from './components/chain/ChainChip';
 import ChainSheet from './components/chain/ChainSheet';
@@ -37,6 +39,7 @@ import { useTreasureSpawner } from './hooks/useTreasureSpawner';
 import { useTreasureStore } from './stores/useTreasureStore';
 import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
+import { useFriendStore } from './stores/useFriendStore';
 import { useUIStore } from './stores/useUIStore';
 import { useMapStore } from './stores/useMapStore';
 import { usePetStore, selectActivePet } from './stores/usePetStore';
@@ -94,6 +97,7 @@ function AppContent() {
   const fetchAchievements = useAchievementStore((s) => s.fetchAchievements);
   const fetchDaily = useDailySideQuestStore((s) => s.fetchDaily);
   const fetchTreasureInventory = useTreasureStore((s) => s.fetchInventory);
+  const refreshFriends = useFriendStore((s) => s.refresh);
   const showStreakModal = useStreakStore((s) => s.showStreakModal);
 
   // Silent refresh on mount — non-blocking, app works without auth
@@ -166,7 +170,16 @@ function AppContent() {
     void fetchAchievements();
     void fetchDaily();
     void fetchTreasureInventory();
-  }, [isAuthenticated, fetchAchievements, fetchDaily, fetchTreasureInventory]);
+    // Kumpanen requests — the hub badge needs the count before the overlay
+    // is ever opened.
+    void refreshFriends();
+  }, [
+    isAuthenticated,
+    fetchAchievements,
+    fetchDaily,
+    fetchTreasureInventory,
+    refreshFriends,
+  ]);
 
   // Daily streak checkin — fires once per day on first open
   useEffect(() => {
@@ -313,9 +326,13 @@ function AppContent() {
 
       {/* Menagerie overlay */}
       <PetsPage />
+      <ChallengesPage />
 
       {/* Gilden placeholder overlay */}
       <GuildsPage />
+
+      {/* Kumpane overlay (friends, requests, people search) */}
+      <KumpanePage />
 
       {/* Celebration animations (accept / complete / evolution / achievement / hatch) */}
       <CelebrationOverlay />

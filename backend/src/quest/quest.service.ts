@@ -34,6 +34,8 @@ import type { CompleteQuestDto } from './dto/complete-quest.dto.js';
 import { DAILY_QUESTS_POOL } from './data/daily-quests.data.js';
 import { CoinService } from '../coin/coin.service.js';
 import { DAILY_COIN_REWARD } from '../coin/coin.constants.js';
+import { QuestVectorService } from '../vector/quest-vector.service.js';
+import type { QuestSearchDto } from './dto/quest-search.dto.js';
 
 function toPlain(doc: QuestDocument) {
   const obj = doc.toObject();
@@ -98,6 +100,16 @@ const DAILY_DIFFICULTY_PLAN = [
 ];
 // Extra XP for clearing the whole board — the reward for securing the day.
 const DAILY_BOARD_BONUS_XP = 40;
+
+// --- Near-duplicate detection for newly posted quests ---
+// Two quests count as the same one when they are semantically this close AND
+// this near each other. 0.93 cosine on multilingual-e5 is "same errand, other
+// words" — rephrasings match, two different quests in one park do not.
+const DUPLICATE_THRESHOLD = 0.93;
+const DUPLICATE_RADIUS_M = 300;
+// Posting must never wait on a cold Replicate container: past this, the quest
+// is created unchecked.
+const DUPLICATE_CHECK_TIMEOUT_MS = 4000;
 
 // Per-category styling for the generated side quest scene (emoji + gradient
 // colors drive the fallback image when no Replicate token is configured).
@@ -168,6 +180,7 @@ export class QuestService {
     private readonly replicate: ReplicateService,
     private readonly treasureService: TreasureService,
     private readonly coinService: CoinService,
+    private readonly questVector: QuestVectorService,
   ) {}
 
   // De-dupes concurrent image requests for the same key so we never kick off
@@ -250,8 +263,145 @@ export class QuestService {
     return toPlain(doc);
   }
 
+  // --- Semantic search ----------------------------------------------------
+
+  /**
+   * Meaning-based quest search: "irgendwas mit Musik draußen" finds the open
+   * mic in the park without sharing a single word with it. Falls back to a
+   * substring match when the vector stack is unavailable, so the endpoint
+   * always answers something useful.
+   */
+  async search(dto: QuestSearchDto) {
+    const limit = dto.limit ?? 20;
+    const hits = await this.questVector.search(dto.q, {
+      limit,
+      categories: dto.categories,
+      types: dto.types,
+      lat: dto.lat,
+      lng: dto.lng,
+      radius: dto.radius,
+      includeSideQuests: dto.includeSideQuests ?? false,
+      includeCompleted: dto.includeCompleted ?? false,
+      scoreThreshold: dto.minScore,
+    });
+
+    if (hits.length === 0) {
+      return {
+        mode: this.questVector.enabled
+          ? ('semantic' as const)
+          : ('text' as const),
+        query: dto.q,
+        results: this.questVector.enabled
+          ? []
+          : await this.textSearch(dto, limit),
+      };
+    }
+
+    const docs = await this.questModel
+      .find({ _id: { $in: hits.map((h) => h.questId) } })
+      .exec();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+
+    // Qdrant already ranked these — keep its order, drop anything Mongo no
+    // longer has (a point the sweep hasn't reached yet).
+    const results = hits
+      .map((hit) => {
+        const doc = byId.get(hit.questId);
+        return doc ? { ...toPlain(doc), score: hit.score } : null;
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    return { mode: 'semantic' as const, query: dto.q, results };
+  }
+
+  /** Quests semantically close to this one — the "mehr davon" rail. */
+  async findSimilar(id: string, limit = 5) {
+    const doc = await this.questModel.findById(id).exec();
+    if (!doc) throw new NotFoundException(`Quest ${id} not found`);
+
+    const hits = await this.questVector.similar(doc, {
+      limit,
+      includeSideQuests: !!doc.isSideQuest,
+    });
+    if (hits.length === 0) return [];
+
+    const docs = await this.questModel
+      .find({ _id: { $in: hits.map((h) => h.questId) } })
+      .exec();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+
+    return hits
+      .map((hit) => {
+        const found = byId.get(hit.questId);
+        return found ? { ...toPlain(found), score: hit.score } : null;
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+  }
+
+  /** Plain substring fallback used when Qdrant or the embedder is down. */
+  private async textSearch(dto: QuestSearchDto, limit: number) {
+    const escaped = dto.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(escaped, 'i');
+    const query: Record<string, unknown> = {
+      $or: [{ title: rx }, { description: rx }, { address: rx }],
+    };
+    if (!dto.includeSideQuests) query.isSideQuest = { $ne: true };
+    if (!dto.includeCompleted) query.completedBy = null;
+    if (dto.categories?.length) query.category = { $in: dto.categories };
+    if (dto.types?.length) query.type = { $in: dto.types };
+
+    let docs = await this.questModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+
+    if (dto.lat != null && dto.lng != null && dto.radius) {
+      docs = docs.filter(
+        (q) =>
+          this.geoService.haversine(dto.lat!, dto.lng!, q.lat, q.lng) <=
+          dto.radius!,
+      );
+    }
+    return docs.map((d) => ({ ...toPlain(d), score: null }));
+  }
+
   async create(dto: CreateQuestDto, userId: string | null = null) {
-    const { usePseudonym, ...quest } = dto;
+    const { usePseudonym, force, ...quest } = dto;
+
+    // Semantic duplicate guard: same errand, same corner, different wording.
+    // `force: true` is the client saying "yes, I mean it" after seeing the
+    // conflict — and the check is skipped entirely when the index is cold.
+    if (!force) {
+      const duplicate = await this.questVector.findNearDuplicate(
+        quest.title,
+        quest.description,
+        quest.address,
+        quest.lat,
+        quest.lng,
+        {
+          radiusM: DUPLICATE_RADIUS_M,
+          threshold: DUPLICATE_THRESHOLD,
+          timeoutMs: DUPLICATE_CHECK_TIMEOUT_MS,
+        },
+      );
+      if (duplicate) {
+        const existing = await this.questModel
+          .findById(duplicate.questId)
+          .exec();
+        if (existing) {
+          throw new ConflictException({
+            message:
+              'Ganz in der Nähe gibt es schon ein sehr ähnliches Quest. ' +
+              'Sende erneut mit "force": true, wenn du es trotzdem posten willst.',
+            error: 'DuplicateQuest',
+            statusCode: 409,
+            similarity: Number(duplicate.score.toFixed(4)),
+            duplicate: toPlain(existing),
+          });
+        }
+      }
+    }
 
     // Snapshot the creator's display name at publish time; pseudonymous
     // quests carry the pseudonym and never reveal createdBy to clients.
@@ -271,6 +421,7 @@ export class QuestService {
       creatorName,
       pseudonymous,
     });
+    void this.questVector.indexNow(doc);
     return toPlain(doc);
   }
 
@@ -364,6 +515,14 @@ export class QuestService {
             userId,
             doc.templateId,
             doc._id.toString(),
+            {
+              sourceKind: 'sidequest',
+              questTitle: doc.title,
+              questCategory: doc.category,
+              lat: doc.lat,
+              lng: doc.lng,
+              placeLabel: doc.address ?? '',
+            },
           )
         : [];
 
@@ -414,14 +573,26 @@ export class QuestService {
     const radius = radiusKm ?? SIDEQUEST_SPAWN_RADIUS_KM;
     const now = new Date();
 
-    // 1. Despawn expired spawns that nobody has accepted.
-    await this.questModel
-      .deleteMany({
+    // 1. Despawn expired spawns that nobody has accepted. Collect the ids
+    //    first — a hard delete is invisible to the vector reconciler, so the
+    //    points have to be dropped explicitly (the orphan sweep is the
+    //    backstop, not the mechanism).
+    const expired = await this.questModel
+      .find({
         isSideQuest: true,
         acceptedBy: null,
         expiresAt: { $lt: now },
       })
+      .select('_id')
       .exec();
+
+    if (expired.length > 0) {
+      const ids = expired.map((d) => d._id.toString());
+      await this.questModel
+        .deleteMany({ _id: { $in: expired.map((d) => d._id) } })
+        .exec();
+      void this.questVector.removeQuests(ids);
+    }
 
     // 2. Load all open (un-accepted, non-expired) side quests and keep those
     //    inside the radius.
@@ -464,7 +635,7 @@ export class QuestService {
     const { lat, lng } = this.randomPointAround(centerLat, centerLng, radiusKm);
     const expiresAt = new Date(Date.now() + template.ttlMinutes * 60_000);
 
-    return this.questModel.create({
+    const doc = await this.questModel.create({
       title: template.title,
       description: template.description,
       lat,
@@ -478,6 +649,10 @@ export class QuestService {
       templateId: template.id,
       expiresAt,
     });
+    // Spawns repeat the same handful of templates, so the embedding for this
+    // wording is almost always a cache hit — indexing them costs nothing.
+    void this.questVector.indexNow(doc);
+    return doc;
   }
 
   /** Uniform-ish random point in the ring [minOffset, radius] around a center. */
@@ -665,7 +840,11 @@ export class QuestService {
       userId,
       doc.templateId,
       doc._id.toString(),
-      { daily: true },
+      {
+        daily: true,
+        questTitle: doc.title,
+        questCategory: doc.category,
+      },
     );
 
     // Clearing a full board is what hatches the mystery egg — the pet's

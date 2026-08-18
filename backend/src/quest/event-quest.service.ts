@@ -20,6 +20,7 @@ import { escrowAccount } from '../coin/coin.constants.js';
 import { PetService } from '../pet/pet.service.js';
 import { SoulService } from '../pet/soul.service.js';
 import { UserService } from '../user/user.service.js';
+import { QuestVectorService } from '../vector/quest-vector.service.js';
 
 const DEFAULT_PRESENCE_RADIUS_M = 150;
 /** A heartbeat only accrues presence when the previous one is this fresh. */
@@ -57,6 +58,7 @@ export class EventQuestService {
     private readonly petService: PetService,
     private readonly soulService: SoulService,
     private readonly userService: UserService,
+    private readonly questVector: QuestVectorService,
   ) {}
 
   async create(userId: string, dto: CreateEventQuestDto) {
@@ -93,9 +95,13 @@ export class EventQuestService {
     } catch (err) {
       // Not enough coins — roll the quest back and surface the error.
       await this.questModel.deleteOne({ _id: doc._id }).exec();
+      await this.questVector.removeQuests([doc._id.toString()]);
       throw err;
     }
 
+    // Only index once the escrow is funded — a rolled-back quest never
+    // becomes searchable.
+    void this.questVector.indexNow(doc);
     return doc;
   }
 

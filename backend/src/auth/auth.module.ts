@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '../user/user.module.js';
 import { QuestModule } from '../quest/quest.module.js';
+import { AchievementModule } from '../achievement/achievement.module.js';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
@@ -12,6 +13,7 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
   imports: [
     UserModule,
     QuestModule,
+    AchievementModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

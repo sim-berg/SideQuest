@@ -8,12 +8,15 @@ import {
   Shield,
   Sparkles,
   User,
+  Users,
   X,
+  Target,
 } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import type { ActiveTab } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useChatStore } from '../../stores/useChatStore';
+import { useFriendStore } from '../../stores/useFriendStore';
 import { useLogbookStore } from '../../stores/useLogbookStore';
 import { useTreasureStore } from '../../stores/useTreasureStore';
 import { cn } from '../../utils/cn';
@@ -47,6 +50,9 @@ export default function HubMenuFAB() {
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
   const openPets = useUIStore((s) => s.openPets);
   const openGuilds = useUIStore((s) => s.openGuilds);
+  const openKumpane = useUIStore((s) => s.openKumpane);
+  const openChallenges = useUIStore((s) => s.openChallenges);
+  const pendingFriends = useFriendStore((s) => s.pendingCount);
   const openLogbook = useLogbookStore((s) => s.openLogbook);
   const openTreasury = useTreasureStore((s) => s.openTreasury);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -81,6 +87,14 @@ export default function HubMenuFAB() {
       action: openLogbook,
     },
     {
+      id: 'challenges',
+      label: 'Challenges',
+      icon: Target,
+      color: '#10b981',
+      protected: true,
+      action: openChallenges,
+    },
+    {
       id: 'equipment',
       label: 'Ausrüstung',
       icon: Backpack,
@@ -105,6 +119,15 @@ export default function HubMenuFAB() {
       authTab: 'chat',
       badge: unread,
       action: () => setActiveTab('chat'),
+    },
+    {
+      id: 'kumpane',
+      label: 'Kumpane',
+      icon: Users,
+      color: '#ec4899',
+      protected: true,
+      badge: isAuthenticated ? pendingFriends : 0,
+      action: openKumpane,
     },
     {
       id: 'profile',

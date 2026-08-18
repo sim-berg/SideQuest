@@ -24,6 +24,7 @@ import { UserModule } from '../user/user.module.js';
 import { AchievementModule } from '../achievement/achievement.module.js';
 import { TreasureModule } from '../treasure/treasure.module.js';
 import { CoinModule } from '../coin/coin.module.js';
+import { VectorModule } from '../vector/vector.module.js';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { CoinModule } from '../coin/coin.module.js';
     AchievementModule,
     TreasureModule,
     CoinModule,
+    VectorModule,
   ],
   controllers: [QuestController, SideQuestController],
   providers: [QuestService, EventQuestService, WorldQuestService],

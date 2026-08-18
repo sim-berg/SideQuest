@@ -11,6 +11,10 @@ Standort-Sharing zwischen Spielern.
 
 | Dokument | Inhalt |
 |----------|--------|
+| **[workflow.md](./workflow.md)** | **Team- & Multi-Session-Workflow: Lanes, Worktrees, Hotspots, Merge-Train** |
+| **[BOARD.md](./BOARD.md)** | **Wer arbeitet gerade woran — vor Arbeitsbeginn eintragen!** |
+| **[beta-plan.md](./beta-plan.md)** | **Weg zur Closed Beta: Scope, 4-Wochen-Plan, Beta-Gate** |
+| **[production-plan.md](./production-plan.md)** | **Weg zu v1.0: Zielarchitektur, Härtung, Release, Kosten** |
 | [getting-started.md](./getting-started.md) | Setup, Installation, Dev-Server, Umgebungsvariablen |
 | [architecture.md](./architecture.md) | Gesamtarchitektur, Datenfluss, Modulabhängigkeiten |
 | [frontend.md](./frontend.md) | React-App: Navigation, Stores, Services, Hooks, Komponenten |
@@ -49,3 +53,14 @@ npm run dev          # Frontend (5173) + Backend (3000) parallel
 ```
 
 Details siehe [getting-started.md](./getting-started.md).
+
+## Parallel arbeiten (zwei Menschen, mehrere Claude-Sessions)
+
+```bash
+docker compose up -d mongo qdrant      # einmal, aus dem Haupt-Tree
+./scripts/lane.sh new quest-search 1   # eigener Worktree + Branch + Ports
+./scripts/lane.sh list                 # wer belegt welchen Slot
+./scripts/lane.sh drop quest-search    # nach dem Merge aufräumen
+```
+
+Regeln und Lane-Map: [workflow.md](./workflow.md) · Belegung: [BOARD.md](./BOARD.md)

@@ -1,0 +1,113 @@
+# SideQuest — Coolify deployment (Docker Compose resource)
+#
+# Point a Coolify "Docker Compose" resource at this file. Only the frontend
+# gets a public domain; nginx proxies /api, /socket.io and /uploads to the
+# backend, so mongo, qdrant and the backend itself stay on the internal
+# network and are never reachable from the internet.
+#
+# Coolify magic variables used here (generated once, then persisted per
+# resource — you can view and override every one of them under
+# "Environment Variables" in the Coolify UI):
+#   SERVICE_FQDN_FRONTEND_80  → public domain, routed to the frontend's :80
+#   SERVICE_PASSWORD_QDRANT   → Qdrant API key, shared with the backend
+#   SERVICE_BASE64_64_JWT     → JWT signing secret
+#
+# Upgrading an existing deployment: paste your current JWT_SECRET into the
+# Coolify UI before the first deploy, otherwise a freshly generated secret
+# logs every user out.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # No credentials on purpose: the container is only reachable inside this
+    # compose network. To enable auth, set MONGO_INITDB_ROOT_USERNAME /
+    # MONGO_INITDB_ROOT_PASSWORD here *and* add
+    # `?authSource=admin` plus the credentials to MONGODB_URI below — note
+    # that MONGO_INITDB_* only takes effect on an empty data volume.
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    restart: unless-stopped
+    environment:
+      # Even on an internal network: any container in this project could
+      # otherwise read and delete the whole index.
+      QDRANT__SERVICE__API_KEY: ${SERVICE_PASSWORD_QDRANT}
+      QDRANT__TELEMETRY_DISABLED: 'true'
+    volumes:
+      - qdrant-data:/qdrant/storage
+      - qdrant-snapshots:/qdrant/snapshots
+    healthcheck:
+      # The image ships no curl/wget — bash's /dev/tcp is the portable probe.
+      test: ['CMD-SHELL', "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      MONGODB_URI: mongodb://mongo:27017/sidequest
+      JWT_SECRET: ${SERVICE_BASE64_64_JWT}
+      # Same-origin in production — nginx proxies /api to this service.
+      CORS_ORIGIN: ${SERVICE_FQDN_FRONTEND_80}
+      APP_URL: ${SERVICE_FQDN_FRONTEND_80}
+
+      # --- Vector search -------------------------------------------------
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${SERVICE_PASSWORD_QDRANT}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-quests}
+      # Must match the embedding model's output size. Changing the model means
+      # changing this AND pointing QDRANT_COLLECTION at a fresh name.
+      EMBEDDING_DIMS: ${EMBEDDING_DIMS:-1024}
+      VECTOR_RECONCILE_INTERVAL_MS: ${VECTOR_RECONCILE_INTERVAL_MS:-30000}
+
+      # --- AI providers (set these in the Coolify UI) ---------------------
+      # Without a Replicate token: no embeddings, no semantic search, no
+      # duplicate detection — search degrades to substring matching.
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      # Generated badges, pet portraits and quest scenes live on disk. Without
+      # this volume every redeploy regenerates them at full Replicate cost.
+      - backend-uploads:/app/uploads
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      # This single line is what makes Coolify route a domain here.
+      SERVICE_FQDN_FRONTEND_80: /
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
+  qdrant-data:
+  qdrant-snapshots:
+  backend-uploads:

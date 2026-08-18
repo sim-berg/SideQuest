@@ -14,11 +14,13 @@ import { WorldQuestService } from './world-quest.service.js';
 import { CreateQuestDto } from './dto/create-quest.dto.js';
 import { CompleteQuestDto } from './dto/complete-quest.dto.js';
 import { QuestFilterDto } from './dto/quest-filter.dto.js';
+import { QuestSearchDto } from './dto/quest-search.dto.js';
 import { CreateEventQuestDto } from './dto/create-event-quest.dto.js';
 import { EventCheckinDto } from './dto/event-checkin.dto.js';
 import { RedeemQrDto } from './dto/redeem-qr.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard.js';
+import { DAILY_QUEST_TEMPLATES } from './daily-templates.js';
 
 @Controller('quests')
 export class QuestController {
@@ -36,6 +38,32 @@ export class QuestController {
   @Get('daily')
   getDailyQuests() {
     return this.questService.getDailyQuests();
+  }
+
+  /**
+   * The standard quest pool — every everyday template, offered as a
+   * pre-selection when creating a quest so nobody has to invent "Bett machen"
+   * from scratch. Static catalog data, so no auth and no user context.
+   */
+  @Get('pool')
+  getQuestPool() {
+    return DAILY_QUEST_TEMPLATES.map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      category: t.category,
+      difficulty: t.difficulty,
+      emoji: t.emoji,
+    }));
+  }
+
+  /**
+   * Semantic quest search. Declared above `:id` — Nest matches routes in
+   * declaration order and would otherwise read "search" as a quest id.
+   */
+  @Get('search')
+  search(@Query() dto: QuestSearchDto) {
+    return this.questService.search(dto);
   }
 
   @Get('my/active')
@@ -120,6 +148,15 @@ export class QuestController {
   @UseGuards(JwtAuthGuard)
   qrPayload(@Param('id') id: string, @Request() req: any) {
     return this.worldQuestService.getQrPayload(id, req.user.userId);
+  }
+
+  /** "Mehr davon" — quests closest in meaning to this one. */
+  @Get(':id/similar')
+  similar(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.questService.findSimilar(
+      id,
+      limit ? Math.min(Number(limit) || 5, 20) : 5,
+    );
   }
 
   @Get(':id')

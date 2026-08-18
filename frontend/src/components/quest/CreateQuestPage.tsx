@@ -10,6 +10,8 @@ import type { Category as CategoryType, Difficulty as DifficultyType, GoalType a
 import { createQuest, createEventQuest } from '../../services/quest.service';
 import { useCoinStore } from '../../stores/useCoinStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useTrackStore } from '../../stores/useTrackStore';
+import { QuestPoolPicker } from './QuestPoolPicker';
 import { cn } from '../../utils/cn';
 
 const ALL_CATEGORIES = Object.values(Category);
@@ -25,6 +27,7 @@ export default function CreateQuestPage() {
   const quests = useQuestStore((s) => s.quests);
   const setQuests = useQuestStore((s) => s.setQuests);
   const setViewState = useMapStore((s) => s.setViewState);
+  const openTrack = useTrackStore((s) => s.open);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -268,6 +271,17 @@ export default function CreateQuestPage() {
                     </button>
                   ))}
                 </div>
+                {/* Pre-selection: standard quests fill the form, challenges
+                    hand off to the challenge sheet. */}
+                <QuestPoolPicker
+                  onSelect={(sel) => {
+                    setTitle(sel.title);
+                    setDescription(sel.description);
+                    setCategory(sel.category);
+                    setDifficulty(sel.difficulty);
+                  }}
+                  onSelectChallenge={(slug) => openTrack(slug)}
+                />
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
                     Titel *

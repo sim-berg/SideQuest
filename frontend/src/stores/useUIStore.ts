@@ -16,6 +16,10 @@ interface UIState {
   petsOpen: boolean;
   /** Gilden placeholder overlay */
   guildsOpen: boolean;
+  /** Kumpane overlay — friends, requests and people search */
+  kumpaneOpen: boolean;
+  /** Challenge & story-arc pool overlay. */
+  challengesOpen: boolean;
   /** Top sheet under the wordmark listing the nearest side quests. */
   topSheetOpen: boolean;
   showAuthPrompt: boolean;
@@ -42,6 +46,10 @@ interface UIState {
   closePets: () => void;
   openGuilds: () => void;
   closeGuilds: () => void;
+  openKumpane: () => void;
+  closeKumpane: () => void;
+  openChallenges: () => void;
+  closeChallenges: () => void;
   toggleTopSheet: () => void;
   setTopSheetOpen: (open: boolean) => void;
   setShowAuthPrompt: (show: boolean, pendingTab?: ActiveTab) => void;
@@ -55,6 +63,8 @@ export const useUIStore = create<UIState>((set) => ({
   hubMenuOpen: false,
   petsOpen: false,
   guildsOpen: false,
+  kumpaneOpen: false,
+  challengesOpen: false,
   topSheetOpen: false,
   showAuthPrompt: false,
   pendingAuthTab: null,
@@ -129,6 +139,10 @@ export const useUIStore = create<UIState>((set) => ({
   closePets: () => set({ petsOpen: false }),
   openGuilds: () => set({ guildsOpen: true, hubMenuOpen: false }),
   closeGuilds: () => set({ guildsOpen: false }),
+  openKumpane: () => set({ kumpaneOpen: true, hubMenuOpen: false }),
+  closeKumpane: () => set({ kumpaneOpen: false }),
+  openChallenges: () => set({ challengesOpen: true, hubMenuOpen: false }),
+  closeChallenges: () => set({ challengesOpen: false }),
   // The top sheet owns the screen while open — the dropdowns step aside.
   toggleTopSheet: () =>
     set((s) => ({

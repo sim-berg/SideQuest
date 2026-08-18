@@ -1,6 +1,6 @@
 import { api } from './api';
 import type { Comment } from '../types/comment';
-import type { UserSoul } from '../types/user';
+import type { PublicProfile, User, UserCard, UserSoul } from '../types/user';
 
 export interface CheckinResult {
   streak: number;
@@ -31,19 +31,38 @@ export async function fetchMySoul(): Promise<UserSoul> {
   return api.get<UserSoul>('/users/me/soul');
 }
 
-/** What other users may see of a profile. */
-export interface PublicProfile {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string;
-  bio: string;
-  profileCss: string;
-  level: number;
-  questsCompleted: number;
-  isOnline: boolean;
-}
+export type { PublicProfile } from '../types/user';
 
 export async function fetchPublicProfile(id: string): Promise<PublicProfile> {
   return api.get<PublicProfile>(`/users/${id}`);
+}
+
+/** Everything the profile editor may change, all optional. */
+export type ProfileUpdate = Partial<
+  Pick<
+    User,
+    | 'displayName'
+    | 'bio'
+    | 'profileCss'
+    | 'pseudonym'
+    | 'avatarUrl'
+    | 'status'
+    | 'openForQuests'
+    | 'characterClass'
+    | 'homeRegion'
+    | 'accentColor'
+    | 'links'
+    | 'featuredEmblems'
+    | 'shareLocation'
+  >
+>;
+
+export async function updateMyProfile(patch: ProfileUpdate): Promise<User> {
+  return api.patch<User>('/users/me', patch);
+}
+
+/** Find people by username or display name. */
+export async function searchUsers(query: string): Promise<UserCard[]> {
+  if (!query.trim()) return [];
+  return api.get<UserCard[]>(`/users/search?q=${encodeURIComponent(query)}`);
 }

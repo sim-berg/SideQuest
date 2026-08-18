@@ -208,7 +208,8 @@ export class ReplicateService {
           const file = await this.download(PET_DIR, scene.key, url);
           // Drop stale variants with another extension so a later cache
           // lookup can't resurrect the old picture.
-          if (opts.force) await this.clearCachedExcept(PET_DIR, scene.key, file);
+          if (opts.force)
+            await this.clearCachedExcept(PET_DIR, scene.key, file);
           this.logger.log(`Generated AI portrait for ${scene.key}`);
           return this.petUrl(file);
         }

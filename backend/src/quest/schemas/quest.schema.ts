@@ -121,6 +121,16 @@ export class Quest {
   @Prop({ type: String, default: null })
   templateId: string | null;
 
+  // --- Vector index bookkeeping -------------------------------------------
+  // The reconciler treats a quest as dirty while `vectorAt < updatedAt`, so
+  // any write anywhere in the codebase re-indexes it without extra wiring.
+  @Prop({ type: Date, default: null, index: true })
+  vectorAt: Date | null;
+
+  /** Content hash of what was last pushed to Qdrant — diagnostics only. */
+  @Prop({ type: String, default: null })
+  vectorHash: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

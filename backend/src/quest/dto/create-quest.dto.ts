@@ -77,4 +77,12 @@ export class CreateQuestDto {
   @IsOptional()
   @IsBoolean()
   usePseudonym?: boolean;
+
+  /**
+   * Post even though a near-identical quest exists nearby — set after the
+   * client showed the 409 duplicate and the user confirmed anyway.
+   */
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
