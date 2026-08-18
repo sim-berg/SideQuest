@@ -124,6 +124,43 @@ export const DAILY_QUEST_TEMPLATES: DailyQuestTemplate[] = [
     emoji: '🚲',
   },
 
+  // ── Haushalt / Grundlagen ─────────────────────────────────────────────────
+  // Die Basis-Dailies: die vier Handgriffe, an denen sich entscheidet, ob ein
+  // Tag nach Kontrolle oder nach Chaos aussieht. Bewusst am Anfang des Pools.
+  {
+    id: 'dq_go_outside',
+    title: 'Raus gehen',
+    description: 'Geh heute mindestens einmal vor die Tür. Fünf Minuten zählen.',
+    category: Category.ADVENTURE,
+    difficulty: Difficulty.EASY,
+    emoji: '🚪',
+  },
+  {
+    id: 'dq_make_bed',
+    title: 'Bett machen',
+    description:
+      'Mach dein Bett, sobald du aufstehst. Die erste erledigte Aufgabe des Tages.',
+    category: Category.SKILL,
+    difficulty: Difficulty.EASY,
+    emoji: '🛏️',
+  },
+  {
+    id: 'dq_do_dishes',
+    title: 'Geschirr abspülen',
+    description: 'Spül das Geschirr ab oder räum die Spülmaschine aus.',
+    category: Category.SKILL,
+    difficulty: Difficulty.EASY,
+    emoji: '🍽️',
+  },
+  {
+    id: 'dq_hang_laundry',
+    title: 'Wäsche aufhängen',
+    description: 'Häng die Wäsche auf oder räum die trockene weg.',
+    category: Category.SKILL,
+    difficulty: Difficulty.EASY,
+    emoji: '🧺',
+  },
+
   // ── Social ────────────────────────────────────────────────────────────────
   {
     id: 'dq_compliment',

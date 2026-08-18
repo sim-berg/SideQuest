@@ -2,12 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GeoService {
-  haversine(
-    lat1: number,
-    lng1: number,
-    lat2: number,
-    lng2: number,
-  ): number {
+  haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 6371;
     const dLat = this.toRad(lat2 - lat1);
     const dLng = this.toRad(lng2 - lng1);

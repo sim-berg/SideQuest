@@ -1,12 +1,22 @@
 import { IsOptional, IsEnum, IsNumber, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { Category } from '../enums/category.enum.js';
+import { QuestType } from '../enums/quest-type.enum.js';
 
 export class QuestFilterDto {
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.split(',') : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.split(',') : value,
+  )
   @IsEnum(Category, { each: true })
   categories?: Category[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.split(',') : value,
+  )
+  @IsEnum(QuestType, { each: true })
+  types?: QuestType[];
 
   @IsOptional()
   @Type(() => Number)

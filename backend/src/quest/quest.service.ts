@@ -29,8 +29,13 @@ import {
   DailySideQuestDocument,
 } from './schemas/daily-sidequest.schema.js';
 import { GoalType } from './enums/goal-type.enum.js';
+import { QuestType } from './enums/quest-type.enum.js';
 import type { CompleteQuestDto } from './dto/complete-quest.dto.js';
 import { DAILY_QUESTS_POOL } from './data/daily-quests.data.js';
+import { CoinService } from '../coin/coin.service.js';
+import { DAILY_COIN_REWARD } from '../coin/coin.constants.js';
+import { QuestVectorService } from '../vector/quest-vector.service.js';
+import type { QuestSearchDto } from './dto/quest-search.dto.js';
 
 function toPlain(doc: QuestDocument) {
   const obj = doc.toObject();
@@ -55,6 +60,19 @@ function toPlain(doc: QuestDocument) {
     isSideQuest: obj.isSideQuest ?? false,
     expiresAt: obj.expiresAt?.toISOString?.() ?? null,
     templateId: obj.templateId ?? null,
+    type: obj.type ?? QuestType.PERSONAL,
+    // Pseudonymous quests never expose their author's id.
+    createdBy: obj.pseudonymous ? null : (obj.createdBy ?? null),
+    creatorName: obj.creatorName ?? null,
+    pseudonymous: obj.pseudonymous ?? false,
+    eventEndsAt: obj.eventEndsAt?.toISOString?.() ?? null,
+    requiredMinutes: obj.requiredMinutes ?? null,
+    presenceRadiusM: obj.presenceRadiusM ?? null,
+    rewardPerParticipant: obj.rewardPerParticipant ?? null,
+    maxParticipants: obj.maxParticipants ?? null,
+    eventFinalized: obj.eventFinalized ?? false,
+    // The QR secret stays server-side; clients only learn one exists.
+    hasQr: !!obj.qrToken,
     createdAt: obj.createdAt?.toISOString?.() ?? obj.createdAt,
   };
 }
@@ -83,16 +101,28 @@ const DAILY_DIFFICULTY_PLAN = [
 // Extra XP for clearing the whole board — the reward for securing the day.
 const DAILY_BOARD_BONUS_XP = 40;
 
+// --- Near-duplicate detection for newly posted quests ---
+// Two quests count as the same one when they are semantically this close AND
+// this near each other. 0.93 cosine on multilingual-e5 is "same errand, other
+// words" — rephrasings match, two different quests in one park do not.
+const DUPLICATE_THRESHOLD = 0.93;
+const DUPLICATE_RADIUS_M = 300;
+// Posting must never wait on a cold Replicate container: past this, the quest
+// is created unchecked.
+const DUPLICATE_CHECK_TIMEOUT_MS = 4000;
+
 // Per-category styling for the generated side quest scene (emoji + gradient
 // colors drive the fallback image when no Replicate token is configured).
-const SCENE_STYLE: Record<Category, { emoji: string; colors: [string, string] }> =
-  {
-    [Category.SPORT]: { emoji: '🏃', colors: ['#22c55e', '#0ea5e9'] },
-    [Category.SOCIAL]: { emoji: '🤝', colors: ['#3b82f6', '#8b5cf6'] },
-    [Category.ADVENTURE]: { emoji: '🧭', colors: ['#f59e0b', '#ef4444'] },
-    [Category.SKILL]: { emoji: '🧠', colors: ['#a855f7', '#ec4899'] },
-    [Category.MYSTERY]: { emoji: '🔮', colors: ['#6366f1', '#ef4444'] },
-  };
+const SCENE_STYLE: Record<
+  Category,
+  { emoji: string; colors: [string, string] }
+> = {
+  [Category.SPORT]: { emoji: '🏃', colors: ['#22c55e', '#0ea5e9'] },
+  [Category.SOCIAL]: { emoji: '🤝', colors: ['#3b82f6', '#8b5cf6'] },
+  [Category.ADVENTURE]: { emoji: '🧭', colors: ['#f59e0b', '#ef4444'] },
+  [Category.SKILL]: { emoji: '🧠', colors: ['#a855f7', '#ec4899'] },
+  [Category.MYSTERY]: { emoji: '🔮', colors: ['#6366f1', '#ef4444'] },
+};
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
@@ -149,6 +179,8 @@ export class QuestService {
     private readonly achievementService: AchievementService,
     private readonly replicate: ReplicateService,
     private readonly treasureService: TreasureService,
+    private readonly coinService: CoinService,
+    private readonly questVector: QuestVectorService,
   ) {}
 
   // De-dupes concurrent image requests for the same key so we never kick off
@@ -198,6 +230,12 @@ export class QuestService {
     if (filter.categories?.length) {
       query.category = { $in: filter.categories };
     }
+    if (filter.types?.length) {
+      // Legacy quests predate the type field and count as personal.
+      query.$or = filter.types.includes(QuestType.PERSONAL)
+        ? [{ type: { $in: filter.types } }, { type: { $exists: false } }]
+        : [{ type: { $in: filter.types } }];
+    }
     if (filter.paidOnly) {
       query.reward = { $gt: 0 };
     }
@@ -225,8 +263,165 @@ export class QuestService {
     return toPlain(doc);
   }
 
-  async create(dto: CreateQuestDto) {
-    const doc = await this.questModel.create(dto);
+  // --- Semantic search ----------------------------------------------------
+
+  /**
+   * Meaning-based quest search: "irgendwas mit Musik draußen" finds the open
+   * mic in the park without sharing a single word with it. Falls back to a
+   * substring match when the vector stack is unavailable, so the endpoint
+   * always answers something useful.
+   */
+  async search(dto: QuestSearchDto) {
+    const limit = dto.limit ?? 20;
+    const hits = await this.questVector.search(dto.q, {
+      limit,
+      categories: dto.categories,
+      types: dto.types,
+      lat: dto.lat,
+      lng: dto.lng,
+      radius: dto.radius,
+      includeSideQuests: dto.includeSideQuests ?? false,
+      includeCompleted: dto.includeCompleted ?? false,
+      scoreThreshold: dto.minScore,
+    });
+
+    if (hits.length === 0) {
+      return {
+        mode: this.questVector.enabled
+          ? ('semantic' as const)
+          : ('text' as const),
+        query: dto.q,
+        results: this.questVector.enabled
+          ? []
+          : await this.textSearch(dto, limit),
+      };
+    }
+
+    const docs = await this.questModel
+      .find({ _id: { $in: hits.map((h) => h.questId) } })
+      .exec();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+
+    // Qdrant already ranked these — keep its order, drop anything Mongo no
+    // longer has (a point the sweep hasn't reached yet).
+    const results = hits
+      .map((hit) => {
+        const doc = byId.get(hit.questId);
+        return doc ? { ...toPlain(doc), score: hit.score } : null;
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    return { mode: 'semantic' as const, query: dto.q, results };
+  }
+
+  /** Quests semantically close to this one — the "mehr davon" rail. */
+  async findSimilar(id: string, limit = 5) {
+    const doc = await this.questModel.findById(id).exec();
+    if (!doc) throw new NotFoundException(`Quest ${id} not found`);
+
+    const hits = await this.questVector.similar(doc, {
+      limit,
+      includeSideQuests: !!doc.isSideQuest,
+    });
+    if (hits.length === 0) return [];
+
+    const docs = await this.questModel
+      .find({ _id: { $in: hits.map((h) => h.questId) } })
+      .exec();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+
+    return hits
+      .map((hit) => {
+        const found = byId.get(hit.questId);
+        return found ? { ...toPlain(found), score: hit.score } : null;
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+  }
+
+  /** Plain substring fallback used when Qdrant or the embedder is down. */
+  private async textSearch(dto: QuestSearchDto, limit: number) {
+    const escaped = dto.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(escaped, 'i');
+    const query: Record<string, unknown> = {
+      $or: [{ title: rx }, { description: rx }, { address: rx }],
+    };
+    if (!dto.includeSideQuests) query.isSideQuest = { $ne: true };
+    if (!dto.includeCompleted) query.completedBy = null;
+    if (dto.categories?.length) query.category = { $in: dto.categories };
+    if (dto.types?.length) query.type = { $in: dto.types };
+
+    let docs = await this.questModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+
+    if (dto.lat != null && dto.lng != null && dto.radius) {
+      docs = docs.filter(
+        (q) =>
+          this.geoService.haversine(dto.lat!, dto.lng!, q.lat, q.lng) <=
+          dto.radius!,
+      );
+    }
+    return docs.map((d) => ({ ...toPlain(d), score: null }));
+  }
+
+  async create(dto: CreateQuestDto, userId: string | null = null) {
+    const { usePseudonym, force, ...quest } = dto;
+
+    // Semantic duplicate guard: same errand, same corner, different wording.
+    // `force: true` is the client saying "yes, I mean it" after seeing the
+    // conflict — and the check is skipped entirely when the index is cold.
+    if (!force) {
+      const duplicate = await this.questVector.findNearDuplicate(
+        quest.title,
+        quest.description,
+        quest.address,
+        quest.lat,
+        quest.lng,
+        {
+          radiusM: DUPLICATE_RADIUS_M,
+          threshold: DUPLICATE_THRESHOLD,
+          timeoutMs: DUPLICATE_CHECK_TIMEOUT_MS,
+        },
+      );
+      if (duplicate) {
+        const existing = await this.questModel
+          .findById(duplicate.questId)
+          .exec();
+        if (existing) {
+          throw new ConflictException({
+            message:
+              'Ganz in der Nähe gibt es schon ein sehr ähnliches Quest. ' +
+              'Sende erneut mit "force": true, wenn du es trotzdem posten willst.',
+            error: 'DuplicateQuest',
+            statusCode: 409,
+            similarity: Number(duplicate.score.toFixed(4)),
+            duplicate: toPlain(existing),
+          });
+        }
+      }
+    }
+
+    // Snapshot the creator's display name at publish time; pseudonymous
+    // quests carry the pseudonym and never reveal createdBy to clients.
+    let creatorName: string | null = null;
+    let pseudonymous = false;
+    if (userId) {
+      const user = await this.userService.findById(userId);
+      pseudonymous = !!usePseudonym;
+      creatorName = pseudonymous
+        ? user.pseudonym || 'Anonym'
+        : user.displayName || user.username;
+    }
+
+    const doc = await this.questModel.create({
+      ...quest,
+      createdBy: userId,
+      creatorName,
+      pseudonymous,
+    });
+    void this.questVector.indexNow(doc);
     return toPlain(doc);
   }
 
@@ -247,14 +442,16 @@ export class QuestService {
     return toPlain(doc);
   }
 
-  async completeQuest(
-    questId: string,
-    userId: string,
-    dto: CompleteQuestDto,
-  ) {
+  async completeQuest(questId: string, userId: string, dto: CompleteQuestDto) {
     const doc = await this.questModel.findById(questId).exec();
     if (!doc) throw new NotFoundException(`Quest ${questId} not found`);
 
+    // Event and world quests have their own flows (presence / QR redeem).
+    if (doc.type === QuestType.EVENT || doc.type === QuestType.WORLD) {
+      throw new BadRequestException(
+        'Dieses Quest wird über Teilnahme bzw. QR-Code abgeschlossen',
+      );
+    }
     if (doc.acceptedBy !== userId) {
       throw new BadRequestException('Quest not accepted by this user');
     }
@@ -267,7 +464,9 @@ export class QuestService {
     // GPS proximity check only for proximity quests
     if (goalType === GoalType.PROXIMITY) {
       if (dto.lat == null || dto.lng == null) {
-        throw new BadRequestException('Coordinates required for proximity quest');
+        throw new BadRequestException(
+          'Coordinates required for proximity quest',
+        );
       }
       const distance = this.geoService.haversine(
         dto.lat,
@@ -289,12 +488,22 @@ export class QuestService {
 
     // Award XP — carried treasure items can boost the multiplier
     const baseXp = XP_BY_DIFFICULTY[doc.difficulty ?? Difficulty.MEDIUM] ?? 50;
-    const treasureMultiplier = await this.treasureService.getXpMultiplier(userId);
+    const treasureMultiplier =
+      await this.treasureService.getXpMultiplier(userId);
     const xpResult = await this.petService.recordQuestCompletion(
       userId,
       baseXp,
-      treasureMultiplier,
+      { category: doc.category, treasureMultiplier },
     );
+
+    // Quests with a posted reward pay out in coins.
+    const coinsAwarded = doc.reward && doc.reward > 0 ? doc.reward : 0;
+    if (coinsAwarded > 0) {
+      await this.coinService.mint(userId, coinsAwarded, 'quest_reward', {
+        refType: 'quest',
+        refId: doc._id.toString(),
+      });
+    }
 
     // Increment user questsCompleted
     await this.userService.incrementQuestsCompleted(userId);
@@ -306,10 +515,18 @@ export class QuestService {
             userId,
             doc.templateId,
             doc._id.toString(),
+            {
+              sourceKind: 'sidequest',
+              questTitle: doc.title,
+              questCategory: doc.category,
+              lat: doc.lat,
+              lng: doc.lng,
+              placeLabel: doc.address ?? '',
+            },
           )
         : [];
 
-    return { quest: toPlain(doc), xpResult, achievements };
+    return { quest: toPlain(doc), xpResult, achievements, coinsAwarded };
   }
 
   async abandonQuest(questId: string, userId: string) {
@@ -356,14 +573,26 @@ export class QuestService {
     const radius = radiusKm ?? SIDEQUEST_SPAWN_RADIUS_KM;
     const now = new Date();
 
-    // 1. Despawn expired spawns that nobody has accepted.
-    await this.questModel
-      .deleteMany({
+    // 1. Despawn expired spawns that nobody has accepted. Collect the ids
+    //    first — a hard delete is invisible to the vector reconciler, so the
+    //    points have to be dropped explicitly (the orphan sweep is the
+    //    backstop, not the mechanism).
+    const expired = await this.questModel
+      .find({
         isSideQuest: true,
         acceptedBy: null,
         expiresAt: { $lt: now },
       })
+      .select('_id')
       .exec();
+
+    if (expired.length > 0) {
+      const ids = expired.map((d) => d._id.toString());
+      await this.questModel
+        .deleteMany({ _id: { $in: expired.map((d) => d._id) } })
+        .exec();
+      void this.questVector.removeQuests(ids);
+    }
 
     // 2. Load all open (un-accepted, non-expired) side quests and keep those
     //    inside the radius.
@@ -406,7 +635,7 @@ export class QuestService {
     const { lat, lng } = this.randomPointAround(centerLat, centerLng, radiusKm);
     const expiresAt = new Date(Date.now() + template.ttlMinutes * 60_000);
 
-    return this.questModel.create({
+    const doc = await this.questModel.create({
       title: template.title,
       description: template.description,
       lat,
@@ -420,6 +649,10 @@ export class QuestService {
       templateId: template.id,
       expiresAt,
     });
+    // Spawns repeat the same handful of templates, so the embedding for this
+    // wording is almost always a cache hit — indexing them costs nothing.
+    void this.questVector.indexNow(doc);
+    return doc;
   }
 
   /** Uniform-ish random point in the ring [minOffset, radius] around a center. */
@@ -433,9 +666,7 @@ export class QuestService {
     const latRad = (lat * Math.PI) / 180;
     const dLat = (distanceKm / EARTH_RADIUS_KM) * Math.cos(bearing);
     const dLng =
-      (distanceKm / EARTH_RADIUS_KM) *
-      Math.sin(bearing) /
-      Math.cos(latRad);
+      ((distanceKm / EARTH_RADIUS_KM) * Math.sin(bearing)) / Math.cos(latRad);
 
     return {
       lat: lat + (dLat * 180) / Math.PI,
@@ -591,15 +822,29 @@ export class QuestService {
     const xpResult = await this.petService.recordQuestCompletion(
       userId,
       doc.xpReward + bonusXp,
-      await this.treasureService.getXpMultiplier(userId),
+      {
+        category: doc.category,
+        treasureMultiplier: await this.treasureService.getXpMultiplier(userId),
+      },
     );
     await this.userService.incrementQuestsCompleted(userId);
+
+    // Small coin drop per daily — the everyday faucet of the economy.
+    const coinsAwarded = DAILY_COIN_REWARD[doc.difficulty] ?? 5;
+    await this.coinService.mint(userId, coinsAwarded, 'daily_reward', {
+      refType: 'daily',
+      refId: doc._id.toString(),
+    });
 
     const achievements = await this.achievementService.awardForTemplate(
       userId,
       doc.templateId,
       doc._id.toString(),
-      { daily: true },
+      {
+        daily: true,
+        questTitle: doc.title,
+        questCategory: doc.category,
+      },
     );
 
     // Clearing a full board is what hatches the mystery egg — the pet's
@@ -628,6 +873,7 @@ export class QuestService {
       xpResult,
       achievements,
       bonusXp,
+      coinsAwarded,
       hatch,
       board: await this.buildBoard(userId, doc.date, docs),
     };
@@ -638,7 +884,9 @@ export class QuestService {
   getDailyQuests(): any[] {
     // Date-based deterministic selection: same 3 quests for everyone on a given day
     const today = new Date().toDateString();
-    const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = today
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const startIdx = hash % (DAILY_QUESTS_POOL.length - 2);
 
     const BERLIN_LAT = 52.52;

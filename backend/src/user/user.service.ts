@@ -4,6 +4,9 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema.js';
 import { Quest, QuestDocument } from '../quest/schemas/quest.schema.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { sanitizeProfileCss } from './profile-css.js';
+import { AchievementService } from '../achievement/achievement.service.js';
+import { CHARACTER_CLASSES } from './character-classes.js';
 
 export interface DailyQuestStreak {
   streak: number;
@@ -27,10 +30,14 @@ export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Quest.name) private questModel: Model<QuestDocument>,
+    private readonly achievementService: AchievementService,
   ) {}
 
   async findById(id: string): Promise<UserDocument> {
-    const user = await this.userModel.findById(id).select('-passwordHash').exec();
+    const user = await this.userModel
+      .findById(id)
+      .select('-passwordHash')
+      .exec();
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
     }
@@ -61,6 +68,17 @@ export class UserService {
     id: string,
     dto: UpdateProfileDto,
   ): Promise<UserDocument> {
+    if (dto.profileCss !== undefined) {
+      dto.profileCss = sanitizeProfileCss(dto.profileCss);
+    }
+    // You can only pin an emblem you actually earned — otherwise a crafted
+    // request would show off badges the user never got.
+    if (dto.featuredEmblems !== undefined) {
+      dto.featuredEmblems = await this.achievementService.filterEarnedKeys(
+        id,
+        dto.featuredEmblems,
+      );
+    }
     const user = await this.userModel
       .findByIdAndUpdate(id, { $set: dto }, { new: true })
       .select('-passwordHash')
@@ -201,15 +219,116 @@ export class UserService {
     return { streak, longestStreak, securedToday: true };
   }
 
-  async getPublicProfile(id: string): Promise<Partial<User>> {
-    const user = await this.userModel
-      .findById(id)
-      .select('-passwordHash -email')
-      .exec();
+  /**
+   * Profile view for other users. An explicit allowlist — everything not
+   * listed here (email, pseudonym, shareLocation, ...) stays private.
+   *
+   * Emblems come along in two shapes: the handful the user pinned, and the
+   * full shelf, so a visitor can browse everything without a second request.
+   */
+  async getPublicProfile(id: string) {
+    const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
     }
-    return user;
+
+    const emblems = await this.achievementService.getUserAchievements(id);
+    const byKey = new Map(emblems.map((e) => [e.key, e]));
+    const featured = (user.featuredEmblems ?? [])
+      .map((key) => byKey.get(key))
+      .filter((e): e is NonNullable<typeof e> => !!e);
+
+    const charClass =
+      CHARACTER_CLASSES.find((c) => c.id === user.characterClass) ?? null;
+
+    return {
+      id: user._id.toString(),
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      profileCss: user.profileCss,
+      status: user.status ?? '',
+      openForQuests: user.openForQuests ?? false,
+      characterClass: charClass,
+      homeRegion: user.homeRegion ?? '',
+      accentColor: user.accentColor ?? '',
+      links: (user.links ?? []).map((l) => ({
+        label: l.label,
+        url: l.url,
+        icon: l.icon ?? '',
+      })),
+      level: user.level,
+      questsCompleted: user.questsCompleted,
+      isOnline: user.isOnline,
+      lastSeenAt: user.lastSeenAt ? user.lastSeenAt.toISOString() : null,
+      joinedAt: user.createdAt ? user.createdAt.toISOString() : null,
+      loginStreak: user.loginStreak ?? 0,
+      dailyQuestStreak: this.effectiveStreak(
+        user.dailyQuestStreak ?? 0,
+        user.lastDailyQuestDate ?? null,
+        todayKey(),
+      ),
+      emblemCount: emblems.length,
+      featuredEmblems: featured,
+      emblems,
+    };
+  }
+
+  /** Search the community by username or display name. */
+  async search(query: string, excludeUserId: string, limit = 20) {
+    const q = query.trim();
+    if (!q) return [];
+    // Escape the input — a user typing "a+b" must not become a regex operator.
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(safe, 'i');
+
+    const users = await this.userModel
+      .find({
+        _id: { $ne: excludeUserId },
+        $or: [{ username: rx }, { displayName: rx }],
+      })
+      .select(
+        'username displayName avatarUrl status openForQuests level isOnline',
+      )
+      .limit(limit)
+      .exec();
+
+    return users.map((u) => ({
+      id: u._id.toString(),
+      username: u.username,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl,
+      status: u.status ?? '',
+      openForQuests: u.openForQuests ?? false,
+      level: u.level,
+      isOnline: u.isOnline,
+    }));
+  }
+
+  /** Compact card data for a list of user ids, in one query. */
+  async getCards(ids: string[]) {
+    if (!ids.length) return [];
+    const users = await this.userModel
+      .find({ _id: { $in: ids } })
+      .select(
+        'username displayName avatarUrl status openForQuests characterClass level isOnline questsCompleted',
+      )
+      .exec();
+
+    return users.map((u) => ({
+      id: u._id.toString(),
+      username: u.username,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl,
+      status: u.status ?? '',
+      openForQuests: u.openForQuests ?? false,
+      characterClass:
+        CHARACTER_CLASSES.find((c) => c.id === u.characterClass) ?? null,
+      level: u.level,
+      questsCompleted: u.questsCompleted,
+      isOnline: u.isOnline,
+    }));
   }
 
   async getActivity(
@@ -234,9 +353,7 @@ export class UserService {
     // Count quests completed per day
     quests.forEach((quest) => {
       if (quest.completedAt) {
-        const dateStr = quest.completedAt
-          .toISOString()
-          .split('T')[0];
+        const dateStr = quest.completedAt.toISOString().split('T')[0];
         if (activityMap[dateStr] !== undefined) {
           activityMap[dateStr]++;
         }

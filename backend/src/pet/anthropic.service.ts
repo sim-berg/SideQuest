@@ -61,9 +61,7 @@ export class AnthropicService {
             ]
           : opts.system,
         messages: opts.messages,
-        ...(opts.effort
-          ? { output_config: { effort: opts.effort } }
-          : {}),
+        ...(opts.effort ? { output_config: { effort: opts.effort } } : {}),
       });
       if (response.stop_reason === 'refusal') return null;
       const text = response.content

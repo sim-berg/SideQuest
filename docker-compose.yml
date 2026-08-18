@@ -2,19 +2,42 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    # Published so `npm run dev` (backend outside docker) reaches it too.
+    ports:
+      - '27017:27017'
     volumes:
       - mongo-data:/data/db
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    restart: unless-stopped
+    # Published for the same reason as mongo, plus the dashboard at
+    # http://localhost:6343/dashboard for eyeballing the quest vectors.
+    # Off the default 6333 on purpose — other projects on this machine already
+    # run their own Qdrant there. Inside the compose network it stays 6333.
+    ports:
+      - '6343:6333'
+      - '6344:6334'
+    environment:
+      QDRANT__TELEMETRY_DISABLED: 'true'
+    volumes:
+      - qdrant-data:/qdrant/storage
 
   backend:
     build: ./backend
     restart: unless-stopped
     depends_on:
       - mongo
+      - qdrant
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/sidequest
       JWT_SECRET: change-me-in-production
       CORS_ORIGIN: "*"
+      QDRANT_URL: http://qdrant:6333
+      # Quest embeddings run through Replicate — without a token the index
+      # stays empty and /api/quests/search falls back to substring matching.
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
 
   frontend:
     build: ./frontend
@@ -26,3 +49,4 @@ services:
 
 volumes:
   mongo-data:
+  qdrant-data:

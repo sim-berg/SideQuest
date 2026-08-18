@@ -71,7 +71,12 @@ export class PetChatService {
     if (!pet) throw new BadRequestException('Kein aktiver Gefährte');
     const petId = pet._id.toString();
 
-    await this.messageModel.create({ userId, petId, role: 'user', content: text });
+    await this.messageModel.create({
+      userId,
+      petId,
+      role: 'user',
+      content: text,
+    });
 
     const replyText = pet.species
       ? await this.generateReply(userId, pet, text)
@@ -102,12 +107,10 @@ export class PetChatService {
 
     // Oldest first; the newest user message is already persisted and thus
     // included at the end of the history.
-    const turns: ChatTurn[] = history
-      .reverse()
-      .map((m) => ({
-        role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
-        content: m.content,
-      }));
+    const turns: ChatTurn[] = history.reverse().map((m) => ({
+      role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
+      content: m.content,
+    }));
     if (turns.length === 0 || turns[turns.length - 1].role !== 'user') {
       turns.push({ role: 'user', content: latestMessage });
     }

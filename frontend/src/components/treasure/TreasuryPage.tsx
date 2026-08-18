@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Flame, Gem, Hammer, Lock, ScrollText, Sparkles, X } from 'lucide-react';
+import { Backpack, Flame, Gem, Hammer, Lock, ScrollText, Sparkles, X } from 'lucide-react';
+import OverlayPage from '../common/OverlayPage';
 import { useTreasureStore } from '../../stores/useTreasureStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { RARITY_META, EFFECT_LABEL, TARGET_LABEL } from '../../constants/treasures';
@@ -427,68 +428,70 @@ export default function TreasuryPage() {
   const isForge = tab === 'forge';
 
   return (
-    <div
-      className={`fixed inset-0 z-[80] flex flex-col transition-colors duration-300 ${
-        isForge ? 'bg-[#17110d]' : 'bg-white dark:bg-slate-900'
-      }`}
-    >
-      {/* Top bar */}
-      <div
-        className={`flex shrink-0 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] pb-2 ${
-          isForge ? 'border-b border-amber-900/40' : ''
-        }`}
-      >
-        <button
-          onClick={close}
-          className={`flex h-10 w-10 items-center justify-center rounded-full text-lg transition-colors ${
-            isForge
-              ? 'text-amber-100/80 hover:bg-amber-900/30'
-              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-          }`}
-          aria-label="Zurück"
-        >
-          ←
-        </button>
-        <span
-          className={`text-sm font-semibold ${
-            isForge ? 'text-amber-100/80' : 'text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          {isForge ? 'Schmiede' : 'Schatzkammer'}
-        </span>
-
-        {/* Tab switch */}
+    <OverlayPage
+      title="Ausrüstung"
+      icon={
+        <Backpack
+          className={`h-6 w-6 ${isForge ? 'text-amber-400' : 'text-purple-500'}`}
+          strokeWidth={2.2}
+        />
+      }
+      onClose={close}
+      tone={isForge ? 'dark' : 'default'}
+      contentClassName={isForge ? 'max-w-none' : undefined}
+      toolbar={
         <div
-          className={`ml-auto flex rounded-xl p-1 ${
-            isForge ? 'bg-black/40' : 'bg-slate-100 dark:bg-slate-800'
-          }`}
+          className={`shrink-0 px-4 pt-4 ${isForge ? 'bg-[#17110d]' : ''}`}
         >
-          <button
-            onClick={() => setTab('items')}
-            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-              tab === 'items'
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-                : isForge
-                ? 'text-amber-100/60'
-                : 'text-slate-500 dark:text-slate-400'
+          <div
+            className={`mx-auto flex w-full max-w-md gap-1.5 rounded-2xl p-1.5 ${
+              isForge ? 'bg-black/40' : 'bg-slate-100 dark:bg-slate-800'
             }`}
           >
-            <Gem className="h-3.5 w-3.5" /> Schätze
-          </button>
-          <button
-            onClick={() => setTab('forge')}
-            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-              tab === 'forge'
-                ? 'bg-amber-500 text-amber-950 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <Hammer className="h-3.5 w-3.5" /> Schmiede
-          </button>
+            {(
+              [
+                { id: 'items', label: 'Schatzkammer', Icon: Gem },
+                { id: 'forge', label: 'Schmiede', Icon: Hammer },
+              ] as const
+            ).map(({ id, label, Icon }) => {
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-bold transition-colors ${
+                    active
+                      ? id === 'forge'
+                        ? 'text-amber-950'
+                        : 'text-slate-900 dark:text-white'
+                      : isForge
+                        ? 'text-amber-100/60 hover:text-amber-100/90'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="equipment-tab"
+                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                      className={`absolute inset-0 rounded-xl shadow-sm ${
+                        id === 'forge'
+                          ? 'bg-amber-500'
+                          : 'bg-white dark:bg-slate-700'
+                      }`}
+                    />
+                  )}
+                  <span className="relative flex items-center gap-2">
+                    <Icon className="h-5 w-5" strokeWidth={2.2} />
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 pb-10">
+      }
+    >
+      <div>
         {/* Aggregated boni — the treasury's ledger, not the forge's */}
         {bonuses && !isForge && (
           <div className="mt-2 grid grid-cols-4 gap-2">
@@ -658,6 +661,6 @@ export default function TreasuryPage() {
       <AnimatePresence>
         {detail && <ItemDetail entry={detail} onClose={() => setDetail(null)} />}
       </AnimatePresence>
-    </div>
+    </OverlayPage>
   );
 }

@@ -4,6 +4,7 @@ import { useCommentStore } from '../../stores/useCommentStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { postComment } from '../../services/comment.service';
+import PublicProfileSheet from '../profile/PublicProfileSheet';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -32,6 +33,8 @@ export default function CommentSection({ questId }: { questId: string }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Author whose profile is open — the log is a way into the community. */
+  const [authorProfileId, setAuthorProfileId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -152,7 +155,11 @@ export default function CommentSection({ questId }: { questId: string }) {
         <div className="flex flex-col gap-4">
           {list.map((c) => (
             <div key={c.id} className="flex gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-sm font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+              <button
+                onClick={() => c.userId && setAuthorProfileId(c.userId)}
+                aria-label={`Profil von ${c.username || 'Abenteurer'}`}
+                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-sm font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+              >
                 {c.avatarUrl ? (
                   <img
                     src={c.avatarUrl}
@@ -162,12 +169,15 @@ export default function CommentSection({ questId }: { questId: string }) {
                 ) : (
                   (c.username || '?').charAt(0).toUpperCase()
                 )}
-              </div>
+              </button>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                  <button
+                    onClick={() => c.userId && setAuthorProfileId(c.userId)}
+                    className="text-sm font-semibold text-slate-900 hover:underline dark:text-white"
+                  >
                     {c.username || 'Abenteurer'}
-                  </span>
+                  </button>
                   <span className="text-xs text-slate-400">
                     {timeAgo(c.createdAt)}
                   </span>
@@ -188,6 +198,13 @@ export default function CommentSection({ questId }: { questId: string }) {
             </div>
           ))}
         </div>
+      )}
+
+      {authorProfileId && (
+        <PublicProfileSheet
+          userId={authorProfileId}
+          onClose={() => setAuthorProfileId(null)}
+        />
       )}
     </div>
   );

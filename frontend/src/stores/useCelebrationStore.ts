@@ -18,6 +18,8 @@ export interface Celebration {
   /** Evolution payload. */
   fromStage?: PetStage;
   toStage?: PetStage;
+  /** Pet whose portrait the evolution ceremony reveals. */
+  petId?: string;
   /** Achievement payload. */
   description?: string;
   imageUrl?: string | null;

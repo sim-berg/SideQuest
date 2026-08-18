@@ -112,6 +112,8 @@ export const SIDEQUEST_TEMPLATES: SideQuestTemplate[] = [
   },
 ];
 
-export function getSideQuestTemplate(id: string): SideQuestTemplate | undefined {
+export function getSideQuestTemplate(
+  id: string,
+): SideQuestTemplate | undefined {
   return SIDEQUEST_TEMPLATES.find((t) => t.id === id);
 }

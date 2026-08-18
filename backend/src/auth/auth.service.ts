@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service.js';
 import { QuestService } from '../quest/quest.service.js';
+import { AchievementService } from '../achievement/achievement.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly questService: QuestService,
+    private readonly achievementService: AchievementService,
   ) {}
 
   private async createOnboardingQuests(
@@ -125,6 +127,13 @@ export class AuthService {
 
     // Create onboarding quests (non-blocking, best-effort)
     void this.createOnboardingQuests(user._id.toString(), user.username);
+
+    // Every account starts with the Neustarter emblem, so a fresh profile
+    // already has something on the shelf. Best-effort: badge art generation
+    // must never make registration fail.
+    void this.achievementService
+      .awardStarter(user._id.toString())
+      .catch(() => undefined);
 
     return this.generateTokens(user);
   }

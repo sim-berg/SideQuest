@@ -2,6 +2,55 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠ Read this first — parallel work rules
+
+Two humans (`Seakuh`, `sim-berg`) and often several Claude sessions work in this
+repo at the same time. The full rules live in **[docs/workflow.md](./docs/workflow.md)**;
+the live claim board is **[docs/BOARD.md](./docs/BOARD.md)**. Short version:
+
+**At the start of every session:**
+
+1. `git status` — dirty tree? Say so and clarify before building on top of it.
+2. `git branch --show-current`
+   - on `develop` → feature work is **not** allowed here. Use
+     `./scripts/lane.sh new <name> <slot 1..3>` to get an isolated worktree,
+     or ask the user whether to work on develop anyway.
+   - on `lane/*` → proceed.
+3. Read `docs/BOARD.md` — which lanes are `AKTIV`/`LOCK` right now?
+4. `git fetch && git rebase origin/develop`.
+5. Check the files you are about to touch against the **lane map**
+   (workflow.md §4). A file owned by someone else's lane: do **not** edit it —
+   report it instead ("that belongs to lane/social").
+
+**While working:**
+
+- Stay inside your lane's slice: backend module + matching frontend components +
+  service + store + types.
+- Hotspot files (`backend/src/app.module.ts`, `backend/src/main.ts`,
+  `frontend/src/App.tsx`, `frontend/src/components/layout/AppShell.tsx`,
+  `frontend/src/components/navigation/*`, `frontend/src/stores/useUIStore.ts`,
+  `frontend/src/services/api.ts`, `frontend/src/index.css`,
+  `backend/src/user/schemas/user.schema.ts`, `docker-compose.yml`) — **append
+  only, one line, at the end.** No reordering, no reformatting, no cleanup
+  sweeps. Prefix such commits with `hotspot(...)`.
+- New fields on `user.schema.ts` are always optional. Renaming a field needs its
+  own migration PR announced on the BOARD.
+- Never `git add .` — always explicit paths. Never `git checkout <other-branch>`
+  in a shared worktree (another session may be reading those files).
+- Commit format: `<type>(<lane>): <what>` — e.g. `feat(quest): …`,
+  `fix(social): …`, `hotspot(platform): register VectorModule`.
+
+**Before finishing:**
+
+`npm run build:frontend && npm run build:backend` → both green, `git status`
+clean, push `lane/<name>`, open a PR against `develop`, update the BOARD row.
+
+**Planning docs** (read before proposing scope):
+[beta-plan.md](./docs/beta-plan.md) (what ships in the closed beta) ·
+[production-plan.md](./docs/production-plan.md) (hardening for v1.0).
+Anything marked "nach der Beta" (blockchain, dungeon, guilds) stays behind a
+feature flag — don't pull it forward without being asked.
+
 ## Quick Start
 
 The entire codebase uses a **monorepo structure** with root-level npm scripts that orchestrate both frontend and backend:
@@ -115,11 +164,15 @@ All query parameters and request bodies go through `class-validator` DTOs:
 
 **Health:**
 - `GET /api/health` → `{ status: "ok", timestamp: "..." }`
+- `GET /api/health/vector` — Qdrant index health (indexed vs. pending quests)
 
 **Quests:**
 - `GET /api/quests` — List with optional filtering
 - `GET /api/quests/:id` — Get single quest
-- `POST /api/quests` — Create (expects validated DTO)
+- `GET /api/quests/search?q=…` — Semantic search (see Vector Search below)
+- `GET /api/quests/:id/similar` — Semantically closest quests
+- `POST /api/quests` — Create (expects validated DTO); returns `409` on a
+  near-duplicate nearby, override with `"force": true`
 
 **Filters (GET /api/quests):**
 - `categories` — Comma-separated: `sport,social,adventure,skill,mystery`
@@ -127,6 +180,28 @@ All query parameters and request bodies go through `class-validator` DTOs:
 - `lat`, `lng` — User coordinates
 - `paidOnly` — Boolean, include only quests with reward
 - `timedOnly` — Boolean, include only quests with time limit
+
+## Vector Search
+
+Every quest is embedded (Replicate `multilingual-e5-large`, 1024 dims) and
+mirrored into Qdrant. Full details: **[docs/vector-search.md](./docs/vector-search.md)**.
+
+- Module: `backend/src/vector/` — `EmbeddingService` (+ Mongo-backed cache),
+  `QdrantService` (REST over fetch), `QuestVectorService` (reconciler + search).
+- **Indexing is reconciler-driven, not call-site-driven**: a quest counts as
+  dirty while `vectorAt < updatedAt`, so any `save()` anywhere re-indexes it.
+  `indexNow()` at write sites is a latency optimization only.
+- A periodic two-way sweep deletes orphaned points and re-queues quests that
+  vanished from the index, so the index heals itself after a snapshot restore
+  or a dropped collection.
+- Embedded text is `title + description + address` — the category is
+  deliberately excluded (it flattened ranking; it's a payload filter instead).
+- **Changing `buildText` or `payloadFor` requires bumping `INDEX_VERSION`** in
+  `quest-vector.service.ts`; the sweep then re-embeds every existing quest.
+- Without `QDRANT_URL` / `REPLICATE_API_TOKEN` everything still boots: search
+  degrades to substring matching, `similar` returns `[]`, no duplicate check.
+- Local Qdrant runs on **6343** (6333 is taken by other projects on this box).
+  Give each worktree its own `QDRANT_COLLECTION`.
 
 ## Quest Categories
 

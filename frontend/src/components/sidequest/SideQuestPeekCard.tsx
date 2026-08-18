@@ -13,6 +13,7 @@ import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useSideQuestActions } from '../../hooks/useSideQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
+import CategoryIcon from '../common/CategoryIcon';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance } from '../../utils/format';
 import RoundActionButton from './RoundActionButton';
@@ -62,7 +63,7 @@ export default function SideQuestPeekCard() {
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
             style={{ backgroundColor: `${meta.color}22` }}
           >
-            {meta.icon}
+            <CategoryIcon category={quest.category} size={32} />
           </span>
           <div className="min-w-0 flex-1">
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
