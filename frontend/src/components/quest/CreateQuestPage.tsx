@@ -3,7 +3,6 @@ import { useUIStore, type CreateWizardStep } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useMapStore } from '../../stores/useMapStore';
 import { CATEGORY_META } from '../../constants/categories';
-import CategoryIcon from '../common/CategoryIcon';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { Category, Difficulty, GoalType } from '../../types/quest';
 import type { Category as CategoryType, Difficulty as DifficultyType, GoalType as GoalTypeType } from '../../types/quest';
@@ -329,7 +328,7 @@ export default function CreateQuestPage() {
                       )}
                       style={active ? { backgroundColor: meta.color } : undefined}
                     >
-                      <CategoryIcon category={cat} size={36} />
+                      <span className="text-2xl">{meta.icon}</span>
                       <span className="text-sm font-semibold">{meta.label}</span>
                     </button>
                   );

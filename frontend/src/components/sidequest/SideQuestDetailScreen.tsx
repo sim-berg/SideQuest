@@ -17,7 +17,6 @@ import { useSideQuestStore } from '../../stores/useSideQuestStore';
 import { useSideQuestActions } from '../../hooks/useSideQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
 import { CATEGORY_META } from '../../constants/categories';
-import CategoryIcon from '../common/CategoryIcon';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance } from '../../utils/format';
 import RoundActionButton from './RoundActionButton';
@@ -96,7 +95,7 @@ export default function SideQuestDetailScreen() {
               className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl"
               style={{ backgroundColor: `${meta.color}33` }}
             >
-              <CategoryIcon category={quest.category} size={44} />
+              {meta.icon}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               <Sparkles className="h-3.5 w-3.5" /> SideQuest
