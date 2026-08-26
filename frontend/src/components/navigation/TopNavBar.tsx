@@ -50,9 +50,12 @@ export default function TopNavBar() {
 
   return (
     <div className="absolute top-0 right-0 left-0 z-30 pt-[env(safe-area-inset-top)]">
-      <div className="flex items-center justify-between px-3 py-2">
+      {/* Three explicit columns instead of justify-between: the wordmark sits
+          in a centre column that stays put even when a side slot renders
+          nothing (logged out → no wallet chip). */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2">
         {/* Left: Filter icon */}
-        <div ref={filterRef} className="relative">
+        <div ref={filterRef} className="relative justify-self-start">
           <button
             onClick={toggleFilterPanel}
             className={cn(
@@ -201,8 +204,12 @@ export default function TopNavBar() {
         {/* Center: Logo / Title — doubles as the top sheet handle */}
         <NextQuestsTrigger />
 
-        {/* Right: wallet balances the filter button */}
-        <CoinBalance />
+        {/* Right: wallet balances the filter button. The wrapper always
+            occupies the third column, so the centre column keeps its place
+            when CoinBalance renders null. */}
+        <div className="justify-self-end">
+          <CoinBalance />
+        </div>
       </div>
 
       {/* Top sheet: nearest quests as cards */}
