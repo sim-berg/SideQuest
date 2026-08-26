@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useUIStore, type CreateWizardStep } from '../../stores/useUIStore';
 import { useQuestStore } from '../../stores/useQuestStore';
 import { useMapStore } from '../../stores/useMapStore';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { Category, Difficulty, GoalType } from '../../types/quest';
@@ -74,10 +75,13 @@ export default function CreateQuestPage() {
     setError(null);
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     resetForm();
     closeCreateQuest();
-  };
+  }, [resetForm, closeCreateQuest]);
+
+  // Back closes the wizard (and its location-picking mode) instead of the app.
+  useBackDismiss(createQuestOpen || pickingLocation, handleClose);
 
   const canGoNext = (step: CreateWizardStep): boolean => {
     switch (step) {

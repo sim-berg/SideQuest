@@ -6,6 +6,7 @@ import { CATEGORY_META } from '../../constants/categories';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFilterStore } from '../../stores/useFilterStore';
 import CoinBalance from '../common/CoinBalance';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { cn } from '../../utils/cn';
 import NextQuestsSheet, { NextQuestsTrigger } from './NextQuestsSheet';
 
@@ -27,6 +28,10 @@ export default function TopNavBar() {
   const timedOnly = useFilterStore((s) => s.timedOnly);
   const togglePaidOnly = useFilterStore((s) => s.togglePaidOnly);
   const toggleTimedOnly = useFilterStore((s) => s.toggleTimedOnly);
+
+  // Back closes the open filter panel first. The burger menu that master
+  // dismissed alongside it no longer exists on this bar.
+  useBackDismiss(filterPanelOpen, closeFilterPanel);
 
   const filterRef = useRef<HTMLDivElement>(null);
 

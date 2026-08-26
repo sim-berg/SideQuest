@@ -12,10 +12,15 @@ let socket: Socket | null = null;
 
 export function connectSocket(token: string): Socket {
   if (socket?.connected) return socket;
+  // A disconnected socket from an earlier session would keep its stale token.
+  if (socket) disconnectSocket();
 
   socket = io(SOCKET_URL, {
     auth: { token },
-    transports: ['websocket'],
+    // Allow the polling handshake as a fallback: some proxies and mobile
+    // networks block a bare websocket upgrade, and websocket-only would then
+    // retry forever with a console error per attempt.
+    transports: ['websocket', 'polling'],
     autoConnect: true,
   });
 

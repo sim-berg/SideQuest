@@ -23,6 +23,7 @@ import { useCelebrationStore } from '../../stores/useCelebrationStore';
 import { useDistanceStore } from '../../stores/useDistanceStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { useCoinStore } from '../../stores/useCoinStore';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { completeDailySideQuest } from '../../services/sidequest.service';
@@ -443,6 +444,8 @@ export default function LogbookPage() {
     },
     [updateDaily, setBoard, celebrate, upsertPet, addAchievements, showToast],
   );
+
+  useBackDismiss(open, close);
 
   if (!open) return null;
 

@@ -62,7 +62,7 @@ export class ReplicateService {
       'prunaai/flux-fast:4f22c6cd75e0f95f12f55d1616a4d163e9166087ed4979f5cecc40418a522703',
     );
     this.appUrl = this.config
-      .get<string>('APP_URL', 'http://localhost:3000')
+      .get<string>('APP_URL', 'http://localhost:5173')
       .replace(/\/$/, '');
   }
 

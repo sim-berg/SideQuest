@@ -30,7 +30,7 @@ export class CommentService {
     config: ConfigService,
   ) {
     this.appUrl = config
-      .get<string>('APP_URL', 'http://localhost:3000')
+      .get<string>('APP_URL', 'http://localhost:5173')
       .replace(/\/$/, '');
   }
 

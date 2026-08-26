@@ -17,6 +17,7 @@ import { useQuestStore } from '../../stores/useQuestStore';
 import PublicProfileSheet from '../profile/PublicProfileSheet';
 import { useQuestActions } from '../../hooks/useQuestActions';
 import { useQuestDistance } from '../../hooks/useQuestDistance';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { CATEGORY_META } from '../../constants/categories';
 import { DIFFICULTY_META } from '../../constants/difficulty';
 import { formatDistance, formatTimeRemaining } from '../../utils/format';
@@ -56,6 +57,8 @@ export default function QuestDetailScreen() {
   } = useQuestActions(quest);
   const distance = useQuestDistance(quest?.lat ?? 0, quest?.lng ?? 0);
   const [creatorProfileId, setCreatorProfileId] = useState<string | null>(null);
+
+  useBackDismiss(!!quest && detailOpen, closeDetail);
 
   if (!quest || !detailOpen) return null;
 
@@ -182,12 +185,12 @@ export default function QuestDetailScreen() {
 
           {/* actions */}
           {!hasOwnFlow && (
-          <div className="mb-6 flex items-start justify-around gap-2 rounded-2xl bg-slate-50 py-4 dark:bg-slate-800/50">
+          <div className="mb-6 flex flex-wrap items-start justify-around gap-y-3 rounded-2xl bg-slate-50 px-1 py-4 dark:bg-slate-800/50">
             {isAcceptedByMe ? (
               <>
                 <RoundActionButton
                   icon={CircleCheck}
-                  label={loading ? '...' : 'Abschliessen'}
+                  label={loading ? '...' : 'Fertig'}
                   onClick={complete}
                   disabled={loading}
                   variant="success"

@@ -1,3 +1,8 @@
+# Deployed as a single Coolify "Docker Compose" resource: point the domain at
+# the `frontend` service (it proxies /api, /uploads and /socket.io to the
+# backend over the compose network) and set the variables below in Coolify's
+# Environment Variables tab. Values must stay as ${...} placeholders — a
+# literal here would silently win over anything configured in Coolify.
 services:
   mongo:
     image: mongo:7
@@ -32,21 +37,35 @@ services:
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/sidequest
-      JWT_SECRET: change-me-in-production
-      CORS_ORIGIN: "*"
+      # Required. Reusing the previous value keeps existing logins alive.
+      JWT_SECRET: "${JWT_SECRET}"
+      # Required: public origin of the app, scheme included and no trailing
+      # slash (https://sidequest.example.com). Every absolute URL — share
+      # links, og:image, upload URLs — is built from this, and crawlers fetch
+      # og:image from the outside, so a localhost value breaks link previews.
+      APP_URL: "${APP_URL}"
+      CORS_ORIGIN: "${APP_URL}"
       QDRANT_URL: http://qdrant:6333
-      # Quest embeddings run through Replicate — without a token the index
-      # stays empty and /api/quests/search falls back to substring matching.
-      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN:-}
+      # Optional — without a token, achievements fall back to generated SVGs
+      # and the quest index stays empty, so /api/quests/search degrades to
+      # substring matching.
+      REPLICATE_API_TOKEN: "${REPLICATE_API_TOKEN:-}"
+    volumes:
+      # Generated badge and scene images plus the cached share cards; without
+      # this they are lost on every redeploy.
+      - backend-uploads:/app/uploads
 
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "5173:80"
+    # Reached through Coolify's proxy on the compose network, so no host port
+    # is published. For a local `docker compose up`, add: ports: ["5173:80"]
+    expose:
+      - "80"
     depends_on:
       - backend
 
 volumes:
   mongo-data:
   qdrant-data:
+  backend-uploads:

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useUIStore } from '../../stores/useUIStore';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
 
@@ -9,6 +10,8 @@ export default function AuthPrompt() {
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
   const [showRegister, setShowRegister] = useState(false);
+
+  useBackDismiss(showAuthPrompt, () => setShowAuthPrompt(false));
 
   if (!showAuthPrompt) return null;
 

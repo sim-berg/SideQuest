@@ -37,6 +37,7 @@ import { useRealtimeMessages } from './hooks/useRealtimeMessages';
 import { useSideQuestSpawner } from './hooks/useSideQuestSpawner';
 import { useTreasureSpawner } from './hooks/useTreasureSpawner';
 import { useTreasureStore } from './stores/useTreasureStore';
+import { useBackDismiss } from './hooks/useBackDismiss';
 import { useQuestStore } from './stores/useQuestStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useFriendStore } from './stores/useFriendStore';
@@ -99,6 +100,10 @@ function AppContent() {
   const fetchTreasureInventory = useTreasureStore((s) => s.fetchInventory);
   const refreshFriends = useFriendStore((s) => s.refresh);
   const showStreakModal = useStreakStore((s) => s.showStreakModal);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+
+  // Back from a non-map tab lands on the map instead of leaving the app.
+  useBackDismiss(activeTab !== 'map', () => setActiveTab('map'));
 
   // Silent refresh on mount — non-blocking, app works without auth
   useEffect(() => {

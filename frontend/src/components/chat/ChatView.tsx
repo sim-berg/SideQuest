@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChatStore } from '../../stores/useChatStore';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { useAuthStore } from '../../stores/useAuthStore';
 import {
   getMessages,
@@ -132,6 +133,8 @@ export default function ChatView() {
       handleSend();
     }
   };
+
+  useBackDismiss(!!activeChat, closeChat);
 
   if (!activeChat) return null;
 

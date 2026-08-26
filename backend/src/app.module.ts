@@ -15,6 +15,7 @@ import { FriendshipModule } from './friendship/friendship.module.js';
 import { ProfileCommentModule } from './profile-comment/profile-comment.module.js';
 import { TrackModule } from './track/track.module.js';
 import { VectorModule } from './vector/vector.module.js';
+import { ShareModule } from './share/share.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -40,6 +41,7 @@ import { HealthController } from './health/health.controller.js';
     ProfileCommentModule,
     TrackModule,
     VectorModule,
+    ShareModule,
   ],
   controllers: [HealthController],
 })
