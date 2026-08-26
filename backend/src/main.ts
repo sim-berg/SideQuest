@@ -14,14 +14,16 @@ async function bootstrap() {
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   app.setGlobalPrefix('api');
+  const corsOrigin = config
+    .get<string>('CORS_ORIGIN')
+    ?.trim()
+    .replace(/\/+$/, '');
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN'),
+    origin: corsOrigin || 'http://localhost:5173',
     credentials: true,
   });
   app.use(cookieParser());
-  app.useGlobalPipes(
-    new ValidationPipe({ transform: true, whitelist: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   await app.listen(config.get<number>('PORT', 3000));
 }
 bootstrap();

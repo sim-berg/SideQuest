@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCelebrationStore, type Celebration } from '../../stores/useCelebrationStore';
-import { DRAGON_META, EVOLUTION_LABELS } from '../../constants/dragons';
-import { useDragonStore } from '../../stores/useDragonStore';
+import {
+  ELEMENT_META,
+  SPECIES_EMOJI,
+  STAGE_LABELS,
+  RARITY_META,
+} from '../../constants/pets';
+import { usePetStore, selectActivePet } from '../../stores/usePetStore';
+import { fetchPetImage } from '../../services/pet.service';
 
 const CONFETTI_COLORS = [
   '#f59e0b',
@@ -167,59 +173,418 @@ function CompleteCard({ c }: { c: Celebration }) {
   );
 }
 
-function EvolutionCard({ c }: { c: Celebration }) {
-  const dragon = useDragonStore((s) => s.dragon);
-  const meta = dragon ? DRAGON_META[dragon.type] : null;
-  const fromEmoji = meta && c.fromStage ? meta.emoji[c.fromStage] : '🥚';
-  const toEmoji = meta && c.toStage ? meta.emoji[c.toStage] : '🐲';
+/** Minimum time the transformation runs before revealing (ms). */
+const EVOLUTION_MIN_CHARGE_MS = 3200;
+/** Give up waiting for the generated portrait after this long (ms). */
+const EVOLUTION_MAX_WAIT_MS = 25_000;
+/** How long the reveal stays on screen before auto-dismiss (ms). */
+const EVOLUTION_REVEAL_MS = 4200;
+
+/**
+ * Shared pacing for the hatch + evolution ceremonies: fetch and preload the
+ * pet's freshly generated portrait, hold the build-up phase for at least
+ * `minMs` (so the animation gets its moment even on a cache hit), give up
+ * after `maxMs` (emoji fallback), and push the URL into the pet store so the
+ * rest of the UI picks it up.
+ */
+function usePortraitReveal(
+  petId: string | undefined,
+  minMs: number,
+  maxMs: number,
+) {
+  const [phase, setPhase] = useState<'waiting' | 'reveal'>('waiting');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const started = Date.now();
+
+    const reveal = (url: string | null) => {
+      if (cancelled) return;
+      const wait = Math.max(0, minMs - (Date.now() - started));
+      setTimeout(() => {
+        if (cancelled) return;
+        setImageUrl(url);
+        setPhase('reveal');
+      }, wait);
+    };
+
+    const bailout = setTimeout(() => reveal(null), maxMs);
+    if (!petId) {
+      reveal(null);
+    } else {
+      fetchPetImage(petId)
+        .then(
+          (url) =>
+            new Promise<string | null>((resolve) => {
+              if (!url) return resolve(null);
+              const img = new Image();
+              img.onload = () => resolve(url);
+              img.onerror = () => resolve(null);
+              img.src = url;
+            }),
+        )
+        .then((url) => {
+          clearTimeout(bailout);
+          if (url) {
+            const store = usePetStore.getState();
+            const current = store.pets.find((p) => p.id === petId);
+            if (current) {
+              store.upsertPet({
+                ...current,
+                imageUrl: url,
+                images: { ...current.images, [current.stage]: url },
+              });
+            }
+          }
+          reveal(url);
+        })
+        .catch(() => {
+          clearTimeout(bailout);
+          reveal(null);
+        });
+    }
+    return () => {
+      cancelled = true;
+      clearTimeout(bailout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petId]);
+
+  return { phase, imageUrl };
+}
+
+/**
+ * The evolution ceremony. Phase 1 "charging": the companion is wrapped in a
+ * spinning elemental aura while its new, soul-infused portrait is being
+ * generated server-side — the animation loops as long as that takes (the
+ * backend pre-generates on evolution, so usually just a few seconds).
+ * Phase 2 "reveal": white flash, then the one-of-a-kind portrait scales in.
+ */
+function EvolutionCard({ c, onDone }: { c: Celebration; onDone: () => void }) {
+  const pet = usePetStore((s) => selectActivePet(s));
+
+  const speciesEmoji = (pet?.species && SPECIES_EMOJI[pet.species]) || '🐾';
+  const element = pet?.element ? ELEMENT_META[pet.element] : null;
+  const color = element?.color ?? '#fbbf24';
+  const petId = c.petId ?? pet?.id;
+  // The pre-evolution look: the previous stage's portrait, if it had one.
+  const oldImage = (c.fromStage && pet?.images?.[c.fromStage]) || null;
+  const isUnique = c.toStage !== 'hatchling';
+
+  const { phase, imageUrl } = usePortraitReveal(
+    petId,
+    EVOLUTION_MIN_CHARGE_MS,
+    EVOLUTION_MAX_WAIT_MS,
+  );
+
+  // Linger on the reveal, then hand control back to the queue.
+  useEffect(() => {
+    if (phase !== 'reveal') return;
+    const t = setTimeout(onDone, EVOLUTION_REVEAL_MS);
+    return () => clearTimeout(t);
+  }, [phase, onDone]);
 
   return (
     <div className="relative flex flex-col items-center text-center">
-      <Rays />
-      <Confetti count={60} />
+      {phase === 'reveal' && <Rays />}
+      {phase === 'reveal' && <Confetti count={70} />}
+
       <motion.h2
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="relative z-10 text-xl font-bold uppercase tracking-widest text-amber-200"
       >
-        Dein Drache entwickelt sich!
+        {phase === 'waiting'
+          ? 'Dein Gefährte verwandelt sich…'
+          : 'Entwicklung abgeschlossen!'}
       </motion.h2>
 
-      <div className="relative z-10 mt-6 flex items-center gap-4">
-        <motion.div
-          initial={{ scale: 1, opacity: 1 }}
-          animate={{ scale: [1, 1.1, 0.6], opacity: [1, 1, 0.3] }}
-          transition={{ duration: 1.2 }}
-          className="text-6xl"
-        >
-          {fromEmoji}
-        </motion.div>
-        <motion.div
-          animate={{ x: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 0.8 }}
-          className="text-3xl text-amber-300"
-        >
-          ➜
-        </motion.div>
-        <motion.div
-          initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
-          animate={{ scale: [0.4, 1.4, 1], opacity: 1, rotate: 0 }}
-          transition={{ delay: 0.9, duration: 0.9, type: 'spring', stiffness: 260 }}
-          className="text-7xl drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]"
-        >
-          {toEmoji}
-        </motion.div>
+      <div className="relative z-10 mt-8 flex h-52 w-52 items-center justify-center">
+        <AnimatePresence mode="wait">
+          {phase === 'waiting' ? (
+            <motion.div
+              key="charging"
+              exit={{ opacity: 0, scale: 1.6 }}
+              transition={{ duration: 0.35 }}
+              className="relative flex h-full w-full items-center justify-center"
+            >
+              {/* spinning elemental aura */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: `conic-gradient(${color}00, ${color}cc, ${color}00 60%)`,
+                  filter: 'blur(6px)',
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: 'linear' }}
+              />
+              <motion.div
+                className="absolute inset-3 rounded-full"
+                style={{
+                  background: `conic-gradient(${color}00 30%, ${color}88, ${color}00 80%)`,
+                  filter: 'blur(10px)',
+                }}
+                animate={{ rotate: -360 }}
+                transition={{ repeat: Infinity, duration: 2.4, ease: 'linear' }}
+              />
+              {/* orbiting sparks */}
+              {[0, 1, 2, 3, 4].map((i) => (
+                <motion.span
+                  key={i}
+                  className="absolute h-2 w-2 rounded-full"
+                  style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2 + i * 0.35,
+                    ease: 'linear',
+                  }}
+                >
+                  <span
+                    className="absolute h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: color,
+                      transform: `translateX(${64 + i * 9}px)`,
+                      boxShadow: `0 0 10px ${color}`,
+                    }}
+                  />
+                </motion.span>
+              ))}
+              {/* the companion, pulsing inside the storm */}
+              <motion.div
+                animate={{ scale: [1, 1.12, 0.96, 1.12, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full"
+                style={{ boxShadow: `0 0 40px ${color}aa` }}
+              >
+                {oldImage ? (
+                  <img
+                    src={oldImage}
+                    alt=""
+                    className="h-full w-full object-cover brightness-110"
+                  />
+                ) : (
+                  <span className="text-7xl">{speciesEmoji}</span>
+                )}
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="reveal"
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: [0.3, 1.15, 1], opacity: 1 }}
+              transition={{ duration: 0.7, type: 'spring', stiffness: 220 }}
+              className="relative flex h-full w-full items-center justify-center"
+            >
+              {/* white flash on entry */}
+              <motion.div
+                className="pointer-events-none fixed inset-0 bg-white"
+                initial={{ opacity: 0.9 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+              />
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="h-48 w-48 rounded-full object-cover"
+                  style={{ boxShadow: `0 0 46px ${color}` }}
+                />
+              ) : (
+                <span
+                  className="text-8xl"
+                  style={{ filter: `drop-shadow(0 0 24px ${color})` }}
+                >
+                  {speciesEmoji}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {c.toStage && (
+      {phase === 'reveal' && c.toStage && (
+        <>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="relative z-10 mt-6 text-2xl font-black text-white"
+          >
+            {STAGE_LABELS[c.toStage]}
+          </motion.p>
+          {isUnique && imageUrl && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="relative z-10 mt-2 max-w-xs text-sm text-white/80"
+            >
+              ✨ Ein einzigartiges Porträt — geformt von seinen Abenteuern mit
+              dir.
+            </motion.p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Minimum time the egg trembles before it cracks (ms). */
+const HATCH_MIN_INCUBATE_MS = 2800;
+/** Give up waiting for the hatchling portrait after this long (ms). */
+const HATCH_MAX_WAIT_MS = 25_000;
+/** How long the hatched reveal stays on screen before auto-dismiss (ms). */
+const HATCH_REVEAL_MS = 5200;
+
+/**
+ * The hatch ceremony. The egg trembles and glows for as long as the
+ * hatchling portrait takes to arrive (shared cache per element×species, so
+ * usually just seconds), then cracks open in a white flash and reveals the
+ * generated picture instead of the old emoji.
+ */
+function HatchCard({ c, onDone }: { c: Celebration; onDone: () => void }) {
+  const pet = c.pet;
+  const element = pet?.element ? ELEMENT_META[pet.element] : null;
+  const color = element?.color ?? '#fbbf24';
+  const speciesEmoji =
+    (pet?.species && SPECIES_EMOJI[pet.species]) || '🐾';
+  const rarity = pet?.rarity ? RARITY_META[pet.rarity] : null;
+
+  const { phase, imageUrl } = usePortraitReveal(
+    pet?.id,
+    HATCH_MIN_INCUBATE_MS,
+    HATCH_MAX_WAIT_MS,
+  );
+
+  // Linger on the reveal, then hand control back to the queue.
+  useEffect(() => {
+    if (phase !== 'reveal') return;
+    const t = setTimeout(onDone, HATCH_REVEAL_MS);
+    return () => clearTimeout(t);
+  }, [phase, onDone]);
+
+  return (
+    <div className="relative flex flex-col items-center text-center">
+      {phase === 'reveal' && <Rays />}
+      {phase === 'reveal' && <Confetti count={90} />}
+
+      <motion.p
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative z-10 text-sm font-bold uppercase tracking-[0.3em] text-amber-200"
+      >
+        Dein Ei schlüpft!
+      </motion.p>
+
+      <div className="relative z-10 mt-6 flex h-52 w-52 items-center justify-center">
+        <AnimatePresence mode="wait">
+          {phase === 'waiting' ? (
+            <motion.div
+              key="egg"
+              exit={{ opacity: 0, scale: 1.4 }}
+              transition={{ duration: 0.3 }}
+              className="relative flex h-full w-full items-center justify-center"
+            >
+              {/* pulsing elemental glow behind the egg */}
+              <motion.div
+                className="absolute inset-4 rounded-full"
+                style={{
+                  background: `radial-gradient(circle, ${color}66, transparent 70%)`,
+                  filter: 'blur(8px)',
+                }}
+                animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.1, 0.9] }}
+                transition={{ repeat: Infinity, duration: 1.6 }}
+              />
+              {/* trembling egg — loops until the portrait is ready */}
+              <motion.span
+                className="relative text-8xl"
+                animate={{
+                  rotate: [0, -7, 7, -10, 10, -4, 4, 0],
+                  y: [0, -3, 0, -5, 0, -2, 0, 0],
+                }}
+                transition={{ repeat: Infinity, duration: 1.3, ease: 'easeInOut' }}
+              >
+                🥚
+              </motion.span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="hatched"
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: [0.3, 1.15, 1], opacity: 1 }}
+              transition={{ duration: 0.7, type: 'spring', stiffness: 220 }}
+              className="relative flex h-full w-full items-center justify-center"
+            >
+              {/* white flash as the shell bursts */}
+              <motion.div
+                className="pointer-events-none fixed inset-0 bg-white"
+                initial={{ opacity: 0.9 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+              />
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="h-48 w-48 rounded-full object-cover"
+                  style={{ boxShadow: `0 0 46px ${color}` }}
+                />
+              ) : (
+                <span
+                  className="text-8xl"
+                  style={{ filter: `drop-shadow(0 0 28px ${color})` }}
+                >
+                  {speciesEmoji}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {phase === 'waiting' && (
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          className="relative z-10 mt-6 text-2xl font-black text-white"
+          className="relative z-10 mt-5 text-sm text-white/70"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ repeat: Infinity, duration: 1.8 }}
         >
-          {EVOLUTION_LABELS[c.toStage]}
+          Es klopft von innen…
         </motion.p>
+      )}
+
+      {phase === 'reveal' && pet && (
+        <>
+          <motion.h2
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="relative z-10 mt-5 text-3xl font-black text-white"
+          >
+            {element?.name}-{pet.speciesName}
+          </motion.h2>
+          {rarity && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="relative z-10 mt-1 text-sm font-bold uppercase tracking-widest"
+              style={{ color: rarity.color }}
+            >
+              {rarity.label}
+            </motion.p>
+          )}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            className="relative z-10 mt-3 max-w-xs text-sm text-white/80"
+          >
+            {element?.emoji} Dein Gefährte wird dich von nun an auf allen
+            Quests begleiten.
+          </motion.p>
+        </>
       )}
     </div>
   );
@@ -286,12 +651,16 @@ const DURATIONS: Record<Celebration['type'], number> = {
   complete: 3200,
   evolution: 3800,
   achievement: 4000,
+  hatch: 5200,
 };
 
 function CelebrationView({ c }: { c: Celebration }) {
   const dismiss = useCelebrationStore((s) => s.dismiss);
 
   useEffect(() => {
+    // Hatch + evolution ceremonies pace themselves (they wait for the
+    // generated portrait); every other celebration gets the fixed timer.
+    if (c.type === 'evolution' || c.type === 'hatch') return;
     const t = setTimeout(() => dismiss(c.id), DURATIONS[c.type]);
     return () => clearTimeout(t);
   }, [c.id, c.type, dismiss]);
@@ -307,8 +676,11 @@ function CelebrationView({ c }: { c: Celebration }) {
     >
       {c.type === 'accept' && <AcceptCard c={c} />}
       {c.type === 'complete' && <CompleteCard c={c} />}
-      {c.type === 'evolution' && <EvolutionCard c={c} />}
+      {c.type === 'evolution' && (
+        <EvolutionCard c={c} onDone={() => dismiss(c.id)} />
+      )}
       {c.type === 'achievement' && <AchievementCard c={c} />}
+      {c.type === 'hatch' && <HatchCard c={c} onDone={() => dismiss(c.id)} />}
     </motion.div>
   );
 }

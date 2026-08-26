@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsString,
   IsNumber,
   IsEnum,
@@ -12,6 +13,7 @@ import {
 import { Type } from 'class-transformer';
 import { Category } from '../enums/category.enum.js';
 import { Difficulty } from '../enums/difficulty.enum.js';
+import { GoalType } from '../enums/goal-type.enum.js';
 
 export class QuestGiverDto {
   @IsString()
@@ -61,4 +63,26 @@ export class CreateQuestDto {
   @IsOptional()
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
+
+  @IsOptional()
+  @IsEnum(GoalType)
+  goalType?: GoalType;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  goalCount?: number;
+
+  /** Publish under the author's pseudonym instead of their username. */
+  @IsOptional()
+  @IsBoolean()
+  usePseudonym?: boolean;
+
+  /**
+   * Post even though a near-identical quest exists nearby — set after the
+   * client showed the 409 duplicate and the user confirmed anyway.
+   */
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }

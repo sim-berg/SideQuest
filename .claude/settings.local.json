@@ -51,7 +51,22 @@
       "Bash(echo \"started pid $!\")",
       "Bash(curl -s -o /dev/null -w \"frontend:%{http_code}\\\\n\" http://localhost:5173/)",
       "Bash(curl -s -o /dev/null -w \"backend:%{http_code}\\\\n\" http://localhost:3002/api/health)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(npx eslint *)",
+      "Bash(node *)",
+      "Bash(npm ls *)",
+      "Bash(python3 -)",
+      "Bash(git push *)",
+      "Bash(gh pr create --base develop --head feature/top-sheet-next-quests --title 'Top sheet: nächste SideQuests unter dem Wordmark' --body ' *)",
+      "Bash(curl -sf http://localhost:3000/api/health)",
+      "Bash(break)",
+      "Bash(curl -s http://localhost:3000/api/quests)",
+      "Bash(python3 -c \"import sys,json; print\\(len\\(json.load\\(sys.stdin\\)\\),'quests'\\)\")",
+      "Bash(google-chrome --headless=new --disable-gpu --window-size=430,932 --virtual-time-budget=8000 --screenshot=sheet-closed.png http://localhost:5173)",
+      "Bash(kill 1333821 1333824 1333955 1334144)",
+      "Bash(xargs -r kill)",
+      "Bash(gh pr *)",
+      "Bash(gh api *)"
     ]
   }
 }

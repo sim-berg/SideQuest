@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { register } from '../../services/auth.service';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useToastStore } from '../../stores/useToastStore';
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
@@ -45,6 +46,12 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }: RegisterPag
     try {
       const res = await register(email, username, password);
       setAuth(res.user, res.accessToken);
+      useToastStore.getState().addToast({
+        type: 'quest',
+        title: 'Willkommen bei SideQuest!',
+        message: '4 Onboarding-Quests warten auf dich 🎉',
+        duration: 5000,
+      });
       onSuccess?.();
     } catch (err: unknown) {
       setError(
@@ -56,7 +63,7 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }: RegisterPag
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 dark:bg-slate-900">
+    <div className="flex flex-col items-center justify-center bg-white px-6 py-12 dark:bg-slate-900">
       <div className="w-full max-w-sm">
         <h1 className="mb-2 text-center text-3xl font-bold text-indigo-500">
           SideQuest

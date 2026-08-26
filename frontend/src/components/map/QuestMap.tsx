@@ -9,6 +9,7 @@ import QuestMarkerLayer from './QuestMarkerLayer';
 import SideQuestMarkerLayer from './SideQuestMarkerLayer';
 import RouteLayer from './RouteLayer';
 import TreasureMarkerLayer from './TreasureMarkerLayer';
+import ChainMarkerLayer from './ChainMarkerLayer';
 import SideQuestPeekCard from '../sidequest/SideQuestPeekCard';
 import QuestPeekCard from '../quest/QuestPeekCard';
 import TreasurePeekCard from '../treasure/TreasurePeekCard';
@@ -73,6 +74,7 @@ export default function QuestMap() {
         <QuestMarkerLayer />
         <SideQuestMarkerLayer />
         <TreasureMarkerLayer />
+        <ChainMarkerLayer />
         <NearbyUsersLayer />
 
         {/* Floating cards above the selected marker (Google-Maps style) */}
@@ -93,41 +95,42 @@ export default function QuestMap() {
       {/* Location picking UI overlay */}
       {pickingLocation && (
         <>
-          {/* Top instruction banner */}
-          <div className="fixed top-[calc(env(safe-area-inset-top)+56px)] left-4 right-4 z-40 flex items-center justify-between rounded-2xl bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:bg-slate-800/95">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-lg dark:bg-indigo-900/50">
-                📍
-              </span>
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {droppedPin ? 'Standort bestaetigen?' : 'Tippe auf die Karte'}
-              </span>
-            </div>
-            <button
-              onClick={handleCancelPicking}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
-            >
-              Abbrechen
-            </button>
+          {/* Bottom instruction banner and action buttons - centered max-width */}
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-[1200px] px-4">
+            {!droppedPin ? (
+              <div className="flex items-center justify-center rounded-2xl bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:bg-slate-800/95">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-lg dark:bg-indigo-900/50">
+                    📍
+                  </span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Tippe auf die Karte
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelPicking}
+                  className="flex-1 rounded-2xl bg-slate-100 py-3.5 text-sm font-semibold text-slate-700 shadow-lg transition-all active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => setDroppedPin(null)}
+                  className="flex-1 rounded-2xl bg-white py-3.5 text-sm font-semibold text-slate-700 shadow-lg transition-all active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
+                >
+                  ✨ AI Generate
+                </button>
+                <button
+                  onClick={handleConfirmPin}
+                  className="flex-[2] rounded-2xl bg-indigo-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98]"
+                >
+                  📍 Standort verwenden
+                </button>
+              </div>
+            )}
           </div>
-
-          {/* Confirm button when pin is dropped */}
-          {droppedPin && (
-            <div className="fixed bottom-8 left-4 right-4 z-40 flex gap-3" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
-              <button
-                onClick={() => setDroppedPin(null)}
-                className="flex-1 rounded-2xl bg-white py-3.5 text-sm font-semibold text-slate-700 shadow-lg transition-all active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
-              >
-                Neu setzen
-              </button>
-              <button
-                onClick={handleConfirmPin}
-                className="flex-[2] rounded-2xl bg-indigo-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98]"
-              >
-                Standort bestaetigen
-              </button>
-            </div>
-          )}
 
           {/* Crosshair in center when no pin dropped yet */}
           {!droppedPin && (

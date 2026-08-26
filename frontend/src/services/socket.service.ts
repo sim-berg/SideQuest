@@ -1,16 +1,12 @@
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 
-/**
- * Same origin by default: nginx proxies /socket.io/ to the backend, so a
- * production build without VITE_API_URL still connects instead of hammering a
- * hard-coded localhost port. Only an explicit VITE_API_URL points elsewhere.
- */
+// Same base-URL logic as api.ts: an absolute VITE_API_URL points at a
+// separate backend origin; a relative one ('/api', the production build)
+// means same-origin — nginx proxies /socket.io/ to the backend there.
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
 const SOCKET_URL =
-  (import.meta.env.VITE_API_URL as string | undefined)?.replace(
-    /\/api\/?$/,
-    '',
-  ) || window.location.origin;
+  API_URL.replace(/\/api\/?$/, '') || window.location.origin;
 
 let socket: Socket | null = null;
 

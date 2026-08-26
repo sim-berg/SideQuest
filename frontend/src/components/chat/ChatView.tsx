@@ -144,9 +144,10 @@ export default function ChatView() {
     '?';
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900">
+    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-black/40">
+      <div className="w-full max-w-[1200px] flex flex-col h-[90vh] rounded-2xl overflow-hidden bg-white/80 backdrop-blur-md dark:bg-slate-900/80 border border-white/20 dark:border-slate-800/20">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+      <div className="flex shrink-0 items-center gap-3 border-b border-slate-100/20 px-4 py-3 dark:border-slate-800/20">
         <button
           onClick={closeChat}
           className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -233,6 +234,7 @@ export default function ChatView() {
             </svg>
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

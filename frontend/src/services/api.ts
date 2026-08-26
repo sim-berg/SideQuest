@@ -1,3 +1,5 @@
+import { uploadsReviver } from '../utils/assetUrl';
+
 const API_BASE =
   (import.meta.env.VITE_API_URL as string) || '/api';
 
@@ -63,7 +65,10 @@ async function request<T>(
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  // Endpoints may return null (e.g. "no chain offer today") — that arrives
+  // as an empty body, which res.json() would choke on.
+  const text = await res.text();
+  return (text ? JSON.parse(text, uploadsReviver) : null) as T;
 }
 
 export const api = {

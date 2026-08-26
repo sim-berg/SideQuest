@@ -26,6 +26,8 @@ import {
   TreasureSpawnDocument,
 } from './schemas/treasure-spawn.schema.js';
 import { UserItem, UserItemDocument } from './schemas/user-item.schema.js';
+import { Pet, PetDocument } from '../pet/schemas/pet.schema.js';
+import { sumPerkEffects } from '../pet/pet-perks.js';
 
 const MAX_STACK = 3;
 const COLLECT_BASE_RADIUS_M = 100;
@@ -107,6 +109,7 @@ export class TreasureService {
     @InjectModel(Quest.name) private readonly questModel: Model<QuestDocument>,
     @InjectModel(DailySideQuest.name)
     private readonly dailyModel: Model<DailySideQuestDocument>,
+    @InjectModel(Pet.name) private readonly petModel: Model<PetDocument>,
     private readonly geoService: GeoService,
     private readonly spawner: TreasureSpawnerService,
   ) {}
@@ -218,8 +221,15 @@ export class TreasureService {
     if (!item) throw new NotFoundException('Unbekanntes Item');
 
     const bonuses = await this.getActiveBonuses(userId);
+    // Chain-earned pet perks (Spürsinn etc.) extend the radius alongside items.
+    const activePet = await this.petModel
+      .findOne({ userId, isActive: true })
+      .exec();
+    const petSenseMeters = sumPerkEffects(
+      activePet?.perks ?? [],
+    ).treasureSenseMeters;
     const radiusM = Math.min(
-      COLLECT_BASE_RADIUS_M + bonuses.treasureSenseMeters,
+      COLLECT_BASE_RADIUS_M + bonuses.treasureSenseMeters + petSenseMeters,
       COLLECT_MAX_RADIUS_M,
     );
     const distanceKm = this.geoService.haversine(

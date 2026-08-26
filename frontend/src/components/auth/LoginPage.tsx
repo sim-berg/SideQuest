@@ -32,7 +32,7 @@ export default function LoginPage({ onSwitchToRegister, onSuccess }: LoginPagePr
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 dark:bg-slate-900">
+    <div className="flex flex-col items-center justify-center bg-white px-6 py-12 dark:bg-slate-900">
       <div className="w-full max-w-sm">
         <h1 className="mb-2 text-center text-3xl font-bold text-indigo-500">
           SideQuest

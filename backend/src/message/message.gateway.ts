@@ -13,6 +13,10 @@ import { ConfigService } from '@nestjs/config';
 import { GeoService } from '../geo/geo.service.js';
 import { UserService } from '../user/user.service.js';
 
+const corsOrigin =
+  process.env.CORS_ORIGIN?.trim().replace(/\/+$/, '') ||
+  'http://localhost:5173';
+
 interface UserLocationEntry {
   lat: number;
   lng: number;
@@ -24,10 +28,14 @@ interface UserLocationEntry {
 }
 
 @WebSocketGateway({
-  cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true },
+  cors: { origin: corsOrigin, credentials: true },
 })
 export class MessageGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleDestroy
+  implements
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnGatewayInit,
+    OnModuleDestroy
 {
   @WebSocketServer()
   server: Server;
@@ -121,13 +129,23 @@ export class MessageGateway
   }
 
   @SubscribeMessage('location:update')
-  async handleLocationUpdate(client: Socket, payload: { lat: number; lng: number }) {
+  async handleLocationUpdate(
+    client: Socket,
+    payload: { lat: number; lng: number },
+  ) {
     const userId = client.data.userId;
     if (!userId) return;
 
     // Validate payload
-    if (typeof payload.lat !== 'number' || typeof payload.lng !== 'number') return;
-    if (payload.lat < -90 || payload.lat > 90 || payload.lng < -180 || payload.lng > 180) return;
+    if (typeof payload.lat !== 'number' || typeof payload.lng !== 'number')
+      return;
+    if (
+      payload.lat < -90 ||
+      payload.lat > 90 ||
+      payload.lng < -180 ||
+      payload.lng > 180
+    )
+      return;
 
     // Round to 3 decimal places (~110m precision) for privacy
     const lat = Math.round(payload.lat * 1000) / 1000;

@@ -7,6 +7,7 @@ import type { AchievementDef } from './achievement-catalog.js';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'achievements');
 const SCENE_DIR = path.join(process.cwd(), 'uploads', 'sidequests');
+const PET_DIR = path.join(process.cwd(), 'uploads', 'pets');
 
 const EXT_BY_TYPE: Record<string, string> = {
   'image/png': 'png',
@@ -38,18 +39,27 @@ export class ReplicateService {
   private readonly token?: string;
   private readonly model: string;
   private readonly sceneModel: string;
+  private readonly petModel: string;
   private readonly appUrl: string;
 
   constructor(private readonly config: ConfigService) {
     this.token = this.config.get<string>('REPLICATE_API_TOKEN');
+    // Community models need a pinned version — the version-less model
+    // endpoint only exists for official models (404 otherwise).
     this.model = this.config.get<string>(
       'REPLICATE_MODEL',
-      'fofr/sticker-maker',
+      'fofr/sticker-maker:4acb778eb059772225ec213948f0660867b2e03f277448f18cf1800b96a65a1a',
     );
     // A general text-to-image model for illustrative side quest scenes.
     this.sceneModel = this.config.get<string>(
       'REPLICATE_SCENE_MODEL',
       'black-forest-labs/flux-schnell',
+    );
+    // Speed-optimized FLUX for pet portraits. Community model, so the
+    // version must stay pinned (same 404 rule as REPLICATE_MODEL above).
+    this.petModel = this.config.get<string>(
+      'REPLICATE_PET_MODEL',
+      'prunaai/flux-fast:4f22c6cd75e0f95f12f55d1616a4d163e9166087ed4979f5cecc40418a522703',
     );
     this.appUrl = this.config
       .get<string>('APP_URL', 'http://localhost:5173')
@@ -158,6 +168,77 @@ export class ReplicateService {
 
   private sceneUrl(file: string): string {
     return `${this.appUrl}/uploads/sidequests/${file}`;
+  }
+
+  /**
+   * Square character portrait (pets). Same contract as generateScene: cached
+   * on disk by key, Replicate when a token is configured, and a gradient
+   * SVG data-URI fallback so there is always something to show.
+   */
+  async generatePortrait(
+    scene: SceneInput,
+    opts: { force?: boolean } = {},
+  ): Promise<string> {
+    await fs.mkdir(PET_DIR, { recursive: true });
+
+    if (!opts.force) {
+      const cached = await this.findCached(PET_DIR, scene.key);
+      if (cached) return this.petUrl(cached);
+    }
+
+    if (this.token) {
+      try {
+        const replicate = new Replicate({
+          auth: this.token,
+          useFileOutput: false,
+        });
+        const output = (await replicate.run(
+          this.petModel as `${string}/${string}`,
+          {
+            input: {
+              prompt: scene.prompt,
+              aspect_ratio: '1:1',
+              output_format: 'webp',
+            },
+          },
+        )) as unknown;
+
+        const url = this.firstUrl(output);
+        if (url) {
+          const file = await this.download(PET_DIR, scene.key, url);
+          // Drop stale variants with another extension so a later cache
+          // lookup can't resurrect the old picture.
+          if (opts.force)
+            await this.clearCachedExcept(PET_DIR, scene.key, file);
+          this.logger.log(`Generated AI portrait for ${scene.key}`);
+          return this.petUrl(file);
+        }
+        this.logger.warn(`Replicate returned no URL for portrait ${scene.key}`);
+      } catch (err) {
+        this.logger.error(
+          `AI portrait generation failed for ${scene.key}: ${String(err)}`,
+        );
+      }
+    }
+
+    return this.sceneFallback(scene);
+  }
+
+  private petUrl(file: string): string {
+    return `${this.appUrl}/uploads/pets/${file}`;
+  }
+
+  /** Delete every cached variant of a key except the file just written. */
+  private async clearCachedExcept(
+    dir: string,
+    key: string,
+    keep: string,
+  ): Promise<void> {
+    for (const ext of CACHE_EXTS) {
+      const file = `${key}.${ext}`;
+      if (file === keep) continue;
+      await fs.rm(path.join(dir, file), { force: true });
+    }
   }
 
   /** Returns the cached image filename for a key, or null if none exists. */

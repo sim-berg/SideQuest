@@ -3,11 +3,13 @@ import type { Quest } from '../types/quest';
 
 interface QuestState {
   quests: Quest[];
+  dailyQuests: Quest[];
   selectedQuest: Quest | null;
   /** whether the full detail screen is open for `selectedQuest`. */
   detailOpen: boolean;
   isLoading: boolean;
   setQuests: (quests: Quest[]) => void;
+  setDailyQuests: (quests: Quest[]) => void;
   selectQuest: (quest: Quest | null) => void;
   openDetail: () => void;
   closeDetail: () => void;
@@ -17,10 +19,12 @@ interface QuestState {
 
 export const useQuestStore = create<QuestState>((set, get) => ({
   quests: [],
+  dailyQuests: [],
   selectedQuest: null,
   detailOpen: false,
   isLoading: false,
   setQuests: (quests) => set({ quests }),
+  setDailyQuests: (dailyQuests) => set({ dailyQuests }),
   // Selecting a quest shows the peek card; it never auto-opens the full screen.
   selectQuest: (selectedQuest) => set({ selectedQuest, detailOpen: false }),
   openDetail: () => set({ detailOpen: true }),

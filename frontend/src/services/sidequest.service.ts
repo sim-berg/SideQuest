@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { Quest } from '../types/quest';
-import type { DailySideQuest } from '../types/sidequest';
-import type { XpResult } from '../types/dragon';
+import type { DailyBoard, DailySideQuest } from '../types/sidequest';
+import type { Pet, XpResult } from '../types/pet';
 import type { Achievement } from '../types/achievement';
 
 /**
@@ -25,11 +25,16 @@ export interface DailyCompleteResult {
   daily: DailySideQuest;
   xpResult: XpResult | null;
   achievements: Achievement[];
+  /** Extra XP granted for clearing the whole board (0 when not cleared). */
+  bonusXp: number;
+  /** The freshly hatched pet when clearing this board cracked the egg. */
+  hatch: Pet | null;
+  board: DailyBoard;
 }
 
-/** Today's per-user daily side quests (generated on first call). */
-export async function fetchDailySideQuests(): Promise<DailySideQuest[]> {
-  return api.get<DailySideQuest[]>('/sidequests/daily');
+/** Today's per-user daily quest board (generated on first call). */
+export async function fetchDailyBoard(): Promise<DailyBoard> {
+  return api.get<DailyBoard>('/sidequests/daily');
 }
 
 export async function completeDailySideQuest(

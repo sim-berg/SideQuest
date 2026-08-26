@@ -3,11 +3,12 @@ import type { Quest } from '../types/quest';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
-import { useDragonStore } from '../stores/useDragonStore';
+import { usePetStore, selectActivePet } from '../stores/usePetStore';
 import { useCelebrationStore } from '../stores/useCelebrationStore';
 import { useAchievementStore } from '../stores/useAchievementStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useRouteStore } from '../stores/useRouteStore';
+import { useCoinStore } from '../stores/useCoinStore';
 import { acceptQuest, completeQuest, abandonQuest } from '../services/quest.service';
 import { shareQuest } from '../utils/share';
 
@@ -25,7 +26,7 @@ export function useQuestActions(quest: Quest | null) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const setShowAuthPrompt = useUIStore((s) => s.setShowAuthPrompt);
-  const setDragon = useDragonStore((s) => s.setDragon);
+  const upsertPet = usePetStore((s) => s.upsertPet);
   const celebrate = useCelebrationStore((s) => s.celebrate);
   const addAchievements = useAchievementStore((s) => s.addAchievements);
 
@@ -64,24 +65,32 @@ export function useQuestActions(quest: Quest | null) {
           timeout: 10000,
         }),
       );
-      const prevStage = useDragonStore.getState().dragon?.evolutionStage;
-      const result = await completeQuest(
-        quest.id,
-        pos.coords.latitude,
-        pos.coords.longitude,
-      );
+      const prevStage = selectActivePet(usePetStore.getState())?.stage;
+      const result = await completeQuest(quest.id, {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      });
       celebrate({
         type: 'complete',
         title: result.quest.title,
         xpResult: result.xpResult ?? undefined,
       });
       if (result.xpResult) {
-        setDragon(result.xpResult.dragon);
-        const newStage = result.xpResult.dragon.evolutionStage;
+        upsertPet(result.xpResult.pet);
+        const newStage = result.xpResult.pet.stage;
         if (prevStage && newStage !== prevStage) {
-          celebrate({ type: 'evolution', fromStage: prevStage, toStage: newStage });
+          celebrate({
+            type: 'evolution',
+            fromStage: prevStage,
+            toStage: newStage,
+            petId: result.xpResult.pet.id,
+          });
         }
       }
+      if (result.coinsAwarded) {
+        useToastStore.getState().showToast(`+${result.coinsAwarded} 🪙`);
+      }
+      void useCoinStore.getState().fetchWallet();
       if (result.achievements?.length) {
         addAchievements(result.achievements);
         for (const a of result.achievements) {
@@ -102,7 +111,7 @@ export function useQuestActions(quest: Quest | null) {
     } finally {
       setLoading(false);
     }
-  }, [quest, quests, setQuests, selectQuest, setDragon, celebrate, addAchievements]);
+  }, [quest, quests, setQuests, selectQuest, upsertPet, celebrate, addAchievements]);
 
   const abandon = useCallback(async () => {
     if (!quest) return;
