@@ -3,7 +3,6 @@ import { Check } from 'lucide-react';
 import type { Category } from '../../types/quest';
 import { CATEGORY_META } from '../../constants/categories';
 import { useQuestStore } from '../../stores/useQuestStore';
-import CategoryIcon from '../common/CategoryIcon';
 
 interface QuestMarkerProps {
   questId: string;
@@ -40,7 +39,7 @@ export default function QuestMarker({ questId, category, acceptedByMe }: QuestMa
         }`}
         style={{ backgroundColor: meta.color }}
       >
-        <CategoryIcon category={category} size={28} />
+        <span className="text-lg">{meta.icon}</span>
       </div>
       {acceptedByMe && (
         <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900">
